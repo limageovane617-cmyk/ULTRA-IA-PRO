@@ -91,6 +91,9 @@ DEFAULTS = {
     "personagem_atual": None,
     "arquivo_contexto": "",
     "arquivo_nome": "",
+    "imagem_contexto": None,
+    "imagem_nome": "",
+    "imagem_mime": "",
     "ferramenta_ativa": None,
     "usar_voz": False,
     "ultima_imagem_caminho": None,
@@ -100,7 +103,6 @@ for chave, valor in DEFAULTS.items():
 
     if chave not in st.session_state:
         st.session_state[chave] = valor
-
 
 # ============================================================
 # 🔐 SERVIÇOS
