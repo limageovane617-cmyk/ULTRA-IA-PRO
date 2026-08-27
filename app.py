@@ -973,59 +973,79 @@ if ferramenta:
     # ========================================================
     elif ferramenta == "arquivo":
 
-        st.markdown("### 📎 Central de Arquivos")
-        st.caption(
-            "Envie imagens, documentos, áudios, vídeos ou outros arquivos."
+        st.markdown(
+            "### 📎 Central de Arquivos"
         )
 
+        st.caption(
+            "Envie imagens, documentos, áudios, vídeos, "
+            "códigos ou outros arquivos."
+        )
+
+
         arquivos_enviados = st.file_uploader(
+
             "📤 Escolher arquivos",
+
             type=[
                 # 🖼️ Imagens
-                "png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff",
+                "png", "jpg", "jpeg", "webp",
+                "gif", "bmp", "tiff",
 
                 # 📄 Documentos
-                "pdf", "txt", "doc", "docx", "rtf",
-                "csv", "json", "xml", "md",
+                "pdf", "txt", "doc", "docx",
+                "rtf",
 
-                # 📊 Planilhas
+                # 📊 Dados
+                "csv", "json", "xml", "md",
                 "xls", "xlsx",
 
                 # 🎵 Áudio
-                "mp3", "wav", "ogg", "m4a", "flac", "aac",
+                "mp3", "wav", "ogg", "m4a",
+                "flac", "aac",
 
                 # 🎬 Vídeo
-                "mp4", "mov", "avi", "mkv", "webm",
+                "mp4", "mov", "avi", "mkv",
+                "webm",
 
                 # 💻 Código
-                "py", "js", "ts", "html", "css", "java",
-                "cpp", "c", "h", "sql", "sh",
+                "py", "js", "ts", "html",
+                "css", "java", "cpp", "c",
+                "h", "sql", "sh",
 
-                # 📦 Arquivos compactados
+                # 📦 Compactado
                 "zip"
             ],
+
             accept_multiple_files=True,
+
             key="central_arquivos_upload"
         )
+
 
         if arquivos_enviados:
 
             st.success(
-                f"📁 {len(arquivos_enviados)} arquivo(s) selecionado(s)."
+                f"📁 {len(arquivos_enviados)} "
+                "arquivo(s) selecionado(s)."
             )
+
 
             for arquivo in arquivos_enviados:
 
                 st.markdown(
                     f"**📄 {arquivo.name}**  \n"
-                    f"Tamanho: {arquivo.size / 1024:.1f} KB"
+                    f"Tamanho: "
+                    f"{arquivo.size / 1024:.1f} KB"
                 )
 
-                # ====================================================
-                # 🖼️ VISUALIZAÇÃO DE IMAGENS
-                # ====================================================
 
                 nome = arquivo.name.lower()
+
+
+                # ====================================================
+                # 🖼️ IMAGEM
+                # ====================================================
 
                 if nome.endswith((
                     ".png",
@@ -1043,8 +1063,9 @@ if ferramenta:
                         use_container_width=True
                     )
 
+
                 # ====================================================
-                # 🎬 VISUALIZAÇÃO DE VÍDEOS
+                # 🎬 VÍDEO
                 # ====================================================
 
                 elif nome.endswith((
@@ -1055,10 +1076,13 @@ if ferramenta:
                     ".webm"
                 )):
 
-                    st.video(arquivo)
+                    st.video(
+                        arquivo
+                    )
+
 
                 # ====================================================
-                # 🎵 VISUALIZAÇÃO DE ÁUDIO
+                # 🎵 ÁUDIO
                 # ====================================================
 
                 elif nome.endswith((
@@ -1070,29 +1094,53 @@ if ferramenta:
                     ".aac"
                 )):
 
-                    st.audio(arquivo)
+                    st.audio(
+                        arquivo
+                    )
+
 
                 # ====================================================
-                # 📄 LEITURA DE DOCUMENTOS COMPATÍVEIS
+                # 📖 ARQUIVOS DE TEXTO / CÓDIGO
                 # ====================================================
 
                 elif nome.endswith((
-                    ".pdf",
                     ".txt",
-                    ".doc",
-                    ".docx"
+                    ".py",
+                    ".js",
+                    ".ts",
+                    ".html",
+                    ".css",
+                    ".java",
+                    ".cpp",
+                    ".c",
+                    ".h",
+                    ".sql",
+                    ".sh",
+                    ".json",
+                    ".xml",
+                    ".md",
+                    ".csv"
                 )):
 
                     if st.button(
                         f"📖 Ler {arquivo.name}",
-                        key=f"ler_{arquivo.name}_{arquivo.size}"
+                        key=(
+                            f"ler_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        )
                     ):
 
-                        texto, erro = ler_arquivo(arquivo)
+                        texto, erro = (
+                            ler_arquivo(arquivo)
+                        )
+
 
                         if erro:
 
-                            st.error(erro)
+                            st.error(
+                                erro
+                            )
 
                         else:
 
@@ -1104,9 +1152,70 @@ if ferramenta:
                                 arquivo.name
                             )
 
+
                             st.success(
-                                f"✅ {arquivo.name} foi carregado."
+                                f"✅ {arquivo.name} "
+                                "foi carregado para a Alex."
                             )
+
+
+                            with st.expander(
+                                "👁️ Ver conteúdo"
+                            ):
+
+                                st.code(
+                                    texto[:10000],
+                                    language="text"
+                                )
+
+
+                # ====================================================
+                # 📄 PDF / DOCX
+                # ====================================================
+
+                elif nome.endswith((
+                    ".pdf",
+                    ".doc",
+                    ".docx",
+                    ".rtf"
+                )):
+
+                    if st.button(
+                        f"📖 Ler {arquivo.name}",
+                        key=(
+                            f"ler_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        )
+                    ):
+
+                        texto, erro = (
+                            ler_arquivo(arquivo)
+                        )
+
+
+                        if erro:
+
+                            st.error(
+                                erro
+                            )
+
+                        else:
+
+                            st.session_state.arquivo_contexto = (
+                                texto[:50000]
+                            )
+
+                            st.session_state.arquivo_nome = (
+                                arquivo.name
+                            )
+
+
+                            st.success(
+                                f"✅ {arquivo.name} "
+                                "foi carregado para a Alex."
+                            )
+
 
                             with st.expander(
                                 "👁️ Ver conteúdo"
@@ -1115,6 +1224,21 @@ if ferramenta:
                                 st.text(
                                     texto[:10000]
                                 )
+
+
+                # ====================================================
+                # 📦 ZIP
+                # ====================================================
+
+                elif nome.endswith(
+                    ".zip"
+                ):
+
+                    st.info(
+                        "📦 ZIP recebido. "
+                        "A leitura interna do ZIP "
+                        "será adicionada em uma próxima etapa."
+                    )
 
 
     # ========================================================
