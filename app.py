@@ -1718,6 +1718,11 @@ if pergunta:
         )
     )
 
+
+    # ========================================================
+    # 📎 ARQUIVO ANEXADO
+    # ========================================================
+
     arquivo_contexto = st.session_state.get(
         "arquivo_contexto",
         ""
@@ -1728,10 +1733,12 @@ if pergunta:
         ""
     )
 
+
     if arquivo_contexto:
 
         contexto_arquivo = (
-            f"\n\n📎 ARQUIVO ANEXADO\n"
+            "\n\n"
+            "📎 ARQUIVO ANEXADO\n"
             f"Nome: {arquivo_nome}\n\n"
             "CONTEÚDO DO ARQUIVO:\n"
             f"{arquivo_contexto}\n"
@@ -1742,13 +1749,30 @@ if pergunta:
 
         contexto_arquivo = ""
 
+
+    # ========================================================
+    # 🧠 INSTRUÇÃO PARA A ALEX
+    # ========================================================
+
     instrucao = (
         f"{SYSTEM_PROMPT}\n\n"
+
         "Responda sempre em português do Brasil.\n\n"
-        f"Histórico:\n{contexto}\n"
+
+        f"Histórico da conversa:\n"
+        f"{contexto}\n\n"
+
         f"{contexto_arquivo}\n\n"
-        f"Pergunta:\n{pergunta}"
+
+        "IMPORTANTE: se houver um arquivo anexado "
+        "acima, analise o conteúdo real dele. "
+        "Não diga que o arquivo não foi enviado "
+        "se o conteúdo estiver presente no contexto.\n\n"
+
+        f"Pergunta do usuário:\n"
+        f"{pergunta}"
     )
+
 
     # ========================================================
     # ✨ GEMINI — RESPOSTA
