@@ -1941,7 +1941,6 @@ if pergunta:
     # ========================================================
     # 📚 CONTEXTO
     # ========================================================
-
     contexto = "\n".join(
 
         f"{m['role']}: {m['content']}"
@@ -1969,9 +1968,55 @@ if pergunta:
 
 
     # ========================================================
+    # 👁️ PREPARAR VISÃO DA ALEX
+    # ========================================================
+    conteudo_gemini = [
+        instrucao
+    ]
+
+
+    if st.session_state.get(
+        "imagem_contexto"
+    ):
+
+        try:
+
+            from google.genai import types
+
+
+            imagem_bytes = (
+                st.session_state.imagem_contexto
+            )
+
+            imagem_mime = (
+                st.session_state.get(
+                    "imagem_mime"
+                )
+                or "image/jpeg"
+            )
+
+
+            conteudo_gemini.append(
+                types.Part.from_bytes(
+                    data=imagem_bytes,
+                    mime_type=imagem_mime
+                )
+            )
+
+
+        except Exception as erro_imagem:
+
+            st.error(
+                "❌ Não foi possível preparar "
+                f"a imagem para o Gemini: {erro_imagem}"
+            )
+
+            st.stop()
+
+
+    # ========================================================
     # ✨ GEMINI — RESPOSTA
     # ========================================================
-
     try:
 
         with st.spinner(
@@ -1983,7 +2028,7 @@ if pergunta:
 
                     model=GEMINI_MODEL,
 
-                    contents=instrucao
+                    contents=conteudo_gemini
                 )
             )
 
@@ -2002,7 +2047,6 @@ if pergunta:
         # ====================================================
         # ✨ MOSTRAR RESPOSTA DA ALEX
         # ====================================================
-
         with st.chat_message(
             "assistant",
             avatar="✨"
@@ -2027,7 +2071,6 @@ if pergunta:
             # ================================================
             # 🔊 VOZ AUTOMÁTICA
             # ================================================
-
             if st.session_state.usar_voz:
 
                 with st.spinner(
@@ -2057,12 +2100,13 @@ if pergunta:
             # ================================================
             # 🔊 BOTÃO PARA OUVIR NOVAMENTE
             # ================================================
-
             audio_key = (
                 "audio_resposta_atual_"
-                + str(len(
-                    st.session_state.mensagens
-                ))
+                + str(
+                    len(
+                        st.session_state.mensagens
+                    )
+                )
             )
 
 
@@ -2098,7 +2142,6 @@ if pergunta:
         # ====================================================
         # 💾 SALVAR RESPOSTA
         # ====================================================
-
         st.session_state.mensagens.append({
 
             "role":
@@ -2114,4 +2157,4 @@ if pergunta:
         st.error(
             "❌ Erro ao conversar com o Gemini: "
             f"{erro}"
-    )
+            )
