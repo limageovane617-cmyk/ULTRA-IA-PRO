@@ -982,7 +982,6 @@ if ferramenta:
             "códigos ou outros arquivos."
         )
 
-
         arquivos_enviados = st.file_uploader(
 
             "📤 Escolher arquivos",
@@ -1046,7 +1045,6 @@ if ferramenta:
                 # ====================================================
                 # 🖼️ IMAGEM
                 # ====================================================
-
                 if nome.endswith((
                     ".png",
                     ".jpg",
@@ -1067,7 +1065,6 @@ if ferramenta:
                 # ====================================================
                 # 🎬 VÍDEO
                 # ====================================================
-
                 elif nome.endswith((
                     ".mp4",
                     ".mov",
@@ -1084,7 +1081,6 @@ if ferramenta:
                 # ====================================================
                 # 🎵 ÁUDIO
                 # ====================================================
-
                 elif nome.endswith((
                     ".mp3",
                     ".wav",
@@ -1102,7 +1098,6 @@ if ferramenta:
                 # ====================================================
                 # 📖 ARQUIVOS DE TEXTO / CÓDIGO
                 # ====================================================
-
                 elif nome.endswith((
                     ".txt",
                     ".py",
@@ -1152,7 +1147,6 @@ if ferramenta:
                                 arquivo.name
                             )
 
-
                             st.success(
                                 f"✅ {arquivo.name} "
                                 "foi carregado para a Alex."
@@ -1170,9 +1164,8 @@ if ferramenta:
 
 
                 # ====================================================
-                # 📄 PDF / DOCX
+                # 📄 PDF / DOCX / RTF
                 # ====================================================
-
                 elif nome.endswith((
                     ".pdf",
                     ".doc",
@@ -1210,7 +1203,6 @@ if ferramenta:
                                 arquivo.name
                             )
 
-
                             st.success(
                                 f"✅ {arquivo.name} "
                                 "foi carregado para a Alex."
@@ -1227,20 +1219,91 @@ if ferramenta:
 
 
                 # ====================================================
-                # 📦 ZIP
+                # 📦 ZIP INTELIGENTE
                 # ====================================================
-
                 elif nome.endswith(
                     ".zip"
                 ):
 
-                    st.info(
-                        "📦 ZIP recebido. "
-                        "A leitura interna do ZIP "
-                        "será adicionada em uma próxima etapa."
+                    st.markdown(
+                        "### 📦 Arquivo ZIP"
+                    )
+
+                    st.caption(
+                        "A Alex pode analisar os arquivos "
+                        "internos do ZIP sem modificar o "
+                        "arquivo original."
                     )
 
 
+                    if st.button(
+                        f"🔓 Analisar ZIP — {arquivo.name}",
+                        key=(
+                            f"analisar_zip_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        ),
+                        type="primary"
+                    ):
+
+                        with st.spinner(
+                            "📦 Abrindo e analisando o ZIP..."
+                        ):
+
+                            texto, erro = (
+                                ler_arquivo(arquivo)
+                            )
+
+
+                        if erro:
+
+                            st.error(
+                                f"❌ Não foi possível analisar "
+                                f"o ZIP: {erro}"
+                            )
+
+                        else:
+
+                            # ----------------------------------------
+                            # 🧠 SALVAR NO CONTEXTO DA ALEX
+                            # ----------------------------------------
+
+                            st.session_state.arquivo_contexto = (
+                                texto[:50000]
+                            )
+
+                            st.session_state.arquivo_nome = (
+                                arquivo.name
+                            )
+
+
+                            st.success(
+                                f"✅ {arquivo.name} "
+                                "foi analisado e carregado "
+                                "para a Alex."
+                            )
+
+
+                            # ----------------------------------------
+                            # 👁️ MOSTRAR RESULTADO
+                            # ----------------------------------------
+
+                            with st.expander(
+                                "👁️ Ver análise interna do ZIP",
+                                expanded=True
+                            ):
+
+                                st.text(
+                                    texto[:20000]
+                                )
+
+
+                            st.info(
+                                "🤖 Agora você pode perguntar "
+                                "à Alex sobre os arquivos e "
+                                "conteúdos encontrados dentro "
+                                "deste ZIP."
+                )
     # ========================================================
     # 🎭 PERSONAGEM
     # ========================================================
