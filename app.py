@@ -969,58 +969,389 @@ if ferramenta:
 
 
     # ========================================================
-    # 📎 ARQUIVO
+    # 📎 CENTRAL DE ARQUIVOS
     # ========================================================
-
     elif ferramenta == "arquivo":
 
-        arquivo = st.file_uploader(
+        st.markdown(
+            "### 📎 Central de Arquivos"
+        )
 
-            "📎 Enviar arquivo",
+        st.caption(
+            "Envie imagens, documentos, áudios, vídeos, "
+            "códigos ou outros arquivos."
+        )
+
+        arquivos_enviados = st.file_uploader(
+
+            "📤 Escolher arquivos",
 
             type=[
-                "pdf",
-                "txt",
-                "docx"
+                # 🖼️ Imagens
+                "png", "jpg", "jpeg", "webp",
+                "gif", "bmp", "tiff",
+
+                # 📄 Documentos
+                "pdf", "txt", "doc", "docx",
+                "rtf",
+
+                # 📊 Dados
+                "csv", "json", "xml", "md",
+                "xls", "xlsx",
+
+                # 🎵 Áudio
+                "mp3", "wav", "ogg", "m4a",
+                "flac", "aac",
+
+                # 🎬 Vídeo
+                "mp4", "mov", "avi", "mkv",
+                "webm",
+
+                # 💻 Código
+                "py", "js", "ts", "html",
+                "css", "java", "cpp", "c",
+                "h", "sql", "sh",
+
+                # 📦 Compactado
+                "zip"
             ],
 
-            key="tool_arquivo_upload"
+            accept_multiple_files=True,
+
+            key="central_arquivos_upload"
         )
 
 
-        if arquivo:
+        if arquivos_enviados:
 
-            if st.button(
-                "📥 Ler arquivo",
-                key="ler_arquivo"
-            ):
+            st.success(
+                f"📁 {len(arquivos_enviados)} "
+                "arquivo(s) selecionado(s)."
+            )
 
-                texto, erro = ler_arquivo(
-                    arquivo
+
+            for arquivo in arquivos_enviados:
+
+                st.markdown(
+                    f"**📄 {arquivo.name}**  \n"
+                    f"Tamanho: "
+                    f"{arquivo.size / 1024:.1f} KB"
                 )
 
 
-                if erro:
+                nome = arquivo.name.lower()
 
-                    st.error(
-                        erro
+
+                # ====================================================
+                # 🖼️ IMAGEM — PREPARAÇÃO PARA VISÃO DA ALEX
+                # ====================================================
+                if nome.endswith((
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                    ".webp",
+                    ".gif",
+                    ".bmp",
+                    ".tiff"
+                )):
+
+                    st.image(
+                        arquivo,
+                        caption=arquivo.name,
+                        use_container_width=True
                     )
 
-                else:
 
-                    st.session_state.arquivo_contexto = (
-                        texto[:50000]
+                    if st.button(
+                        f"👁️ Carregar imagem para a Alex — "
+                        f"{arquivo.name}",
+                        key=(
+                            f"visao_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        ),
+                        type="primary"
+                    ):
+
+                        try:
+
+                            imagem_bytes = (
+                                arquivo.getvalue()
+                            )
+
+                            mime = (
+                                arquivo.type
+                                or "image/jpeg"
+                            )
+
+
+                            st.session_state.imagem_contexto = (
+                                imagem_bytes
+                            )
+
+                            st.session_state.imagem_nome = (
+                                arquivo.name
+                            )
+
+                            st.session_state.imagem_mime = (
+                                mime
+                            )
+
+
+                            st.success(
+                                f"👁️ {arquivo.name} "
+                                "foi carregada para a visão "
+                                "da Alex."
+                            )
+
+                            st.info(
+                                "🤖 Agora você pode perguntar "
+                                "à Alex sobre esta imagem."
+                            )
+
+
+                        except Exception as erro:
+
+                            st.error(
+                                "❌ Não foi possível carregar "
+                                f"a imagem: {erro}"
+                            )
+
+
+                # ====================================================
+                # 🎬 VÍDEO
+                # ====================================================
+                elif nome.endswith((
+                    ".mp4",
+                    ".mov",
+                    ".avi",
+                    ".mkv",
+                    ".webm"
+                )):
+
+                    st.video(
+                        arquivo
                     )
 
-                    st.session_state.arquivo_nome = (
-                        arquivo.name
+
+                # ====================================================
+                # 🎵 ÁUDIO
+                # ====================================================
+                elif nome.endswith((
+                    ".mp3",
+                    ".wav",
+                    ".ogg",
+                    ".m4a",
+                    ".flac",
+                    ".aac"
+                )):
+
+                    st.audio(
+                        arquivo
                     )
 
 
-                    st.success(
-                        "✅ Arquivo carregado."
+                # ====================================================
+                # 📖 ARQUIVOS DE TEXTO / CÓDIGO
+                # ====================================================
+                elif nome.endswith((
+                    ".txt",
+                    ".py",
+                    ".js",
+                    ".ts",
+                    ".html",
+                    ".css",
+                    ".java",
+                    ".cpp",
+                    ".c",
+                    ".h",
+                    ".sql",
+                    ".sh",
+                    ".json",
+                    ".xml",
+                    ".md",
+                    ".csv"
+                )):
+
+                    if st.button(
+                        f"📖 Ler {arquivo.name}",
+                        key=(
+                            f"ler_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        )
+                    ):
+
+                        texto, erro = (
+                            ler_arquivo(arquivo)
+                        )
+
+
+                        if erro:
+
+                            st.error(
+                                erro
+                            )
+
+                        else:
+
+                            st.session_state.arquivo_contexto = (
+                                texto[:50000]
+                            )
+
+                            st.session_state.arquivo_nome = (
+                                arquivo.name
+                            )
+
+                            st.success(
+                                f"✅ {arquivo.name} "
+                                "foi carregado para a Alex."
+                            )
+
+
+                            with st.expander(
+                                "👁️ Ver conteúdo"
+                            ):
+
+                                st.code(
+                                    texto[:10000],
+                                    language="text"
+                                )
+
+
+                # ====================================================
+                # 📄 PDF / DOCX / RTF
+                # ====================================================
+                elif nome.endswith((
+                    ".pdf",
+                    ".doc",
+                    ".docx",
+                    ".rtf"
+                )):
+
+                    if st.button(
+                        f"📖 Ler {arquivo.name}",
+                        key=(
+                            f"ler_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        )
+                    ):
+
+                        texto, erro = (
+                            ler_arquivo(arquivo)
+                        )
+
+
+                        if erro:
+
+                            st.error(
+                                erro
+                            )
+
+                        else:
+
+                            st.session_state.arquivo_contexto = (
+                                texto[:50000]
+                            )
+
+                            st.session_state.arquivo_nome = (
+                                arquivo.name
+                            )
+
+                            st.success(
+                                f"✅ {arquivo.name} "
+                                "foi carregado para a Alex."
+                            )
+
+
+                            with st.expander(
+                                "👁️ Ver conteúdo"
+                            ):
+
+                                st.text(
+                                    texto[:10000]
+                                )
+
+
+                # ====================================================
+                # 📦 ZIP INTELIGENTE
+                # ====================================================
+                elif nome.endswith(
+                    ".zip"
+                ):
+
+                    st.markdown(
+                        "### 📦 Arquivo ZIP"
                     )
 
+                    st.caption(
+                        "A Alex pode analisar os arquivos "
+                        "internos do ZIP sem modificar o "
+                        "arquivo original."
+                    )
+
+
+                    if st.button(
+                        f"🔓 Analisar ZIP — {arquivo.name}",
+                        key=(
+                            f"analisar_zip_"
+                            f"{arquivo.name}_"
+                            f"{arquivo.size}"
+                        ),
+                        type="primary"
+                    ):
+
+                        with st.spinner(
+                            "📦 Abrindo e analisando o ZIP..."
+                        ):
+
+                            texto, erro = (
+                                ler_arquivo(arquivo)
+                            )
+
+
+                        if erro:
+
+                            st.error(
+                                f"❌ Não foi possível analisar "
+                                f"o ZIP: {erro}"
+                            )
+
+                        else:
+
+                            st.session_state.arquivo_contexto = (
+                                texto[:50000]
+                            )
+
+                            st.session_state.arquivo_nome = (
+                                arquivo.name
+                            )
+
+
+                            st.success(
+                                f"✅ {arquivo.name} "
+                                "foi analisado e carregado "
+                                "para a Alex."
+                            )
+
+
+                            with st.expander(
+                                "👁️ Ver análise interna do ZIP",
+                                expanded=True
+                            ):
+
+                                st.text(
+                                    texto[:20000]
+                                )
+
+
+                            st.info(
+                                "🤖 Agora você pode perguntar "
+                                "à Alex sobre os arquivos e "
+                                "conteúdos encontrados dentro "
+                                "deste ZIP."
+                            )
 
     # ========================================================
     # 🎭 PERSONAGEM
