@@ -1718,18 +1718,37 @@ if pergunta:
         )
     )
 
-
-    instrucao = (
-
-        f"{SYSTEM_PROMPT}\n\n"
-
-        "Responda sempre em português do Brasil.\n\n"
-
-        f"Histórico:\n{contexto}\n\n"
-
-        f"Pergunta:\n{pergunta}"
+    arquivo_contexto = st.session_state.get(
+        "arquivo_contexto",
+        ""
     )
 
+    arquivo_nome = st.session_state.get(
+        "arquivo_nome",
+        ""
+    )
+
+    if arquivo_contexto:
+
+        contexto_arquivo = (
+            f"\n\n📎 ARQUIVO ANEXADO\n"
+            f"Nome: {arquivo_nome}\n\n"
+            "CONTEÚDO DO ARQUIVO:\n"
+            f"{arquivo_contexto}\n"
+            "FIM DO ARQUIVO\n"
+        )
+
+    else:
+
+        contexto_arquivo = ""
+
+    instrucao = (
+        f"{SYSTEM_PROMPT}\n\n"
+        "Responda sempre em português do Brasil.\n\n"
+        f"Histórico:\n{contexto}\n"
+        f"{contexto_arquivo}\n\n"
+        f"Pergunta:\n{pergunta}"
+    )
 
     # ========================================================
     # ✨ GEMINI — RESPOSTA
