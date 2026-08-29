@@ -139,58 +139,40 @@ if cliente is None:
 
 
 # ============================================================
-# 🖼️ FUNDO
+# 🖼️ FUNDO DA ALEX IA ULTRA
 # ============================================================
 
-def imagem_fundo_css():
-
-    caminho = Path(__file__).with_name(
-        "fundo_chat.jpg"
-    )
-
-    if not caminho.exists():
-        return ""
-
-    try:
-
-        dados = base64.b64encode(
-            caminho.read_bytes()
-        ).decode("utf-8")
-
-        return (
-            "background-image:url("
-            "data:image/jpeg;base64,"
-            f"{dados});"
-        )
-
-    except Exception:
-
-        return ""
-
-
+FUNDO_URL = (
+    "https://i.supaimg.com/"
+    "c4e94ec5-263e-44e5-b119-dca8baa8acad/"
+    "9865081d-da93-4f67-a58d-f304f9feb1cb.jpg"
+)
 # ============================================================
 # 🎨 CSS
 # ============================================================
 
-st.markdown(
-    f"""
-    <style>
+.stApp {{
+    background-image: url("{FUNDO_URL}") !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    min-height: 100vh !important;
+}}
 
-    .stApp {{
-        {imagem_fundo_css()}
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }}
+.stApp::before {{
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(2,8,16,.35);
+    z-index: 0;
+    pointer-events: none;
+}}
 
-    .stApp::before {{
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: rgba(2,8,16,.68);
-        z-index: -1;
-        pointer-events: none;
-    }}
+.stApp > div {{
+    position: relative;
+    z-index: 1;
+}}
 
     .main .block-container {{
         max-width: 980px;
