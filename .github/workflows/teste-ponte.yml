@@ -28,3 +28,9 @@ jobs:
           PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
         run: |
           python teste_ponte_alex.py
+
+      - name: Verificar importacao da Ponte no app
+        env:
+          PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
+        run: |
+          python -c "import app; print('IMPORTACAO DO APP COM A PONTE: OK')"
