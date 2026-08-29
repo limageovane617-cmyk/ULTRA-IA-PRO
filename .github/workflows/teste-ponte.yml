@@ -16,6 +16,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Testar cliente da Ponte Alex v2
         env:
           PONTE_API_SECRET: ${{ secrets.PONTE_API_SECRET }}
@@ -25,12 +30,14 @@ jobs:
 
       - name: Testar camada de integracao da Ponte
         env:
+          PONTE_API_SECRET: ${{ secrets.PONTE_API_SECRET }}
           PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
         run: |
           python teste_ponte_alex.py
 
       - name: Verificar importacao da Ponte no app
         env:
+          PONTE_API_SECRET: ${{ secrets.PONTE_API_SECRET }}
           PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
         run: |
           python -c "import app; print('IMPORTACAO DO APP COM A PONTE: OK')"
