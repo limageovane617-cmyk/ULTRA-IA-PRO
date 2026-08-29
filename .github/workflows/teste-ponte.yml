@@ -22,3 +22,9 @@ jobs:
           PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
         run: |
           python teste_cliente_ponte.py
+
+      - name: Testar camada de integracao da Ponte
+        env:
+          PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
+        run: |
+          python teste_ponte_alex.py
