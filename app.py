@@ -13,6 +13,12 @@ from pathlib import Path
 
 import streamlit as st
 
+from ponte_alex import (
+    verificar_ponte,
+    ponte_disponivel,
+    obter_status_ponte,
+)
+
 
 # ============================================================
 # ⚙️ CONFIGURAÇÃO
