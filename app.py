@@ -1845,14 +1845,14 @@ if pergunta:
                     )
 
 
-                    st.success(
-                        "🎬 Vídeo gerado com "
-                        f"{resultado.get(
-                            'motor',
-                            'motor automático'
-                        )}"
+                    motor_video = resultado.get(
+                      "motor",
+                      "motor automatico"
                     )
 
+                    st.success(
+                       f"🎬 Video gerado com {motor_video}"
+                    )
 
                     st.video(
                         caminho
