@@ -135,7 +135,7 @@ if cliente is None:
         "❌ Não foi possível criar a conexão com o Gemini."
     )
 
-    st.stop()
+st.stop()
 
 
 # ============================================================
