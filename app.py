@@ -139,6 +139,7 @@ if cliente is None:
 
 
 # ============================================================
+# ============================================================
 # 🖼️ FUNDO DA ALEX IA ULTRA
 # ============================================================
 
@@ -147,10 +148,12 @@ FUNDO_URL = (
     "c4e94ec5-263e-44e5-b119-dca8baa8acad/"
     "9865081d-da93-4f67-a58d-f304f9feb1cb.jpg"
 )
+
 # ============================================================
 # 🎨 CSS
 # ============================================================
 
+CSS = f"""
 .stApp {{
     background-image: url("{FUNDO_URL}") !important;
     background-size: cover !important;
@@ -174,16 +177,15 @@ FUNDO_URL = (
     z-index: 1;
 }}
 
-    .main .block-container {{
-        max-width: 980px;
-        padding-top: 1.2rem;
-        padding-bottom: 8rem;
-    }}
+.main .block-container {{
+    max-width: 980px;
+    padding-top: 1.2rem;
+    padding-bottom: 8rem;
+}}
 
-
-    /* ========================================================
-       ➕ BOTÃO DE FERRAMENTAS
-       ======================================================== */
+/* ========================================================
+   ➕ BOTÃO DE FERRAMENTAS
+   ======================================================== */
 
     div[data-testid="stElementContainer"]:has(
         div[data-testid="stPopover"]
