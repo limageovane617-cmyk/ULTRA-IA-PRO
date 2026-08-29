@@ -1,0 +1,24 @@
+name: Testar Ponte Alex v2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  teste-ponte:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Testar cliente da Ponte Alex v2
+        env:
+          PONTE_API_SECRET: ${{ secrets.PONTE_API_SECRET }}
+          PONTE_API_URL: https://ponte-alex-v2.dockhosting.dev
+        run: |
+          python teste_cliente_ponte.py
