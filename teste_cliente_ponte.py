@@ -32,7 +32,7 @@ def executar_teste_automatizado():
     print("âœ… 1. VerificaÃ§Ã£o de Ambiente: PONTE_API_SECRET configurado com sucesso (protegido).")
 
     # 2. Configura a URL base (usa local se estiver dentro do ambiente ou a URL configurada)
-    url_teste = os.environ.get("PONTE_API_URL") or "http://localhost:3000"
+    url_teste = os.environ.get("PONTE_API_URL") or "https://ponte-alex-v2.dockhosting.dev"
     print(f"ðŸ“¡ 2. Conectando Ã  Ponte Alex v2 em: {url_teste}")
 
     cliente = ClientePonteAlex(base_url=url_teste)
