@@ -965,14 +965,183 @@ if ferramenta:
 
     elif ferramenta == "codigo":
 
-        st.selectbox(
+    st.markdown(
+        "### 💻 Código"
+    )
 
-            "Linguagem",
+    linguagem = st.selectbox(
+        "Linguagem",
+        listar_linguagens(),
+        key="tool_linguagem_codigo"
+    )
 
-            listar_linguagens(),
+    codigo_entrada = st.text_area(
+        "📝 Digite ou cole o código",
+        height=300,
+        key="ponte_codigo_entrada",
+        placeholder="Cole aqui o código que você quer processar..."
+    )
 
-            key="tool_linguagem_codigo"
-        )
+    instrucao_ponte = st.text_area(
+        "🔧 O que a Ponte deve fazer?",
+        height=100,
+        key="ponte_instrucao_codigo",
+        placeholder="Exemplo: corrigir o código, melhorar a função, adicionar tratamento de erros..."
+    )
+
+    st.caption(
+        "🌉 O código será enviado para a Ponte Alex v2 "
+        "somente quando você clicar no botão abaixo."
+    )
+
+    if st.button(
+        "🌉 Processar com a Ponte Alex",
+        type="primary",
+        use_container_width=True,
+        key="processar_codigo_ponte"
+    ):
+
+        if not codigo_entrada.strip():
+
+            st.warning(
+                "⚠️ Digite ou cole algum código primeiro."
+            )
+
+            st.stop()
+
+        if not instrucao_ponte.strip():
+
+            st.warning(
+                "⚠️ Informe o que você quer que a Ponte faça."
+            )
+
+            st.stop()
+
+        if linguagem.lower() not in (
+            "python",
+            "python 3",
+            "py"
+        ):
+
+            st.info(
+                "🌉 A integração inicial da Ponte "
+                "está preparada para código Python."
+            )
+
+            st.stop()
+
+        try:
+
+            with st.spinner(
+                "🌉 Enviando código para a Ponte Alex v2..."
+            ):
+
+                resultado_ponte = verificar_ponte()
+
+            if not resultado_ponte:
+
+                st.error(
+                    "❌ A Ponte Alex v2 não está disponível."
+                )
+
+                st.stop()
+
+            with st.spinner(
+                "⚙️ A Ponte está processando o código..."
+            ):
+
+                from ponte_alex import ClientePonteAlex
+
+                cliente_ponte = ClientePonteAlex()
+
+                resultado = cliente_ponte.processar_codigo(
+                    conteudo_codigo=codigo_entrada,
+                    instrucao=instrucao_ponte,
+                    nome_arquivo="codigo_alex.py"
+                )
+
+            st.success(
+                "🌉 Código processado pela Ponte Alex v2!"
+            )
+
+            st.markdown(
+                "### 📄 Resultado"
+            )
+
+            if resultado.get("arquivo_salvo"):
+
+                caminho_resultado = (
+                    resultado["arquivo_salvo"]
+                )
+
+                if os.path.exists(
+                    caminho_resultado
+                ):
+
+                    conteudo_resultado = Path(
+                        caminho_resultado
+                    ).read_text(
+                        encoding="utf-8",
+                        errors="replace"
+                    )
+
+                    st.code(
+                        conteudo_resultado,
+                        language="python"
+                    )
+
+            if resultado.get("test_passed"):
+
+                st.success(
+                    "✅ Execução Python aprovada pela Ponte."
+                )
+
+            else:
+
+                st.warning(
+                    "⚠️ O processamento foi concluído, "
+                    "mas o teste de execução não foi aprovado."
+                )
+
+            execucao = resultado.get(
+                "execucao",
+                {}
+            )
+
+            stdout = execucao.get(
+                "stdout",
+                ""
+            )
+
+            if stdout:
+
+                st.markdown(
+                    "### 🖥️ Saída da execução"
+                )
+
+                st.code(
+                    stdout
+                )
+
+        except ErroPonteAlex as erro:
+
+            st.error(
+                "❌ Erro na Ponte Alex v2."
+            )
+
+            st.code(
+                str(erro)
+            )
+
+        except Exception as erro:
+
+            st.error(
+                "❌ Erro ao processar o código."
+            )
+
+            st.code(
+                str(erro)
+                )
 
 
     # ========================================================
