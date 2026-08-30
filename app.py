@@ -211,8 +211,8 @@ CSS = f"""
 
         border-radius: 100% !important;
 
-        border: 1px solid
-            rgba(255, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 0, 0, 1) !important;
+
 
         background-color:
             rgba(15, 23, 42, 0.85) !important;
