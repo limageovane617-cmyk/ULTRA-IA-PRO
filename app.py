@@ -156,7 +156,7 @@ CSS = f"""
 <style>
 .stApp {{
     background-image: url("{FUNDO_URL}") !important;
-    background-size: 200% 200% !important;
+    background-size: 100% 100% !important;
     background-position: center center !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
