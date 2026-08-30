@@ -189,9 +189,9 @@ CSS = f"""
 
         position: fixed !important;
 
-        bottom: 100px !important;/* Alinha com a altura da barra de chat */
+        bottom: 100px /* Alinha com a altura da barra de chat */!important;
 
-        left: 100px !important;/* Afasta um pouco da borda esquerda */
+        left: 100px /* Afasta um pouco da borda esquerda */!important;
 
         width: auto !important;
 
