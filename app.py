@@ -233,9 +233,9 @@ CSS = f"""
 
     .tool-panel {{
 
-        margin: 0 auto .65rem;
+        margin: 0 auto 40rem;
 
-        padding: .40rem;
+        padding: .75rem;
 
         border-radius: 100px;
 
