@@ -503,7 +503,7 @@ for indice, mensagem in enumerate(
 with st.popover("＋"):
 
     st.markdown(
-        "### 🧰 Ferramentas da Ultra"
+        "### ☢️ Ferramentas"
     )
 
 
