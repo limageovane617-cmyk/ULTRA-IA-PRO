@@ -239,7 +239,7 @@ CSS = f"""
 
         border-radius: 100px;
 
-        background: rgba(0,0,0,.50);
+        background: rgba(255,0,0,.0);
 
         border: 1px solid
             rgba(130,210,255,.16);
