@@ -241,9 +241,10 @@ CSS = f"""
 
         border: 1px solid transparent !important;
 
+        border: 1px solid rgba(255, 0, 0, 0) !important;
 
-        border: 1px solid
-            rgba(130,210,255,.16);
+
+        
     }}
 
 
