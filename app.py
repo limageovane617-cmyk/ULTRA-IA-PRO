@@ -295,7 +295,7 @@ CSS = f"""
         background: rgba(0,0,0,0.100);
         color: white;
         padding: 12px 16px;
-        border-radius: 100px 100px 100px 5px;
+        border-radius: 100px 100px 100px 20px;
         font-size: 16px;
         line-height: 1.45;
         word-wrap: break-word;
