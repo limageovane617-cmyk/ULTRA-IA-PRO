@@ -191,7 +191,7 @@ CSS = f"""
 
         bottom: 14px !important;/* Alinha com a altura da barra de chat */
 
-        left: 1px !important;
+        left: 12px !important;/* Afasta um pouco da borda esquerda */
 
         width: auto !important;
 
