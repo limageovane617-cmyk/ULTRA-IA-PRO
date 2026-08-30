@@ -277,7 +277,7 @@ CSS = f"""
         background: rgba(40,110,180,0.90);
         color: white;
         padding: 11px 15px;
-        border-radius: 20px 20px 5px 20px;
+        border-radius: 100px 100px 5px 100px;
         font-size: 16px;
         line-height: 1.45;
         word-break: break-word;
