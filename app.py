@@ -2273,7 +2273,7 @@ if pergunta:
 
 
             if st.button(
-                "🔊 Ouvir",
+                "🔊",
                 key=audio_key
             ):
 
