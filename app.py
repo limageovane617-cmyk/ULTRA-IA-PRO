@@ -182,50 +182,29 @@ CSS = f"""
    ➕ BOTÃO DE FERRAMENTAS
    ========================================================
 
-    div[data-testid="stElementContainer"]:has(
-        div[data-testid="stPopover"]
-    ),
-    div[data-testid="stPopover"] {{
+div[data-testid="stElementContainer"]:has(
+    div[data-testid="stPopover"]
+),
+div[data-testid="stPopover"] {
+    position: fixed !important;
+    bottom: 80px !important; /* Ajustado para ficar próximo ao input */
+    left: 100px !important; 
+    width: auto !important;
+    z-index: 99999 !important;
+}
 
-        position: fixed !important;
-
-        bottom: 80px /* Alinha com a altura da barra de chat */!important;
-
-        left: 100px /* Afasta um pouco da borda esquerda */!important;
-
-        width: auto !important;
-
-        z-index: 99999 !important;
-    }}
-
-
-    div[data-testid="stPopover"] > button {{
-
-        padding: 0 !important;
-
-        min-width: 38px !important;
-
-        width: 38px !important;
-
-        height: 38px !important;
-
-        border-radius: 100% !important;
-
-        border: 1px solid
-            rgba(255, 0, 0, 0.3) !important;
-
-        background-color: rgba(15, 23, 42, 0) !important;
-
-
-        Hexadecimal: #ff0000
-
-        display: flex !important;
-
-        align-items: center !important;
-
-        justify-content: center !important;
-    }}
-
+div[data-testid="stPopover"] > button {
+    padding: 0 !important;
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 100% !important;
+    border: 1px solid rgba(255, 0, 0, 0.3) !important;
+    background-color: rgba(15, 23, 42, 0) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
 
     /* ========================================================
        🧰 PAINEL DE FERRAMENTAS
