@@ -325,7 +325,10 @@ CSS = f"""
     }}
 
     </style>
-    """,
+"""
+
+st.markdown(
+    CSS,
     unsafe_allow_html=True
 )
 
