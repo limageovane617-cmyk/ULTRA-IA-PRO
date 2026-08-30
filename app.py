@@ -214,8 +214,8 @@ CSS = f"""
         border: 1px solid
             rgba(255, 0, 0, 0.3) !important;
 
-        background-color:
-            rgba(15, 23, 42, 0.85) !important;
+        background-color: rgba(15, 23, 42, 0) !important;
+
 
         Hexadecimal: #ff0000
 
