@@ -189,9 +189,9 @@ CSS = f"""
 
         position: fixed !important;
 
-        bottom: 55px !important;
+        bottom: 1px !important;
 
-        left: 5px !important;
+        left: 1px !important;
 
         width: auto !important;
 
@@ -203,11 +203,11 @@ CSS = f"""
 
         padding: 0 !important;
 
-        min-width: 30px !important;
+        min-width: 1px !important;
 
-        width: 30px !important;
+        width: 1px !important;
 
-        height: 30px !important;
+        height: 1px !important;
 
         border-radius: 100% !important;
 
@@ -233,7 +233,7 @@ CSS = f"""
 
     .tool-panel {{
 
-        margin: 0 auto 40rem;
+        margin: 0 auto .60rem;
 
         padding: .75rem;
 
