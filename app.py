@@ -274,7 +274,7 @@ CSS = f"""
        ======================================================== */
 
     .user-message {{
-        background: rgba(0,0,0,0.90);
+        background: rgba(0,0,0,0.60);
         color: white;
         padding: 11px 15px;
         border-radius: 100px 100px 15px 100px;
@@ -292,7 +292,7 @@ CSS = f"""
        ======================================================== */
 
     .assistant-message {{
-        background: rgba(0,0,0,0.50);
+        background: rgba(0,0,0,0.90);
         color: white;
         padding: 12px 16px;
         border-radius: 100px 100px 100px 5px;
