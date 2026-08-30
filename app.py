@@ -153,6 +153,7 @@ FUNDO_URL = (
 # ============================================================
 
 CSS = f"""
+<style>
 .stApp {{
     background-image: url("{FUNDO_URL}") !important;
     background-size: cover !important;
