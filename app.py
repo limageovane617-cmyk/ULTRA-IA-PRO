@@ -522,8 +522,6 @@ with st.popover("＋"):
         ("personagem", "🎭 Personagem"),
 
         ("memoria", "🧠 Memória"),
-        
-        ("te amo ❤" , " meu amor"), 
 
     ]
 
