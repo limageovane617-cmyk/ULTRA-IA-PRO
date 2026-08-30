@@ -189,7 +189,7 @@ CSS = f"""
 
         position: fixed !important;
 
-        bottom: 14px !important;
+        bottom: 50px !important;
 
         left: 1px !important;
 
