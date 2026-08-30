@@ -217,7 +217,7 @@ CSS = f"""
         background-color:
             rgba(15, 23, 42, 0.85) !important;
 
-        color: #ff0000 !important;
+        Hexadecimal: #ff0000
 
         display: flex !important;
 
