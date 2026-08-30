@@ -1779,6 +1779,7 @@ if pergunta:
         "faz imagem",
         "fazer imagem",
         "faça imagem",
+        "gera uma imagem ",
     )
 
 
@@ -1922,6 +1923,7 @@ if pergunta:
 
             "video:",
             "vídeo:",
+            "gera um video",
         )
 
 
