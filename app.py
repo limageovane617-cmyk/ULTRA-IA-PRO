@@ -189,7 +189,7 @@ CSS = f"""
 
         position: fixed !important;
 
-        bottom: 30px !important;
+        bottom: 55px !important;
 
         left: 5px !important;
 
@@ -203,11 +203,11 @@ CSS = f"""
 
         padding: 0 !important;
 
-        min-width: 30px !important;
+        min-width: 15px !important;
 
-        width: 30px !important;
+        width: 15px !important;
 
-        height: 30px !important;
+        height: 15px !important;
 
         border-radius: 100% !important;
 
