@@ -524,6 +524,8 @@ with st.popover("➕"):
         ("personagem", "🎭 Personagem"),
 
         ("memoria", "🧠 Memória"),
+        border: 1px solid rgba(255, 0, 0, 0) !important;
+        
 
     ]
 
