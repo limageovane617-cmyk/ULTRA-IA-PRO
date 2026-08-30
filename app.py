@@ -188,10 +188,6 @@ if cliente is None:
        ➕ BOTÃO DE FERRAMENTAS
        ======================================================== */
 
-    /* ========================================================
-       ➕ BOTÃO DE FERRAMENTAS
-       ======================================================== */
-
     div[data-testid="stElementContainer"]:has(
         div[data-testid="stPopover"]
     ),
