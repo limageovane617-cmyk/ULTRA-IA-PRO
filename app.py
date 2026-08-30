@@ -203,11 +203,11 @@ CSS = f"""
 
         padding: 0 !important;
 
-        min-width: 15px !important;
+        min-width: 30px !important;
 
-        width: 15px !important;
+        width: 30px !important;
 
-        height: 15px !important;
+        height: 30px !important;
 
         border-radius: 100% !important;
 
@@ -237,7 +237,7 @@ CSS = f"""
 
         padding: .75rem;
 
-        border-radius: 22px;
+        border-radius: 100px;
 
         background: rgba(8,17,29,.92);
 
