@@ -217,7 +217,7 @@ CSS = f"""
         background-color:
             rgba(15, 23, 42, 0.85) !important;
 
-        color: #ffffff !important;
+        color: #ff0000 !important;
 
         display: flex !important;
 
