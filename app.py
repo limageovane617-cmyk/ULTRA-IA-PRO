@@ -138,53 +138,53 @@ if cliente is None:
     st.stop()
 
 
-    # ============================================================
-    # 🖼️ FUNDO DA ALEX IA ULTRA
-    # ============================================================
+# ============================================================
+# 🖼️ FUNDO DA ALEX IA ULTRA
+# ============================================================
 
-    FUNDO_URL = (
-        "https://i.supaimg.com/"
-        "c4e94ec5-263e-44e5-b119-dca8baa8acad/"
-        "9865081d-da93-4f67-a58d-f304f9feb1cb.jpg"
-    )
+FUNDO_URL = (
+    "https://i.supaimg.com/"
+    "c4e94ec5-263e-44e5-b119-dca8baa8acad/"
+    "9865081d-da93-4f67-a58d-f304f9feb1cb.jpg"
+)
 
-    # ============================================================
-    # 🎨 CSS
-    # ============================================================
+# ============================================================
+# 🎨 CSS
+# ============================================================
 
-    CSS = f"""
-    .stApp {{
-        background-image: url("{FUNDO_URL}") !important;
-        background-size: cover !important;
-        background-position: center center !important;
-        background-repeat: no-repeat !important;
-        background-attachment: fixed !important;
-        min-height: 100vh !important;
-    }}
+CSS = f"""
+.stApp {{
+    background-image: url("{FUNDO_URL}") !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    min-height: 100vh !important;
+}}
 
-    .stApp::before {{
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: rgba(2,8,16,.35);
-        z-index: 0;
-        pointer-events: none;
-    }}
+.stApp::before {{
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(2,8,16,.35);
+    z-index: 0;
+    pointer-events: none;
+}}
 
-    .stApp > div {{
-        position: relative;
-        z-index: 1;
-    }}
+.stApp > div {{
+    position: relative;
+    z-index: 1;
+}}
 
-    .main .block-container {{
-        max-width: 980px;
-        padding-top: 1.2rem;
-        padding-bottom: 8rem;
-    }}
+.main .block-container {{
+    max-width: 980px;
+    padding-top: 1.2rem;
+    padding-bottom: 8rem;
+}}
 
-    /* ========================================================
-       ➕ BOTÃO DE FERRAMENTAS
-       ======================================================== */
+/* ========================================================
+   ➕ BOTÃO DE FERRAMENTAS
+   =======================================================
 
     div[data-testid="stElementContainer"]:has(
         div[data-testid="stPopover"]
