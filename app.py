@@ -156,7 +156,7 @@ CSS = f"""
 <style>
 .stApp {{
     background-image: url("{FUNDO_URL}") !important;
-    background-size: cover !important;
+    background-size: 100% 100% !important;
     background-position: center center !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
@@ -170,11 +170,6 @@ CSS = f"""
     background: rgba(2,8,16,.35);
     z-index: 0;
     pointer-events: none;
-}}
-
-.stApp > div {{
-    position: relative;
-    z-index: 1;
 }}
 
 .main .block-container {{
