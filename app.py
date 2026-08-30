@@ -316,7 +316,7 @@ CSS = f"""
        ======================================================== */
 
     button[kind="secondary"] {{
-        border-radius: 18px !important;
+        border-radius: 100px !important;
     }}
 
     </style>
