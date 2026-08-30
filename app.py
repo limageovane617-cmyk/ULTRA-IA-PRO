@@ -502,10 +502,10 @@ for indice, mensagem in enumerate(
 # 🧰 MENU DE FERRAMENTAS
 # ============================================================
 
-with st.popover("＋"):
+with st.popover("➕"):
 
     st.markdown(
-        "### 🧰 Ferramentas da Ultra"
+        "### ❇️ Ferramentas"
     )
 
 
