@@ -296,11 +296,11 @@ CSS = f"""
         color: white;
         padding: 12px 16px;
         border-radius: 100px 100px 100px 50px;
-        font-size: 16px;
+        font-size: 20px;
         line-height: 1.45;
         word-wrap: break-word;
         width: fit-content;
-        max-width: 78%;
+        max-width: 50%;
     }}
 
 
