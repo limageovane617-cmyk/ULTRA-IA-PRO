@@ -183,7 +183,6 @@ CSS = f"""
    ========================================================
 
     div[data-testid="stElementContainer"]:has(
-    st.markdown(
     /* Posiciona o container do Popover bem embaixo, ao lado do chat */
     div[data-testid="stElementContainer"]:has(
         div[data-testid="stPopover"]
