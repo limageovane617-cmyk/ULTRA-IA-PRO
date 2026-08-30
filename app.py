@@ -183,49 +183,40 @@ CSS = f"""
    ========================================================
 
     div[data-testid="stElementContainer"]:has(
+    st.markdown(
+    """
+    <style>
+    /* Posiciona o container do Popover bem embaixo, ao lado do chat */
+    div[data-testid="stElementContainer"]:has(
         div[data-testid="stPopover"]
     ),
-    div[data-testid="stPopover"] {{
-
+    div[data-testid="stPopover"] {
         position: fixed !important;
-
-        bottom: 14px !important;/* Alinha com a altura da barra de chat */
-
-        left: 1px !important;
-
+        bottom: 14px !important; /* Alinha com a altura da barra de chat */
+        left: 12px !important;   /* Afasta um pouco da borda esquerda */
         width: auto !important;
-
         z-index: 99999 !important;
-    }}
+    }
 
-
-    div[data-testid="stPopover"] > button {{
-
+    /* Estilização do botão circular */
+    div[data-testid="stPopover"] > button {
         padding: 0 !important;
-
-        min-width: 1px !important;
-
-        width: 1px !important;
-
-        height: 1px !important;
-
-        border-radius: 100% !important;
-
-        border: 1px solid
-            rgba(255, 0, 0, 0.3) !important;
-
-        background-color:
-            rgba(15, 23, 42, 0.85) !important;
-
+        min-width: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important;
+        border: 1px solid rgba(255, 0, 0, 0.3) !important;
+        background-color: rgba(15, 23, 42, 0.85) !important;
         color: #ffffff !important;
-
         display: flex !important;
-
         align-items: center !important;
-
         justify-content: center !important;
-    }}
-
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+    )
+       
 
     /* ========================================================
        🧰 PAINEL DE FERRAMENTAS
