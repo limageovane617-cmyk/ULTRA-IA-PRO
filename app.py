@@ -203,11 +203,11 @@ CSS = f"""
 
         padding: 0 !important;
 
-        min-width: 1px !important;
+        min-width: 38px !important;
 
-        width: 1px !important;
+        width: 38px !important;
 
-        height: 1px !important;
+        height: 38px !important;
 
         border-radius: 100% !important;
 
