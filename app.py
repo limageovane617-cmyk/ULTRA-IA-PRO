@@ -2277,12 +2277,12 @@ if pergunta:
 
 
             if st.button(
-                "🔊 Ouvir",
+                "🔊 ",
                 key=audio_key
             ):
 
                 with st.spinner(
-                    "🔊 Preparando a voz..."
+                    "🔊 carregando..."
                 ):
 
                     audio, erro, formato = (
