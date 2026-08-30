@@ -470,7 +470,7 @@ for indice, mensagem in enumerate(
 
 
             if st.button(
-                "🔊 Ouvir",
+                "🔊 ",
                 key=audio_key
             ):
 
