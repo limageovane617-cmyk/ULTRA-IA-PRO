@@ -189,7 +189,7 @@ CSS = f"""
 
         position: fixed !important;
 
-        bottom: 14px !important;/* Alinha com a altura da barra de chat */
+        bottom: 14px !important;
 
         left: 1px !important;
 
@@ -203,11 +203,11 @@ CSS = f"""
 
         padding: 0 !important;
 
-        min-width: 1px !important;
+        min-width: 36px !important;
 
-        width: 1px !important;
+        width: 36px !important;
 
-        height: 1px !important;
+        height: 36px !important;
 
         border-radius: 100% !important;
 
