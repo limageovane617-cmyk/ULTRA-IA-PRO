@@ -235,7 +235,7 @@ CSS = f"""
 
         margin: 0 auto .65rem;
 
-        padding: .75rem;
+        padding: .40rem;
 
         border-radius: 100px;
 
