@@ -523,7 +523,7 @@ with st.popover("＋"):
 
         ("memoria", "🧠 Memória"),
         
-        ("te amo ❤"), " meu amor"), 
+        ("te amo ❤" , " meu amor"), 
 
     ]
 
