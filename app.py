@@ -167,9 +167,19 @@ for k, v in DEFAULT_COLOR_SETTINGS.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
+# configurações do popover (posição e offsets)
+if "posicao_popover" not in st.session_state:
+    st.session_state["posicao_popover"] = "bottom-left"
+if "popover_offset_x" not in st.session_state:
+    st.session_state["popover_offset_x"] = 1
+if "popover_offset_y" not in st.session_state:
+    st.session_state["popover_offset_y"] = 14
+if "fixar_popover" not in st.session_state:
+    st.session_state["fixar_popover"] = True
+
 # Painel de configuração (usuário pode abrir e ajustar)
 with st.expander("🎨 Painel de Cores — ajustar aparência", expanded=False):
-    st.markdown("Altere cores e fonte abaixo. As mudanças são aplicadas imediatamente.")
+    st.markdown("Altere cores, fonte e posição do botão + abaixo. As mudanças são aplicadas imediatamente.")
     st.session_state["fundo_botao"] = st.color_picker(
         "Cor do botão (+)",
         st.session_state["fundo_botao"],
@@ -196,7 +206,48 @@ with st.expander("🎨 Painel de Cores — ajustar aparência", expanded=False):
         key="input_font_family"
     )
 
-# Gera CSS usando as cores escolhidas
+    # Posição do botão + (cantos)
+    pos_options = ["bottom-left", "bottom-right", "top-left", "top-right"]
+    idx = pos_options.index(st.session_state.get("posicao_popover", "bottom-left"))
+    pos = st.selectbox("Posição fixa do botão (+)", pos_options, index=idx, key="select_posicao_popover")
+    st.session_state["posicao_popover"] = pos
+
+    ox = st.number_input("Offset horizontal (px)", min_value=0, max_value=200, value=st.session_state["popover_offset_x"], key="input_offset_x")
+    oy = st.number_input("Offset vertical (px)", min_value=0, max_value=200, value=st.session_state["popover_offset_y"], key="input_offset_y")
+    st.session_state["popover_offset_x"] = int(ox)
+    st.session_state["popover_offset_y"] = int(oy)
+
+    st.session_state["fixar_popover"] = st.checkbox("Fixar o botão na tela (position: fixed)", value=st.session_state["fixar_popover"], key="check_fixar_popover")
+
+    st.info("Escolha um canto e offsets; o botão será posicionado de acordo.")
+
+# Mapeia posição escolhida para variáveis CSS
+_pos = st.session_state.get("posicao_popover", "bottom-left")
+_ox = st.session_state.get("popover_offset_x", 1)
+_oy = st.session_state.get("popover_offset_y", 14)
+_fixar = st.session_state.get("fixar_popover", True)
+
+popover_top = "auto"
+popover_bottom = "auto"
+popover_left = "auto"
+popover_right = "auto"
+
+if _pos == "bottom-left":
+    popover_bottom = f"{_oy}px"
+    popover_left = f"{_ox}px"
+elif _pos == "bottom-right":
+    popover_bottom = f"{_oy}px"
+    popover_right = f"{_ox}px"
+elif _pos == "top-left":
+    popover_top = f"{_oy}px"
+    popover_left = f"{_ox}px"
+elif _pos == "top-right":
+    popover_top = f"{_oy}px"
+    popover_right = f"{_ox}px"
+
+popover_position = "fixed" if _fixar else "absolute"
+
+# Gera CSS usando as cores escolhidas e posição do popover
 CSS = f"""
 <style>
 :root {{
@@ -205,6 +256,11 @@ CSS = f"""
     --texto-color: {st.session_state['texto_color']};
     --painel-bg: {st.session_state['painel_bg']};
     --app-font-family: {st.session_state['font_family']};
+    --popover-position: {popover_position};
+    --popover-top: {popover_top};
+    --popover-bottom: {popover_bottom};
+    --popover-left: {popover_left};
+    --popover-right: {popover_right};
 }}
 
 .stApp {{
@@ -237,9 +293,11 @@ div[data-testid="stElementContainer"]:has(
     div[data-testid="stPopover"]
 ),
 div[data-testid="stPopover"] {{
-    position: fixed !important;
-    bottom: 14px !important;
-    left: 1px !important;
+    position: var(--popover-position) !important;
+    bottom: var(--popover-bottom) !important;
+    top: var(--popover-top) !important;
+    left: var(--popover-left) !important;
+    right: var(--popover-right) !important;
     width: auto !important;
     z-index: 99999 !important;
 }}
