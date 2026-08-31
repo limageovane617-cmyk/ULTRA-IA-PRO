@@ -9,6 +9,7 @@ import base64
 import os
 import sys
 import importlib
+import requests
 from pathlib import Path
 
 import streamlit as st
