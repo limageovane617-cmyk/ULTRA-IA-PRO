@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 
-DEFAULT_PONTE_URL = "https://ponte-alex-v2.dockhosting.dev"
+DEFAULT_PONTE_URL = "https://ponte-alex-v2.onrender.com"
 
 
 class ErroPonteAlex(Exception):
