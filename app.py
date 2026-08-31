@@ -1172,6 +1172,47 @@ if ferramenta:
                 st.warning(
                     "⚠️ Nenhum conteúdo de arquivo foi retornado."
                 )
+                # =================================================
+            # ✏️ EDITOR DO ARQUIVO
+            # =================================================
+
+            if conteudo_resultado:
+
+                st.markdown(
+                    "### ✏️ Editar arquivo"
+                )
+
+                conteudo_editado = st.text_area(
+                    "📝 Edite o conteúdo antes de baixar",
+                    value=st.session_state.get(
+                        "ponte_conteudo",
+                        conteudo_resultado
+                    ),
+                    height=500,
+                    key="editor_arquivo_ponte"
+                )
+
+                if st.button(
+                    "💾 Salvar alterações",
+                    type="primary",
+                    use_container_width=True,
+                    key="salvar_edicao_ponte"
+                ):
+
+                    st.session_state["ponte_conteudo"] = (
+                        conteudo_editado
+                    )
+
+                    conteudo_resultado = (
+                        conteudo_editado
+                    )
+
+                    st.success(
+                        "✅ Alterações salvas! "
+                        "O arquivo para download foi atualizado."
+                    )
+
+                    st.rerun()
 
 
             # =================================================
