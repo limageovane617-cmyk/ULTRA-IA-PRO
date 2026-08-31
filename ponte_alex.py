@@ -12,7 +12,7 @@ from cliente_ponte_alex import (
 )
 
 
-DEFAULT_PONTE_URL = https://"ponte-alex-v2.onrender.com"
+DEFAULT_PONTE_URL = "https://ponte-alex-v2.onrender.com"
 
 
 def criar_cliente_ponte(
