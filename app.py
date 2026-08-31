@@ -1185,10 +1185,7 @@ if ferramenta:
 
                 conteudo_editado = st.text_area(
                     "📝 Edite o conteúdo antes de baixar",
-                    value=st.session_state.get(
-                        "ponte_conteudo",
-                        conteudo_resultado
-                    ),
+                    value=conteudo_resultado,
                     height=500,
                     key="editor_arquivo_ponte"
                 )
