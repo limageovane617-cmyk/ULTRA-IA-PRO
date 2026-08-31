@@ -1185,7 +1185,6 @@ if ferramenta:
                 )
 
                 nome_download = st.text_input(
-
                     "Nome do arquivo",
 
                     value=st.session_state.get(
@@ -1196,177 +1195,67 @@ if ferramenta:
                     key="nome_download_codigo"
                 )
 
-                if st.button(
+                # -------------------------------------------------
+                # 🔐 Limpa o nome do arquivo
+                # -------------------------------------------------
 
-                    "📥 Criar arquivo para download",
+                nome_download = (
+                    nome_download
+                    .strip()
+                    .replace("\\", "/")
+                    .split("/")[-1]
+                )
 
-                    type="primary",
+                if not nome_download:
+                    nome_download = "codigo_alex.py"
 
-                    use_container_width=True,
+                # -------------------------------------------------
+                # 🔤 GARANTE UTF-8
+                # -------------------------------------------------
 
-                    key="criar_download_codigo"
-                ):
+                try:
 
-                    try:
-
-                        nome_download = (
-                            nome_download
-                            .strip()
-                            .replace("\\", "/")
-                            .split("/")[-1]
-                        )
-
-                        if not nome_download:
-
-                            nome_download = (
-                                "codigo_alex.py"
-                            )
-
-                        # Guardar nome
-                        st.session_state[
-                            "ponte_nome_download"
-                        ] = nome_download
-
-                        # =====================================
-                        # 🌉 ENVIAR PARA A PONTE
-                        # =====================================
-
-                        url_ponte = (
-                            "https://ponte-alex-v2.onrender.com"
-                            "/api/ponte/v2/criar-arquivo"
-                        )
-
-                        with st.spinner(
-                            "🌉 Criando arquivo..."
-                        ):
-
-                            resposta_download = requests.post(
-
-                                url_ponte,
-
-                                json={
-                                    "filename": nome_download,
-                                    "code": conteudo_resultado
-                                },
-
-                                timeout=60
-                            )
-
-                        # =====================================
-                        # ✅ ARQUIVO CRIADO
-                        # =====================================
-
-                        if (
-                            resposta_download.status_code
-                            == 200
-                        ):
-
-                            st.session_state[
-                                "ponte_arquivo_bytes"
-                            ] = (
-                                resposta_download.content
-                            )
-
-                            st.session_state[
-                                "ponte_arquivo_pronto"
-                            ] = True
-
-                            st.success(
-                                f"✅ Arquivo {nome_download} "
-                                "criado com sucesso!"
-                            )
-
-                        # =====================================
-                        # ❌ ERRO
-                        # =====================================
-
-                        else:
-
-                            st.session_state[
-                                "ponte_arquivo_pronto"
-                            ] = False
-
-                            st.error(
-                                "❌ A Ponte Alex v2 "
-                                "não conseguiu criar "
-                                "o arquivo."
-                            )
-
-                            try:
-
-                                st.code(
-                                    str(
-                                        resposta_download.json()
-                                    )
-                                )
-
-                            except Exception:
-
-                                st.code(
-                                    resposta_download.text
-                                )
-
-                    except requests.RequestException as erro_requisicao:
-
-                        st.error(
-                            "❌ Não foi possível conectar "
-                            "à Ponte Alex v2."
-                        )
-
-                        st.code(
-                            str(erro_requisicao)
-                        )
-
-                    except Exception as erro_download:
-
-                        st.error(
-                            "❌ Erro ao criar o arquivo "
-                            "para download."
-                        )
-
-                        st.code(
-                            str(erro_download)
-                        )
-
-
-                # =============================================
-                # ⬇️ BOTÃO DE DOWNLOAD
-                # =============================================
-
-                if st.session_state.get(
-                    "ponte_arquivo_pronto",
-                    False
-                ):
-
-                    arquivo_bytes = st.session_state.get(
-                        "ponte_arquivo_bytes"
+                    arquivo_utf8 = (
+                        conteudo_resultado
+                        .encode("utf-8")
                     )
 
-                    nome_download = st.session_state.get(
-                        "ponte_nome_download",
-                        "codigo_alex.py"
+                except Exception as erro_utf8:
+
+                    st.error(
+                        "❌ Não foi possível preparar "
+                        "o arquivo em UTF-8."
                     )
 
-                    if arquivo_bytes:
+                    st.code(
+                        str(erro_utf8)
+                    )
 
-                        st.download_button(
+                    arquivo_utf8 = None
 
-                            label="⬇️ Baixar arquivo",
+                # -------------------------------------------------
+                # ⬇️ DOWNLOAD DIRETO
+                # -------------------------------------------------
 
-                            data=arquivo_bytes,
+                if arquivo_utf8:
 
-                            file_name=nome_download,
+                    st.download_button(
+                        label="⬇️ Baixar arquivo",
 
-                            mime=(
-                                "text/x-python"
-                                if nome_download.endswith(".py")
-                                else "application/octet-stream"
-                            ),
+                        data=arquivo_utf8,
 
-                            use_container_width=True,
+                        file_name=nome_download,
 
-                            key="baixar_arquivo_ponte"
-                        )
+                        mime=(
+                            "text/x-python; charset=utf-8"
+                            if nome_download.lower().endswith(".py")
+                            else "text/plain; charset=utf-8"
+                        ),
+
+                        use_container_width=True,
+
+                        key="baixar_arquivo_ponte"
+                    )
 
 
             # =================================================
