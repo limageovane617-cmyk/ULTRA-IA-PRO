@@ -1310,7 +1310,8 @@ if ferramenta:
                     )
 
                     arquivo_utf8 = (
-                        conteudo_limpo.encode("utf-8")
+                        b"\xef\xbb\xbf"
+                        + conteudo_limpo.encode("utf-8")
                     )
 
                 except Exception as erro_utf8:
