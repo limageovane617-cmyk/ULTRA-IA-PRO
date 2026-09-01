@@ -1080,6 +1080,10 @@ if ferramenta:
                             ""
                         )
                     )
+                    
+                    st.code(
+                       repr(conteudo_resultado)
+                    )
 
                 # ============================================================
                 # 📄 COMPATIBILIDADE COM RESPOSTAS ANTIGAS
@@ -1148,7 +1152,7 @@ if ferramenta:
                     str(erro)
                 )
 
-            except Exception as erro;
+            except Exception as erro:
 
 
         # ====================================================
