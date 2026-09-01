@@ -168,7 +168,7 @@ CSS = f"""
     content: "";
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.65);
+    background: rgba(0,0,0,.30);
     z-index: 0;
     pointer-events: none;
 }}
