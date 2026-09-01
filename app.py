@@ -1059,10 +1059,12 @@ if ferramenta:
                         instrucao=instrucao_ponte,
                         nome_arquivo="codigo_alex.py"
                     )
-                    
+
                 # ============================================================
                 # 📄 LER CONTEÚDO RETORNADO PELA PONTE
                 # ============================================================
+
+                conteudo_resultado = ""
 
                 processed_file = resultado.get(
                     "processedFile",
@@ -1079,10 +1081,6 @@ if ferramenta:
                             "content",
                             ""
                         )
-                    )
-                    
-                    st.code(
-                       repr(conteudo_resultado)
                     )
 
                 # ============================================================
@@ -1122,58 +1120,67 @@ if ferramenta:
                                 st.code(
                                     str(erro_leitura)
                                 )
-                              
-            # ============================================================
-            # 💾 SALVAR TUDO PARA SOBREVIVER AO RERUN
-            # ============================================================
 
-            st.session_state["ponte_resultado"] = resultado
-            st.session_state["ponte_conteudo"] = conteudo_resultado
-            st.session_state["ponte_processado"] = True
+                # ============================================================
+                # 💾 SALVAR TUDO PARA SOBREVIVER AO RERUN
+                # ============================================================
 
-            # ============================================================
-            # 📄 NOME REAL DO ARQUIVO PROCESSADO PELA PONTE
-            # ============================================================
-
-            nome_processado = ""
-
-            if isinstance(processed_file, dict):
-
-                nome_processado = (
-                    processed_file.get(
-                        "filename",
-                        ""
-                    )
+                st.session_state["ponte_resultado"] = (
+                    resultado
                 )
 
-            st.session_state["ponte_nome_download"] = (
-                nome_processado
-                or "codigo_alex.py"
-            )
+                st.session_state["ponte_conteudo"] = (
+                    conteudo_resultado
+                )
 
-            st.success(
-                "🌉 Código processado pela Ponte Alex v2!"
-            )
+                st.session_state["ponte_processado"] = True
 
-        except ErroPonteAlex as erro:
+                # ============================================================
+                # 📄 NOME REAL DO ARQUIVO PROCESSADO PELA PONTE
+                # ============================================================
 
-            st.error(
-                "❌ Erro na Ponte Alex v2."
-            )
+                nome_processado = ""
 
-            st.code(
-                str(erro)
-            )
+                if isinstance(
+                    processed_file,
+                    dict
+                ):
 
-        except Exception as erro:
+                    nome_processado = (
+                        processed_file.get(
+                            "filename",
+                            ""
+                        )
+                    )
 
-            st.error(
-                "❌ Erro ao processar o código."
-            )
+                st.session_state["ponte_nome_download"] = (
+                    nome_processado
+                    or "codigo_alex.py"
+                )
 
-            st.code(
-                str(erro)
-            )
+                st.success(
+                    "🌉 Código processado pela Ponte Alex v2!"
+                )
+
+            except ErroPonteAlex as erro:
+
+                st.error(
+                    "❌ Erro na Ponte Alex v2."
+                )
+
+                st.code(
+                    str(erro)
+                )
+
+            except Exception as erro:
+
+                st.error(
+                    "❌ Erro ao processar o código."
+                )
+
+                st.code(
+                    str(erro)
+                )
 
         # ====================================================
         # 📄 MOSTRAR RESULTADO SALVO
@@ -1210,7 +1217,7 @@ if ferramenta:
                 st.warning(
                     "⚠️ Nenhum conteúdo de arquivo foi retornado."
                 )
-                
+
             # =================================================
             # ✏️ EDITOR DO ARQUIVO
             # =================================================
@@ -1250,7 +1257,6 @@ if ferramenta:
 
                     st.rerun()
 
-
             # =================================================
             # 📥 CRIAR ARQUIVO PARA DOWNLOAD
             # =================================================
@@ -1273,7 +1279,7 @@ if ferramenta:
                 )
 
                 # -------------------------------------------------
-                # 🔐 Limpa o nome do arquivo
+                # 🔐 LIMPAR NOME DO ARQUIVO
                 # -------------------------------------------------
 
                 nome_download = (
@@ -1284,35 +1290,23 @@ if ferramenta:
                 )
 
                 if not nome_download:
+
                     nome_download = "codigo_alex.py"
 
                 # -------------------------------------------------
-                # -------------------------------------------------
-                # 🔤 GARANTE UTF-8 REAL
+                # 🔤 GARANTIR UTF-8 REAL
                 # -------------------------------------------------
 
                 try:
 
-                    # Remove possível BOM existente
-                    conteudo_limpo = conteudo_resultado.lstrip("\ufeff")
-
-                    # Codifica explicitamente em UTF-8
-                    arquivo_utf8 = conteudo_limpo.encode(
-                        "utf-8"
+                    conteudo_limpo = (
+                        conteudo_resultado
+                        .lstrip("\ufeff")
                     )
 
-                except Exception as erro_utf8:
-
-                    st.error(
-                        "❌ Não foi possível preparar "
-                        "o arquivo em UTF-8."
+                    arquivo_utf8 = (
+                        conteudo_limpo.encode("utf-8")
                     )
-
-                    st.code(
-                        str(erro_utf8)
-                    )
-
-                    arquivo_utf8 = None
 
                 except Exception as erro_utf8:
 
@@ -1331,7 +1325,7 @@ if ferramenta:
                 # ⬇️ DOWNLOAD DIRETO
                 # -------------------------------------------------
 
-                if arquivo_utf8:
+                if arquivo_utf8 is not None:
 
                     st.download_button(
                         label="⬇️ Baixar arquivo",
@@ -1341,9 +1335,9 @@ if ferramenta:
                         file_name=nome_download,
 
                         mime=(
-                            "text/x-python; charset=utf-8"
+                            "text/x-python"
                             if nome_download.lower().endswith(".py")
-                            else "text/plain; charset=utf-8"
+                            else "text/plain"
                         ),
 
                         use_container_width=True,
@@ -1351,12 +1345,13 @@ if ferramenta:
                         key="baixar_arquivo_ponte"
                     )
 
-
             # =================================================
             # ✅ TESTE PYTHON
             # =================================================
 
-            if resultado.get("test_passed"):
+            if resultado.get(
+                "test_passed"
+            ):
 
                 st.success(
                     "✅ Execução Python aprovada pela Ponte."
@@ -1369,7 +1364,6 @@ if ferramenta:
                     "mas o teste de execução não foi aprovado."
                 )
 
-
             # =================================================
             # 🖥️ SAÍDA DA EXECUÇÃO
             # =================================================
@@ -1378,6 +1372,13 @@ if ferramenta:
                 "execution",
                 {}
             )
+
+            if not isinstance(
+                execucao,
+                dict
+            ):
+
+                execucao = {}
 
             stdout = execucao.get(
                 "stdout",
@@ -1393,7 +1394,6 @@ if ferramenta:
                 st.code(
                     stdout
                 )
-
 
     # ========================================================
     # 📎 CENTRAL DE ARQUIVOS
