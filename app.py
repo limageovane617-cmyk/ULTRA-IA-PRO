@@ -1148,15 +1148,7 @@ if ferramenta:
                     str(erro)
                 )
 
-            except Exception as erro:
-
-                st.error(
-                    "❌ Erro ao processar o código."
-                )
-
-                st.code(
-                    str(erro)
-                )
+            except Exception as erro;
 
 
         # ====================================================
