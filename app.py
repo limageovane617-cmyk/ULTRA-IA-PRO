@@ -1124,34 +1124,56 @@ if ferramenta:
                                 )
                               
             # ============================================================
-            # Salvar tudo para sobreviver ao rerun
+            # 💾 SALVAR TUDO PARA SOBREVIVER AO RERUN
             # ============================================================
-            
+
             st.session_state["ponte_resultado"] = resultado
             st.session_state["ponte_conteudo"] = conteudo_resultado
             st.session_state["ponte_processado"] = True
 
-            # Nome real do arquivo processado pela Ponte
+            # ============================================================
+            # 📄 NOME REAL DO ARQUIVO PROCESSADO PELA PONTE
+            # ============================================================
+
             nome_processado = ""
 
             if isinstance(processed_file, dict):
-                nome_processado = processed_file.get("filename", "")
+
+                nome_processado = (
+                    processed_file.get(
+                        "filename",
+                        ""
+                    )
+                )
 
             st.session_state["ponte_nome_download"] = (
-                nome_processado or "codigo_alex.py"
+                nome_processado
+                or "codigo_alex.py"
             )
 
-            st.success("🌉 Código processado pela Ponte Alex v2!")
+            st.success(
+                "🌉 Código processado pela Ponte Alex v2!"
+            )
 
         except ErroPonteAlex as erro:
-            st.error("❌ Erro na Ponte Alex v2.")
 
-                )
+            st.error(
+                "❌ Erro na Ponte Alex v2."
+            )
 
-                st.code(
-                    str(erro)
-                )
+            st.code(
+                str(erro)
+            )
 
+        except Exception as erro:
+
+            st.error(
+                "❌ Erro ao processar o código."
+            )
+
+            st.code(
+                str(erro)
+            )
 
         # ====================================================
         # 📄 MOSTRAR RESULTADO SALVO
