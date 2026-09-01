@@ -194,6 +194,23 @@ footer {{
 #MainMenu {{
     display: none !important;
 }}
+
+/* ========================================================
+   📱 REMOVER BARRA INFERIOR DO STREAMLIT
+   ======================================================== */
+
+[data-testid="stBottomBlockContainer"] {{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}}
+
+[data-testid="stBottom"] {{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}}
+
 /* ========================================================
    📱 OCULTAR ELEMENTOS INFERIORES DO STREAMLIT
    ======================================================== */
