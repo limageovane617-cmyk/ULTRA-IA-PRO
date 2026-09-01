@@ -26,7 +26,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
     setContentView(webView);
 
-    webView.loadUrl("https://SEU-ENDERECO-STREAMLIT.streamlit.app");
+    webView.loadUrl("https://ultra-ia-pro-rhyy3g7h9f5tygntsceeif.streamlit.app/");
 }
 
 @Override
