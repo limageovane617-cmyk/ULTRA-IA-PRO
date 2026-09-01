@@ -194,6 +194,17 @@ footer {{
 #MainMenu {{
     display: none !important;
 }}
+/* ========================================================
+   📱 OCULTAR ELEMENTOS INFERIORES DO STREAMLIT
+   ======================================================== */
+
+div[data-testid="stStatusWidget"] {{
+    display: none !important;
+}}
+
+div[data-testid="stDecoration"] {{
+    display: none !important;
+}}
 
 /* ========================================================
    ➕ BOTÃO DE FERRAMENTAS
