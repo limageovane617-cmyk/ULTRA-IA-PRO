@@ -1,18 +1,25 @@
 package com.geovani.alexiaultra;
 
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.graphics.Color;
+import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.URLUtil;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
@@ -40,7 +47,10 @@ public class MainActivity extends Activity {
             criarTela();
             criarWebView();
         } catch (Exception e) {
-            mostrarErro("Erro ao iniciar o aplicativo:\n\n" + e.toString());
+            mostrarErro(
+                    "Erro ao iniciar o aplicativo:\n\n"
+                    + e.toString()
+            );
         }
     }
 
@@ -88,7 +98,9 @@ public class MainActivity extends Activity {
                     String url,
                     android.graphics.Bitmap favicon) {
 
-                statusText.setText("Conectando à Alex IA Ultra...");
+                statusText.setText(
+                        "Conectando à Alex IA Ultra..."
+                );
             }
 
             @Override
@@ -96,7 +108,9 @@ public class MainActivity extends Activity {
                     WebView view,
                     String url) {
 
-                statusText.setVisibility(TextView.GONE);
+                statusText.setVisibility(
+                        TextView.GONE
+                );
             }
 
             @Override
@@ -106,8 +120,10 @@ public class MainActivity extends Activity {
                     WebResourceError error) {
 
                 if (request.isForMainFrame()) {
+
                     mostrarErro(
-                            "Não foi possível carregar a Alex IA Ultra.\n\n"
+                            "Não foi possível carregar "
+                            + "a Alex IA Ultra.\n\n"
                             + error.getDescription()
                     );
                 }
@@ -119,15 +135,133 @@ public class MainActivity extends Activity {
                     android.webkit.RenderProcessGoneDetail detail) {
 
                 mostrarErro(
-                        "O mecanismo WebView foi encerrado pelo Android.\n\n"
-                        + "O aplicativo continuou aberto para mostrar este diagnóstico."
+                        "O mecanismo WebView foi encerrado "
+                        + "pelo Android.\n\n"
+                        + "O aplicativo continuou aberto "
+                        + "para mostrar este diagnóstico."
                 );
 
                 return true;
             }
         });
 
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(
+                new WebChromeClient()
+        );
+
+        // ============================================================
+        // DOWNLOAD DE ARQUIVOS
+        // ============================================================
+
+        webView.setDownloadListener(
+                new DownloadListener() {
+
+                    @Override
+                    public void onDownloadStart(
+                            String url,
+                            String userAgent,
+                            String contentDisposition,
+                            String mimetype,
+                            long contentLength) {
+
+                        try {
+
+                            Uri uri = Uri.parse(url);
+
+                            DownloadManager.Request request =
+                                    new DownloadManager.Request(uri);
+
+                            // Mantém a sessão/cookies do Streamlit
+                            String cookies =
+                                    CookieManager
+                                            .getInstance()
+                                            .getCookie(url);
+
+                            if (cookies != null) {
+                                request.addRequestHeader(
+                                        "Cookie",
+                                        cookies
+                                );
+                            }
+
+                            // Mantém o User-Agent do WebView
+                            if (userAgent != null
+                                    && !userAgent.isEmpty()) {
+
+                                request.addRequestHeader(
+                                        "User-Agent",
+                                        userAgent
+                                );
+                            }
+
+                            // Descobre o nome original do arquivo
+                            String fileName =
+                                    URLUtil.guessFileName(
+                                            url,
+                                            contentDisposition,
+                                            mimetype
+                                    );
+
+                            request.setTitle(fileName);
+
+                            request.setDescription(
+                                    "Baixando arquivo da Alex IA Ultra"
+                            );
+
+                            if (mimetype != null
+                                    && !mimetype.isEmpty()) {
+
+                                request.setMimeType(mimetype);
+                            }
+
+                            request.setNotificationVisibility(
+                                    DownloadManager.Request
+                                            .VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+                            );
+
+                            // Salva na pasta Downloads do Android
+                            request.setDestinationInExternalPublicDir(
+                                    Environment.DIRECTORY_DOWNLOADS,
+                                    fileName
+                            );
+
+                            DownloadManager manager =
+                                    (DownloadManager)
+                                            getSystemService(
+                                                    DOWNLOAD_SERVICE
+                                            );
+
+                            if (manager != null) {
+
+                                manager.enqueue(request);
+
+                                Toast.makeText(
+                                        MainActivity.this,
+                                        "Download iniciado",
+                                        Toast.LENGTH_SHORT
+                                ).show();
+
+                            } else {
+
+                                Toast.makeText(
+                                        MainActivity.this,
+                                        "Não foi possível iniciar o download.",
+                                        Toast.LENGTH_LONG
+                                ).show();
+                            }
+
+                        } catch (Exception e) {
+
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Erro no download: "
+                                            + e.getMessage(),
+                                    Toast.LENGTH_LONG
+                            ).show();
+                        }
+                    }
+                }
+        );
 
         container.addView(
                 webView,
@@ -144,7 +278,11 @@ public class MainActivity extends Activity {
     private void mostrarErro(String mensagem) {
 
         if (statusText != null) {
-            statusText.setVisibility(TextView.VISIBLE);
+
+            statusText.setVisibility(
+                    TextView.VISIBLE
+            );
+
             statusText.setText(mensagem);
         }
     }
@@ -152,9 +290,13 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
 
-        if (webView != null && webView.canGoBack()) {
+        if (webView != null
+                && webView.canGoBack()) {
+
             webView.goBack();
+
         } else {
+
             super.onBackPressed();
         }
     }
@@ -163,6 +305,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
 
         if (webView != null) {
+
             webView.stopLoading();
             webView.destroy();
             webView = null;
@@ -170,4 +313,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-}
+  }
