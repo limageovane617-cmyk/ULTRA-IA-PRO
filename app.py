@@ -1292,9 +1292,9 @@ if ferramenta:
                 if not nome_download:
 
                     nome_download = "codigo_alex.py"
-
+                
                 # -------------------------------------------------
-                # 🔤 GARANTIR UTF-8 REAL
+                # 🔤 VERIFICAR UTF-8 REAL
                 # -------------------------------------------------
 
                 try:
@@ -1304,23 +1304,28 @@ if ferramenta:
                         .lstrip("\ufeff")
                     )
 
+                    st.write(
+                        "🔎 TESTE ANTES DO DOWNLOAD:",
+                        repr(conteudo_limpo)
+                    )
+
                     arquivo_utf8 = (
                         conteudo_limpo.encode("utf-8")
                     )
 
                 except Exception as erro_utf8:
 
-                    st.error(
+                   st.error(
                         "❌ Não foi possível preparar "
                         "o arquivo em UTF-8."
-                    )
+                   )
 
-                    st.code(
+                   st.code(
                         str(erro_utf8)
-                    )
+                   )
 
-                    arquivo_utf8 = None
-
+                   arquivo_utf8 = None
+                    
                 # -------------------------------------------------
                 # ⬇️ DOWNLOAD DIRETO
                 # -------------------------------------------------
