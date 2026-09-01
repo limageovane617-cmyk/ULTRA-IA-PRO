@@ -1095,8 +1095,11 @@ if ferramenta:
                             st.code(
                                 str(erro_leitura)
                             )
-
+                            
+                #=======================================
                 # Salvar tudo para sobreviver ao rerun
+                #===========≠===========================
+                
                 st.session_state["ponte_resultado"] = (
                     resultado
                 )
