@@ -1060,42 +1060,66 @@ if ferramenta:
                         nome_arquivo="codigo_alex.py"
                     )
 
-                # ============================================
-                # 💾 GUARDAR RESULTADO NA SESSION STATE
-                # ============================================
+                # ===================================
+                # ============================================================
+                # 📄 LER CONTEÚDO RETORNADO PELA PONTE
+                # ============================================================
 
-                conteudo_resultado = ""
-
-                caminho_resultado = (
-                    resultado.get("arquivo_salvo")
+                processed_file = resultado.get(
+                    "processedFile",
+                    {}
                 )
 
-                if caminho_resultado:
+                if isinstance(
+                    processed_file,
+                    dict
+                ):
 
-                    if os.path.exists(
-                        caminho_resultado
-                    ):
+                    conteudo_resultado = (
+                        processed_file.get(
+                            "content",
+                            ""
+                        )
+                    )
 
-                        try:
+                # ============================================================
+                # 📄 COMPATIBILIDADE COM RESPOSTAS ANTIGAS
+                # ============================================================
 
-                            conteudo_resultado = Path(
-                                caminho_resultado
-                            ).read_text(
-                                encoding="utf-8",
-                                errors="replace"
-                            )
+                if not conteudo_resultado:
 
-                        except Exception as erro_leitura:
+                    caminho_resultado = (
+                        resultado.get(
+                            "arquivo_salvo"
+                        )
+                    )
 
-                            st.error(
-                                "❌ Não foi possível ler "
-                                "o arquivo gerado."
-                            )
+                    if caminho_resultado:
 
-                            st.code(
-                                str(erro_leitura)
-                            )
-                            
+                        if os.path.exists(
+                            caminho_resultado
+                        ):
+
+                            try:
+
+                                conteudo_resultado = Path(
+                                    caminho_resultado
+                                ).read_text(
+                                    encoding="utf-8",
+                                    errors="replace"
+                                )
+
+                            except Exception as erro_leitura:
+
+                                st.error(
+                                    "❌ Não foi possível ler "
+                                    "o arquivo gerado."
+                                )
+
+                                st.code(
+                                    str(erro_leitura)
+                                )
+                                
                 #=======================================
                 # Salvar tudo para sobreviver ao rerun
                 #===========≠===========================
