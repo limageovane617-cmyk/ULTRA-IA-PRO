@@ -1,38 +1,32 @@
 package com.geovani.alexiaultra;
 
 import android.app.Activity;
-import android.app.DownloadManager;
-import android.os.Bundle;
-import android.os.Environment;
 import android.graphics.Color;
-import android.net.Uri;
+import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.webkit.DownloadListener;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.webkit.URLUtil;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    private WebView webView;
-    private LinearLayout container;
-    private TextView statusText;
-
-    private static final String URL =
-            "https://ultra-ia-pro-rhyy3g7h9f5tygntsceeif.streamlit.app/";
+    private LinearLayout tela;
+    private LinearLayout mensagens;
+    private EditText campoMensagem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        entrarEmTelaCheia();
+        criarInterface();
+    }
+
+    private void entrarEmTelaCheia() {
 
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -42,229 +36,61 @@ public class MainActivity extends Activity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         );
-
-        try {
-            criarTela();
-            criarWebView();
-        } catch (Exception e) {
-            mostrarErro(
-                    "Erro ao iniciar o aplicativo:\n\n"
-                    + e.toString()
-            );
-        }
     }
 
-    private void criarTela() {
+    private void criarInterface() {
 
-        container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setBackgroundColor(Color.WHITE);
+        tela = new LinearLayout(this);
+        tela.setOrientation(LinearLayout.VERTICAL);
+        tela.setBackgroundColor(Color.rgb(8, 12, 20));
 
-        statusText = new TextView(this);
-        statusText.setText("Abrindo Alex IA Ultra...");
-        statusText.setTextSize(18);
-        statusText.setTextColor(Color.DKGRAY);
-        statusText.setGravity(17);
-        statusText.setPadding(30, 30, 30, 30);
+        // ============================================================
+        // CABEÇALHO
+        // ============================================================
 
-        container.addView(
-                statusText,
+        TextView titulo = new TextView(this);
+
+        titulo.setText("🤖 Alex IA Ultra");
+        titulo.setTextColor(Color.WHITE);
+        titulo.setTextSize(22);
+        titulo.setGravity(Gravity.CENTER);
+        titulo.setPadding(20, 30, 20, 30);
+
+        tela.addView(
+                titulo,
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 )
         );
 
-        setContentView(container);
-    }
-
-    private void criarWebView() {
-
-        webView = new WebView(this);
-
-        WebSettings settings = webView.getSettings();
-
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setUseWideViewPort(true);
-
-        webView.setWebViewClient(new WebViewClient() {
-
-            @Override
-            public void onPageStarted(
-                    WebView view,
-                    String url,
-                    android.graphics.Bitmap favicon) {
-
-                statusText.setText(
-                        "Conectando à Alex IA Ultra..."
-                );
-            }
-
-            @Override
-            public void onPageFinished(
-                    WebView view,
-                    String url) {
-
-                statusText.setVisibility(
-                        TextView.GONE
-                );
-            }
-
-            @Override
-            public void onReceivedError(
-                    WebView view,
-                    WebResourceRequest request,
-                    WebResourceError error) {
-
-                if (request.isForMainFrame()) {
-
-                    mostrarErro(
-                            "Não foi possível carregar "
-                            + "a Alex IA Ultra.\n\n"
-                            + error.getDescription()
-                    );
-                }
-            }
-
-            @Override
-            public boolean onRenderProcessGone(
-                    WebView view,
-                    android.webkit.RenderProcessGoneDetail detail) {
-
-                mostrarErro(
-                        "O mecanismo WebView foi encerrado "
-                        + "pelo Android.\n\n"
-                        + "O aplicativo continuou aberto "
-                        + "para mostrar este diagnóstico."
-                );
-
-                return true;
-            }
-        });
-
-        webView.setWebChromeClient(
-                new WebChromeClient()
-        );
-
         // ============================================================
-        // DOWNLOAD DE ARQUIVOS
+        // ÁREA DE MENSAGENS
         // ============================================================
 
-        webView.setDownloadListener(
-                new DownloadListener() {
+        ScrollView scroll = new ScrollView(this);
 
-                    @Override
-                    public void onDownloadStart(
-                            String url,
-                            String userAgent,
-                            String contentDisposition,
-                            String mimetype,
-                            long contentLength) {
+        mensagens = new LinearLayout(this);
+        mensagens.setOrientation(LinearLayout.VERTICAL);
+        mensagens.setPadding(20, 20, 20, 20);
 
-                        try {
+        TextView boasVindas = new TextView(this);
 
-                            Uri uri = Uri.parse(url);
-
-                            DownloadManager.Request request =
-                                    new DownloadManager.Request(uri);
-
-                            // Mantém a sessão/cookies do Streamlit
-                            String cookies =
-                                    CookieManager
-                                            .getInstance()
-                                            .getCookie(url);
-
-                            if (cookies != null) {
-                                request.addRequestHeader(
-                                        "Cookie",
-                                        cookies
-                                );
-                            }
-
-                            // Mantém o User-Agent do WebView
-                            if (userAgent != null
-                                    && !userAgent.isEmpty()) {
-
-                                request.addRequestHeader(
-                                        "User-Agent",
-                                        userAgent
-                                );
-                            }
-
-                            // Descobre o nome original do arquivo
-                            String fileName =
-                                    URLUtil.guessFileName(
-                                            url,
-                                            contentDisposition,
-                                            mimetype
-                                    );
-
-                            request.setTitle(fileName);
-
-                            request.setDescription(
-                                    "Baixando arquivo da Alex IA Ultra"
-                            );
-
-                            if (mimetype != null
-                                    && !mimetype.isEmpty()) {
-
-                                request.setMimeType(mimetype);
-                            }
-
-                            request.setNotificationVisibility(
-                                    DownloadManager.Request
-                                            .VISIBILITY_VISIBLE_NOTIFY_COMPLETED
-                            );
-
-                            // Salva na pasta Downloads do Android
-                            request.setDestinationInExternalPublicDir(
-                                    Environment.DIRECTORY_DOWNLOADS,
-                                    fileName
-                            );
-
-                            DownloadManager manager =
-                                    (DownloadManager)
-                                            getSystemService(
-                                                    DOWNLOAD_SERVICE
-                                            );
-
-                            if (manager != null) {
-
-                                manager.enqueue(request);
-
-                                Toast.makeText(
-                                        MainActivity.this,
-                                        "Download iniciado",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                            } else {
-
-                                Toast.makeText(
-                                        MainActivity.this,
-                                        "Não foi possível iniciar o download.",
-                                        Toast.LENGTH_LONG
-                                ).show();
-                            }
-
-                        } catch (Exception e) {
-
-                            Toast.makeText(
-                                    MainActivity.this,
-                                    "Erro no download: "
-                                            + e.getMessage(),
-                                    Toast.LENGTH_LONG
-                            ).show();
-                        }
-                    }
-                }
+        boasVindas.setText(
+                "Olá! Eu sou a Alex IA Ultra.\n\n"
+                + "A minha nova interface está funcionando."
         );
 
-        container.addView(
-                webView,
+        boasVindas.setTextColor(Color.WHITE);
+        boasVindas.setTextSize(17);
+        boasVindas.setPadding(25, 25, 25, 25);
+
+        mensagens.addView(boasVindas);
+
+        scroll.addView(mensagens);
+
+        tela.addView(
+                scroll,
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         0,
@@ -272,45 +98,94 @@ public class MainActivity extends Activity {
                 )
         );
 
-        webView.loadUrl(URL);
+        // ============================================================
+        // ÁREA DE DIGITAÇÃO
+        // ============================================================
+
+        LinearLayout entrada = new LinearLayout(this);
+        entrada.setOrientation(LinearLayout.HORIZONTAL);
+        entrada.setPadding(15, 15, 15, 15);
+
+        campoMensagem = new EditText(this);
+
+        campoMensagem.setHint("Digite uma mensagem...");
+        campoMensagem.setHintTextColor(Color.LTGRAY);
+        campoMensagem.setTextColor(Color.WHITE);
+        campoMensagem.setTextSize(16);
+
+        entrada.addView(
+                campoMensagem,
+                new LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        Button enviar = new Button(this);
+
+        enviar.setText("Enviar");
+
+        enviar.setOnClickListener(
+                v -> enviarMensagem()
+        );
+
+        entrada.addView(
+                enviar,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
+
+        tela.addView(
+                entrada,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
+
+        setContentView(tela);
     }
 
-    private void mostrarErro(String mensagem) {
+    private void enviarMensagem() {
 
-        if (statusText != null) {
+        String texto = campoMensagem
+                .getText()
+                .toString()
+                .trim();
 
-            statusText.setVisibility(
-                    TextView.VISIBLE
-            );
-
-            statusText.setText(mensagem);
+        if (texto.isEmpty()) {
+            return;
         }
+
+        adicionarMensagem(
+                "Você: " + texto
+        );
+
+        campoMensagem.setText("");
+
+        adicionarMensagem(
+                "Alex: Interface própria funcionando. "
+                + "A conexão com a Ponte Alex v2 será adicionada na próxima etapa."
+        );
+    }
+
+    private void adicionarMensagem(String texto) {
+
+        TextView mensagem = new TextView(this);
+
+        mensagem.setText(texto);
+        mensagem.setTextColor(Color.WHITE);
+        mensagem.setTextSize(16);
+        mensagem.setPadding(20, 15, 20, 15);
+
+        mensagens.addView(mensagem);
     }
 
     @Override
     public void onBackPressed() {
-
-        if (webView != null
-                && webView.canGoBack()) {
-
-            webView.goBack();
-
-        } else {
-
-            super.onBackPressed();
-        }
+        super.onBackPressed();
     }
-
-    @Override
-    protected void onDestroy() {
-
-        if (webView != null) {
-
-            webView.stopLoading();
-            webView.destroy();
-            webView = null;
-        }
-
-        super.onDestroy();
-    }
-  }
+            }
