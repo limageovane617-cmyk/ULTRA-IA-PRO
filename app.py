@@ -1152,8 +1152,6 @@ if ferramenta:
                     str(erro)
                 )
 
-            except Exception as erro:
-
 
         # ====================================================
         # 📄 MOSTRAR RESULTADO SALVO
