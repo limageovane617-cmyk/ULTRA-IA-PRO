@@ -1118,34 +1118,30 @@ if ferramenta:
                                 st.code(
                                     str(erro_leitura)
                                 )
-                                
-                #=======================================
-                # Salvar tudo para sobreviver ao rerun
-                #===========≠===========================
-                
-                st.session_state["ponte_resultado"] = (
-                    resultado
-                )
+                              
+            # ============================================================
+            # Salvar tudo para sobreviver ao rerun
+            # ============================================================
+            
+            st.session_state["ponte_resultado"] = resultado
+            st.session_state["ponte_conteudo"] = conteudo_resultado
+            st.session_state["ponte_processado"] = True
 
-                st.session_state["ponte_conteudo"] = (
-                    conteudo_resultado
-                )
+            # Nome real do arquivo processado pela Ponte
+            nome_processado = ""
 
-                st.session_state["ponte_processado"] = True
+            if isinstance(processed_file, dict):
+                nome_processado = processed_file.get("filename", "")
 
-                # Nome sugerido
-                st.session_state["ponte_nome_download"] = (
-                    "codigo_alex.py"
-                )
+            st.session_state["ponte_nome_download"] = (
+                nome_processado or "codigo_alex.py"
+            )
 
-                st.success(
-                    "🌉 Código processado pela Ponte Alex v2!"
-                )
+            st.success("🌉 Código processado pela Ponte Alex v2!")
 
-            except ErroPonteAlex as erro:
+        except ErroPonteAlex as erro:
+            st.error("❌ Erro na Ponte Alex v2.")
 
-                st.error(
-                    "❌ Erro na Ponte Alex v2."
                 )
 
                 st.code(
