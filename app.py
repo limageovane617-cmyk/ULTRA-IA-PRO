@@ -183,17 +183,17 @@ CSS = f"""
    📱 MODO APP — OCULTAR INTERFACE DO STREAMLIT
    ======================================================== */
 
-header[data-testid="stHeader"] {
+header[data-testid="stHeader"] {{
     display: none !important;
-}
+}}
 
-footer {
+footer {{
     display: none !important;
-}
+}}
 
-#MainMenu {
+#MainMenu {{
     display: none !important;
-}
+}}
 
 /* ========================================================
    ➕ BOTÃO DE FERRAMENTAS
