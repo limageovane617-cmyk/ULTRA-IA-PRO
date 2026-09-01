@@ -1059,8 +1059,7 @@ if ferramenta:
                         instrucao=instrucao_ponte,
                         nome_arquivo="codigo_alex.py"
                     )
-
-                # ===================================
+                    
                 # ============================================================
                 # 📄 LER CONTEÚDO RETORNADO PELA PONTE
                 # ============================================================
