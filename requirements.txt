@@ -24,3 +24,5 @@ onnxruntime
 gtts
 imageio
 imageio-ffmpeg
+fastapi
+uvicorn
