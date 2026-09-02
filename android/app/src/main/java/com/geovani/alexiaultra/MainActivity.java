@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -86,6 +87,59 @@ public class MainActivity extends Activity {
                 titulo,
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
+        
+        // ============================================================
+        // ➕ BOTÃO DE FERRAMENTAS
+        // ============================================================
+
+        Button botaoMais = new Button(this);
+
+        botaoMais.setText("＋");
+
+        botaoMais.setTextSize(22);
+
+        botaoMais.setTextColor(Color.WHITE);
+
+        botaoMais.setOnClickListener(v -> {
+
+            PopupMenu menu =
+                    new PopupMenu(
+                            MainActivity.this,
+                            botaoMais
+                    );
+
+            menu.getMenu().add("🖼️ Imagem");
+            menu.getMenu().add("🎬 Vídeo");
+            menu.getMenu().add("🔊 Voz");
+            menu.getMenu().add("💻 Código");
+            menu.getMenu().add("📎 Arquivo");
+            menu.getMenu().add("🎭 Personagem");
+            menu.getMenu().add("🧠 Memória");
+            menu.getMenu().add("🗑️ Limpar chat");
+
+            menu.setOnMenuItemClickListener(item -> {
+
+                String ferramenta =
+                        item.getTitle().toString();
+
+                adicionarMensagem(
+                        "🧰 Ferramenta selecionada: "
+                               + ferramenta
+              );
+
+                return true;
+            });
+
+            menu.show();
+        });
+
+        tela.addView(
+                botaoMais,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 )
         );
