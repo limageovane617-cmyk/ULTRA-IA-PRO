@@ -593,6 +593,8 @@ public class MainActivity extends Activity {
                         conteudo;
 
                 runOnUiThread(() -> {
+                    
+                   campoCodigo.setText(conteudoArquivoSelecionado);
 
                     adicionarMensagem(
                             "📎 Arquivo carregado: "
