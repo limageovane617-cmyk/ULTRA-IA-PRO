@@ -473,6 +473,240 @@ public class MainActivity extends Activity {
 
         return resultado.toString();
     }
+    // ============================================================
+    // PROCESSAR CÓDIGO PELA PONTE ALEX V2
+    // ============================================================
+
+    private void processarPelaPonte(
+            String codigo,
+            String instrucao
+    ) {
+
+        codigo = codigo.trim();
+        instrucao = instrucao.trim();
+
+        if (codigo.isEmpty()) {
+
+            adicionarMensagem(
+                    "Ponte: cole um código para processar."
+            );
+
+            return;
+        }
+
+        if (instrucao.isEmpty()) {
+
+            adicionarMensagem(
+                   "Ponte: informe o que deseja modificar."
+            );
+
+            return;
+        }
+
+        adicionarMensagem(
+                "Você → Ponte: processando..."
+        );
+
+        final String codigoFinal = codigo;
+        final String instrucaoFinal = instrucao;
+
+        executor.execute(() -> {
+
+            HttpURLConnection conexao = null;
+
+            try {
+
+                JSONObject pedido = new JSONObject();
+
+                pedido.put(
+                        "fileContent",
+                        codigoFinal
+                );
+
+                pedido.put(
+                       "instruction",
+                        instrucaoFinal
+                );
+
+                pedido.put(
+                        "filename",
+                        "script_alex.py"
+                );
+
+                pedido.put(
+                        "outputFilename",
+                        JSONObject.NULL
+                );
+
+                pedido.put(
+                        "searchTarget",
+                        JSONObject.NULL
+                );
+
+                pedido.put(
+                        "replaceWith",
+                        JSONObject.NULL
+                );
+
+                URL url =
+                        new URL(PONTE_API_URL);
+
+                conexao =
+                        (HttpURLConnection)
+                                url.openConnection();
+
+                conexao.setRequestMethod("POST");
+
+                conexao.setRequestProperty(
+                        "Content-Type",
+                        "application/json"
+                );
+
+                conexao.setRequestProperty(
+                        "Accept",
+                        "application/json"
+                );
+
+                conexao.setDoOutput(true);
+
+                conexao.setConnectTimeout(
+                        30000
+                );
+
+                conexao.setReadTimeout(
+                        90000
+                );
+
+                byte[] dados =
+                        pedido.toString()
+                                .getBytes(
+                                        StandardCharsets.UTF_8
+                                );
+
+                try (
+                        OutputStream saida =
+                                conexao.getOutputStream()
+                ) {
+
+                    saida.write(dados);
+                }
+
+                int codigoHttp =
+                        conexao.getResponseCode();
+
+                InputStream entradaResposta;
+
+                if (
+                        codigoHttp >= 200
+                                && codigoHttp < 300
+                ) {
+
+                    entradaResposta =
+                            conexao.getInputStream();
+
+                } else {
+
+                    entradaResposta =
+                            conexao.getErrorStream();
+                }
+
+                String respostaTexto =
+                        lerResposta(
+                                entradaResposta
+                        );
+
+                JSONObject resposta =
+                        new JSONObject(
+                                respostaTexto
+                        );
+
+                boolean sucesso =
+                        resposta.optBoolean(
+                                "success",
+                                false
+                        );
+
+                if (sucesso) {
+
+                    JSONObject arquivo =
+                            resposta.optJSONObject(
+                                    "processedFile"
+                            );
+
+                    String nomeArquivo =
+                            arquivo != null
+                                    ? arquivo.optString(
+                                            "filename",
+                                            ""
+                                    )
+                                    : "";
+
+                    String download =
+                            arquivo != null
+                                    ? arquivo.optString(
+                                            "downloadUrl",
+                                            ""
+                                    )
+                                    : "";
+
+                    String status =
+                            resposta.optString(
+                                    "status",
+                                    "PROCESSADO"
+                            );
+
+                    runOnUiThread(() -> {
+
+                        adicionarMensagem(
+                                "Ponte: " + status
+                                        + "\nArquivo processado: "
+                                        + nomeArquivo
+                                        + (
+                                            download.isEmpty()
+                                                ? ""
+                                                : "\nDownload: "
+                                                    + download
+                                        )
+                        );
+                    });
+
+                } else {
+
+                    String erro =
+                            resposta.optString(
+                                    "error",
+                                    resposta.optString(
+                                            "resposta",
+                                            "A Ponte não conseguiu processar."
+                                    )
+                            );
+
+                    runOnUiThread(() -> {
+
+                        adicionarMensagem(
+                                "Ponte: " + erro
+                        );
+                    });
+                }
+
+            } catch (Exception erro) {
+
+                runOnUiThread(() -> {
+
+                    adicionarMensagem(
+                            "Ponte: não foi possível "
+                                    + "conectar ao servidor."
+                    );
+                });
+
+            } finally {
+
+                if (conexao != null) {
+                    conexao.disconnect();
+                }
+            }
+        });
+    }
 
     // ============================================================
     // MENSAGEM "PENSANDO..."
