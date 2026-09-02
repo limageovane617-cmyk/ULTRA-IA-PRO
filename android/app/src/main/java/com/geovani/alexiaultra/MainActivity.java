@@ -122,15 +122,36 @@ public class MainActivity extends Activity {
 
             menu.setOnMenuItemClickListener(item -> {
 
-                String ferramenta =
-                        item.getTitle().toString();
+            String ferramenta =
+                    item.getTitle().toString();
+
+            if (ferramenta.equals("💻 Código")) {
 
                 adicionarMensagem(
-                        "🧰 Ferramenta selecionada: "
-                               + ferramenta
-              );
+                        "💻 Código: use a área da Ponte Alex v2 "
+                                + "para processar seu código."
+                );
 
                 return true;
+            }
+
+            if (ferramenta.equals("🗑️ Limpar chat")) {
+
+                mensagens.removeAllViews();
+
+                adicionarMensagem(
+                        "🗑️ Chat limpo."
+                );
+
+                return true;
+            }
+
+            adicionarMensagem(
+                    "🧰 Ferramenta selecionada: "
+                            + ferramenta
+            );
+
+            return true;
             });
 
             menu.show();
