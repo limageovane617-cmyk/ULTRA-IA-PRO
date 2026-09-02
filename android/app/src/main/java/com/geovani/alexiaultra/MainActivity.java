@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
 
@@ -431,13 +433,75 @@ public class MainActivity extends Activity {
                 String nome =
                         obterNomeArquivo(uri);
 
+                if (nome == null || nome.isEmpty()) {
+                    nome = "arquivo_selecionado";
+                }
+
+                final String nomeFinal = nome;
+
+                // ========================================================
+                // ZIP
+                // ========================================================
+
+                if (nome.toLowerCase().endsWith(".zip")) {
+
+                    List<String> arquivosZip =
+                            listarArquivosZip(uri);
+
+                    runOnUiThread(() -> {
+
+                        if (arquivosZip.isEmpty()) {
+
+                            adicionarMensagem(
+                                    "📦 ZIP carregado: "
+                                            + nomeFinal
+                                            + "\n"
+                                            + "Nenhum arquivo encontrado dentro do ZIP."
+                            );
+
+                            return;
+                        }
+
+                        StringBuilder lista =
+                                new StringBuilder();
+
+                        lista.append(
+                                "📦 ZIP carregado: "
+                        );
+
+                        lista.append(nomeFinal);
+
+                        lista.append(
+                                "\n\nArquivos encontrados:"
+                        );
+
+                        for (String arquivo : arquivosZip) {
+
+                            lista.append("\n📄 ");
+                            lista.append(arquivo);
+                        }
+
+                        lista.append(
+                                "\n\n📦 ZIP pronto para a próxima etapa."
+                        );
+
+                        adicionarMensagem(
+                                lista.toString()
+                        );
+                    });
+
+                    return;
+                }
+
+                // ========================================================
+                // ARQUIVO DE TEXTO
+                // ========================================================
+
                 String conteudo =
                         lerConteudoArquivo(uri);
 
                 nomeArquivoSelecionado =
-                        nome != null && !nome.isEmpty()
-                                ? nome
-                                : "arquivo_selecionado";
+                        nomeFinal;
 
                 conteudoArquivoSelecionado =
                         conteudo;
@@ -469,6 +533,8 @@ public class MainActivity extends Activity {
             }
         });
     }
+
+    
 
     // ============================================================
     // OBTER NOME DO ARQUIVO
