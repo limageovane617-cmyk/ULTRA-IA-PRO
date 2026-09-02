@@ -12,11 +12,35 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class MainActivity extends Activity {
 
     private LinearLayout tela;
     private LinearLayout mensagens;
     private EditText campoMensagem;
+
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
+
+    private final List<JSONObject> historico =
+            new ArrayList<>();
+
+    private static final String API_URL =
+            "https://ultra-ia-pro.onrender.com/api/chat";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,11 +54,11 @@ public class MainActivity extends Activity {
 
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         );
     }
 
@@ -78,7 +102,7 @@ public class MainActivity extends Activity {
 
         boasVindas.setText(
                 "Olá! Eu sou a Alex IA Ultra.\n\n"
-                + "A minha nova interface está funcionando."
+                        + "Agora estou conectada ao meu cérebro de IA."
         );
 
         boasVindas.setTextColor(Color.WHITE);
@@ -149,6 +173,10 @@ public class MainActivity extends Activity {
         setContentView(tela);
     }
 
+    // ============================================================
+    // ENVIAR MENSAGEM PARA A API
+    // ============================================================
+
     private void enviarMensagem() {
 
         String texto = campoMensagem
@@ -160,32 +188,283 @@ public class MainActivity extends Activity {
             return;
         }
 
-        adicionarMensagem(
-                "Você: " + texto
-        );
+        adicionarMensagem("Você: " + texto);
 
         campoMensagem.setText("");
 
-        adicionarMensagem(
-                "Alex: Interface própria funcionando. "
-                + "A conexão com a Ponte Alex v2 será adicionada na próxima etapa."
-        );
+        adicionarMensagem("Alex: pensando...");
+
+        executor.execute(() -> {
+
+            try {
+
+                JSONObject pedido = new JSONObject();
+
+                pedido.put(
+                        "pergunta",
+                        texto
+                );
+
+                JSONArray arrayHistorico =
+                        new JSONArray();
+
+                for (JSONObject item : historico) {
+                    arrayHistorico.put(item);
+                }
+
+                pedido.put(
+                        "historico",
+                        arrayHistorico
+                );
+
+                pedido.put(
+                        "contexto_arquivo",
+                        ""
+                );
+
+                pedido.put(
+                        "nome_arquivo",
+                        ""
+                );
+
+                URL url = new URL(API_URL);
+
+                HttpURLConnection conexao =
+                        (HttpURLConnection) url.openConnection();
+
+                conexao.setRequestMethod("POST");
+                conexao.setRequestProperty(
+                        "Content-Type",
+                        "application/json"
+                );
+                conexao.setRequestProperty(
+                        "Accept",
+                        "application/json"
+                );
+
+                conexao.setDoOutput(true);
+                conexao.setConnectTimeout(30000);
+                conexao.setReadTimeout(60000);
+
+                byte[] dados =
+                        pedido.toString()
+                                .getBytes(StandardCharsets.UTF_8);
+
+                try (OutputStream saida =
+                             conexao.getOutputStream()) {
+
+                    saida.write(dados);
+                }
+
+                int codigo =
+                        conexao.getResponseCode();
+
+                InputStream entradaResposta;
+
+                if (codigo >= 200 && codigo < 300) {
+                    entradaResposta =
+                            conexao.getInputStream();
+                } else {
+                    entradaResposta =
+                            conexao.getErrorStream();
+                }
+
+                String respostaTexto =
+                        lerResposta(entradaResposta);
+
+                conexao.disconnect();
+
+                JSONObject resposta =
+                        new JSONObject(respostaTexto);
+
+                boolean sucesso =
+                        resposta.optBoolean(
+                                "success",
+                                false
+                        );
+
+                String respostaAlex =
+                        resposta.optString(
+                                "resposta",
+                                "Não consegui obter uma resposta."
+                        );
+
+                if (sucesso) {
+
+                    JSONObject mensagemUsuario =
+                            new JSONObject();
+
+                    mensagemUsuario.put(
+                            "role",
+                            "user"
+                    );
+
+                    mensagemUsuario.put(
+                            "content",
+                            texto
+                    );
+
+                    JSONObject mensagemAlex =
+                            new JSONObject();
+
+                    mensagemAlex.put(
+                            "role",
+                            "model"
+                    );
+
+                    mensagemAlex.put(
+                            "content",
+                            respostaAlex
+                    );
+
+                    historico.add(
+                            mensagemUsuario
+                    );
+
+                    historico.add(
+                            mensagemAlex
+                    );
+                }
+
+                runOnUiThread(() -> {
+
+                    removerMensagemPensando();
+
+                    if (sucesso) {
+
+                        adicionarMensagem(
+                                "Alex: " + respostaAlex
+                        );
+
+                    } else {
+
+                        adicionarMensagem(
+                                "Alex: " + respostaAlex
+                        );
+                    }
+                });
+
+            } catch (Exception erro) {
+
+                runOnUiThread(() -> {
+
+                    removerMensagemPensando();
+
+                    adicionarMensagem(
+                            "Alex: Não consegui conectar "
+                                    + "ao servidor agora."
+                    );
+                });
+            }
+        });
     }
 
-    private void adicionarMensagem(String texto) {
+    // ============================================================
+    // LER RESPOSTA DO SERVIDOR
+    // ============================================================
 
-        TextView mensagem = new TextView(this);
+    private String lerResposta(
+            InputStream entrada
+    ) throws Exception {
+
+        if (entrada == null) {
+            return "{\"success\":false,"
+                    + "\"resposta\":\"Resposta vazia do servidor.\"}";
+        }
+
+        StringBuilder resultado =
+                new StringBuilder();
+
+        BufferedReader leitor =
+                new BufferedReader(
+                        new InputStreamReader(
+                                entrada,
+                                StandardCharsets.UTF_8
+                        )
+                );
+
+        String linha;
+
+        while ((linha = leitor.readLine()) != null) {
+            resultado.append(linha);
+        }
+
+        leitor.close();
+
+        return resultado.toString();
+    }
+
+    // ============================================================
+    // MENSAGEM "PENSANDO..."
+    // ============================================================
+
+    private void removerMensagemPensando() {
+
+        int quantidade =
+                mensagens.getChildCount();
+
+        if (quantidade == 0) {
+            return;
+        }
+
+        View ultima =
+                mensagens.getChildAt(
+                        quantidade - 1
+                );
+
+        if (ultima instanceof TextView) {
+
+            TextView texto =
+                    (TextView) ultima;
+
+            String valor =
+                    texto.getText().toString();
+
+            if (valor.equals(
+                    "Alex: pensando..."
+            )) {
+
+                mensagens.removeView(
+                        ultima
+                );
+            }
+        }
+    }
+
+    // ============================================================
+    // ADICIONAR MENSAGEM NA TELA
+    // ============================================================
+
+    private void adicionarMensagem(
+            String texto
+    ) {
+
+        TextView mensagem =
+                new TextView(this);
 
         mensagem.setText(texto);
         mensagem.setTextColor(Color.WHITE);
         mensagem.setTextSize(16);
-        mensagem.setPadding(20, 15, 20, 15);
+        mensagem.setPadding(
+                20,
+                15,
+                20,
+                15
+        );
 
         mensagens.addView(mensagem);
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        executor.shutdownNow();
+
+        super.onDestroy();
     }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
     }
-  }
+}
