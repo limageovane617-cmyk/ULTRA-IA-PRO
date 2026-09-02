@@ -170,7 +170,9 @@ public class MainActivity extends Activity {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 )
-        );// ============================================================
+             ); 
+        
+          // ============================================================
           // ÁREA DA PONTE ALEX V2
           // ============================================================
 
