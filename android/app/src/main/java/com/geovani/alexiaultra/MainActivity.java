@@ -170,7 +170,85 @@ public class MainActivity extends Activity {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 )
-        );
+        );// ============================================================
+          // ÁREA DA PONTE ALEX V2
+          // ============================================================
+
+          TextView tituloPonte = new TextView(this);
+
+          tituloPonte.setText("🌉 Ponte Alex v2");
+          tituloPonte.setTextColor(Color.WHITE);
+          tituloPonte.setTextSize(19);
+          tituloPonte.setPadding(20, 20, 20, 10);
+
+          tela.addView(
+                  tituloPonte,
+                  new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
+          );
+
+          EditText campoCodigo = new EditText(this);
+
+          campoCodigo.setHint(
+                  "Cole aqui o código do arquivo..."
+          );
+
+          campoCodigo.setHintTextColor(Color.LTGRAY);
+          campoCodigo.setTextColor(Color.WHITE);
+          campoCodigo.setTextSize(15);
+          campoCodigo.setGravity(Gravity.TOP);
+          campoCodigo.setMinLines(5);
+          campoCodigo.setPadding(20, 20, 20, 20);
+
+          tela.addView(
+                  campoCodigo,
+                  new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          300
+                  )
+          );
+
+          EditText campoInstrucao = new EditText(this);
+
+          campoInstrucao.setHint(
+                  "O que a Ponte deve fazer?"
+          );
+
+          campoInstrucao.setHintTextColor(Color.LTGRAY);
+          campoInstrucao.setTextColor(Color.WHITE);
+          campoInstrucao.setTextSize(15);
+          campoInstrucao.setPadding(20, 15, 20, 15);
+
+          tela.addView(
+                  campoInstrucao,
+                  new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
+          );
+
+          Button enviarPonte = new Button(this);
+
+          enviarPonte.setText(
+                  "🌉 Processar pela Ponte"
+          );
+
+          enviarPonte.setOnClickListener(
+                  v -> processarPelaPonte(
+                          campoCodigo.getText().toString(),
+                          campoInstrucao.getText().toString()
+                  )
+          );
+
+          tela.addView(
+                  enviarPonte,
+                  new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
+          );
 
         setContentView(tela);
     }
