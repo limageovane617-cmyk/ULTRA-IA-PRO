@@ -1,7 +1,9 @@
 package com.geovani.alexiaultra;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -12,6 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.provider.OpenableColumns;
+import android.database.Cursor;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -34,6 +38,15 @@ public class MainActivity extends Activity {
     private LinearLayout mensagens;
     private EditText campoMensagem;
 
+    // ============================================================
+    // ARQUIVO SELECIONADO
+    // ============================================================
+
+    private String nomeArquivoSelecionado = "";
+    private String conteudoArquivoSelecionado = "";
+
+    private static final int REQUEST_SELECIONAR_ARQUIVO = 1001;
+
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
 
@@ -42,8 +55,9 @@ public class MainActivity extends Activity {
 
     private static final String API_URL =
             "https://ultra-ia-pro.onrender.com/api/chat";
+
     private static final String PONTE_API_URL =
-        "https://ultra-ia-pro.onrender.com/api/ponte/processar";
+            "https://ultra-ia-pro.onrender.com/api/ponte/processar";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,7 +104,7 @@ public class MainActivity extends Activity {
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 )
         );
-        
+
         // ============================================================
         // ➕ BOTÃO DE FERRAMENTAS
         // ============================================================
@@ -98,9 +112,7 @@ public class MainActivity extends Activity {
         Button botaoMais = new Button(this);
 
         botaoMais.setText("＋");
-
         botaoMais.setTextSize(22);
-
         botaoMais.setTextColor(Color.WHITE);
 
         botaoMais.setOnClickListener(v -> {
@@ -122,36 +134,59 @@ public class MainActivity extends Activity {
 
             menu.setOnMenuItemClickListener(item -> {
 
-            String ferramenta =
-                    item.getTitle().toString();
+                String ferramenta =
+                        item.getTitle().toString();
 
-            if (ferramenta.equals("💻 Código")) {
+                // ====================================================
+                // 💻 CÓDIGO
+                // ====================================================
+
+                if (ferramenta.equals("💻 Código")) {
+
+                    adicionarMensagem(
+                            "💻 Código: use a área da Ponte Alex v2 "
+                                    + "para processar seu código."
+                    );
+
+                    return true;
+                }
+
+                // ====================================================
+                // 📎 ARQUIVO
+                // ====================================================
+
+                if (ferramenta.equals("📎 Arquivo")) {
+
+                    abrirSeletorDeArquivo();
+
+                    return true;
+                }
+
+                // ====================================================
+                // 🗑️ LIMPAR CHAT
+                // ====================================================
+
+                if (ferramenta.equals("🗑️ Limpar chat")) {
+
+                    mensagens.removeAllViews();
+
+                    adicionarMensagem(
+                            "🗑️ Chat limpo."
+                    );
+
+                    return true;
+                }
+
+                // ====================================================
+                // OUTRAS FERRAMENTAS
+                // ====================================================
 
                 adicionarMensagem(
-                        "💻 Código: use a área da Ponte Alex v2 "
-                                + "para processar seu código."
+                        "🧰 Ferramenta selecionada: "
+                                + ferramenta
                 );
 
                 return true;
-            }
-
-            if (ferramenta.equals("🗑️ Limpar chat")) {
-
-                mensagens.removeAllViews();
-
-                adicionarMensagem(
-                        "🗑️ Chat limpo."
-                );
-
-                return true;
-            }
-
-            adicionarMensagem(
-                    "🧰 Ferramenta selecionada: "
-                            + ferramenta
-            );
-
-            return true;
             });
 
             menu.show();
@@ -245,89 +280,287 @@ public class MainActivity extends Activity {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 )
-             ); 
-        
-          // ============================================================
-          // ÁREA DA PONTE ALEX V2
-          // ============================================================
+        );
 
-          TextView tituloPonte = new TextView(this);
+        // ============================================================
+        // ÁREA DA PONTE ALEX V2
+        // ============================================================
 
-          tituloPonte.setText("🌉 Ponte Alex v2");
-          tituloPonte.setTextColor(Color.WHITE);
-          tituloPonte.setTextSize(19);
-          tituloPonte.setPadding(20, 20, 20, 10);
+        TextView tituloPonte = new TextView(this);
 
-          tela.addView(
-                  tituloPonte,
-                  new LinearLayout.LayoutParams(
-                          ViewGroup.LayoutParams.MATCH_PARENT,
-                          ViewGroup.LayoutParams.WRAP_CONTENT
-                  )
-          );
+        tituloPonte.setText("🌉 Ponte Alex v2");
+        tituloPonte.setTextColor(Color.WHITE);
+        tituloPonte.setTextSize(19);
+        tituloPonte.setPadding(20, 20, 20, 10);
 
-          EditText campoCodigo = new EditText(this);
+        tela.addView(
+                tituloPonte,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
 
-          campoCodigo.setHint(
-                  "Cole aqui o código do arquivo..."
-          );
+        EditText campoCodigo = new EditText(this);
 
-          campoCodigo.setHintTextColor(Color.LTGRAY);
-          campoCodigo.setTextColor(Color.WHITE);
-          campoCodigo.setTextSize(15);
-          campoCodigo.setGravity(Gravity.TOP);
-          campoCodigo.setMinLines(5);
-          campoCodigo.setPadding(20, 20, 20, 20);
+        campoCodigo.setHint(
+                "Cole aqui o código do arquivo..."
+        );
 
-          tela.addView(
-                  campoCodigo,
-                  new LinearLayout.LayoutParams(
-                          ViewGroup.LayoutParams.MATCH_PARENT,
-                          300
-                  )
-          );
+        campoCodigo.setHintTextColor(Color.LTGRAY);
+        campoCodigo.setTextColor(Color.WHITE);
+        campoCodigo.setTextSize(15);
+        campoCodigo.setGravity(Gravity.TOP);
+        campoCodigo.setMinLines(5);
+        campoCodigo.setPadding(20, 20, 20, 20);
 
-          EditText campoInstrucao = new EditText(this);
+        tela.addView(
+                campoCodigo,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        300
+                )
+        );
 
-          campoInstrucao.setHint(
-                  "O que a Ponte deve fazer?"
-          );
+        EditText campoInstrucao = new EditText(this);
 
-          campoInstrucao.setHintTextColor(Color.LTGRAY);
-          campoInstrucao.setTextColor(Color.WHITE);
-          campoInstrucao.setTextSize(15);
-          campoInstrucao.setPadding(20, 15, 20, 15);
+        campoInstrucao.setHint(
+                "O que a Ponte deve fazer?"
+        );
 
-          tela.addView(
-                  campoInstrucao,
-                  new LinearLayout.LayoutParams(
-                          ViewGroup.LayoutParams.MATCH_PARENT,
-                          ViewGroup.LayoutParams.WRAP_CONTENT
-                  )
-          );
+        campoInstrucao.setHintTextColor(Color.LTGRAY);
+        campoInstrucao.setTextColor(Color.WHITE);
+        campoInstrucao.setTextSize(15);
+        campoInstrucao.setPadding(20, 15, 20, 15);
 
-          Button enviarPonte = new Button(this);
+        tela.addView(
+                campoInstrucao,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
 
-          enviarPonte.setText(
-                  "🌉 Processar pela Ponte"
-          );
+        Button enviarPonte = new Button(this);
 
-          enviarPonte.setOnClickListener(
-                  v -> processarPelaPonte(
-                          campoCodigo.getText().toString(),
-                          campoInstrucao.getText().toString()
-                  )
-          );
+        enviarPonte.setText(
+                "🌉 Processar pela Ponte"
+        );
 
-          tela.addView(
-                  enviarPonte,
-                  new LinearLayout.LayoutParams(
-                          ViewGroup.LayoutParams.MATCH_PARENT,
-                          ViewGroup.LayoutParams.WRAP_CONTENT
-                  )
-          );
+        enviarPonte.setOnClickListener(
+                v -> processarPelaPonte(
+                        campoCodigo.getText().toString(),
+                        campoInstrucao.getText().toString()
+                )
+        );
+
+        tela.addView(
+                enviarPonte,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
 
         setContentView(tela);
+    }
+
+    // ============================================================
+    // ABRIR SELETOR DE ARQUIVO
+    // ============================================================
+
+    private void abrirSeletorDeArquivo() {
+
+        Intent intent =
+                new Intent(Intent.ACTION_OPEN_DOCUMENT);
+
+        intent.addCategory(
+                Intent.CATEGORY_OPENABLE
+        );
+
+        intent.setType("*/*");
+
+        startActivityForResult(
+                intent,
+                REQUEST_SELECIONAR_ARQUIVO
+        );
+    }
+
+    // ============================================================
+    // RESULTADO DO SELETOR DE ARQUIVO
+    // ============================================================
+
+    @Override
+    protected void onActivityResult(
+            int requestCode,
+            int resultCode,
+            Intent data
+    ) {
+
+        super.onActivityResult(
+                requestCode,
+                resultCode,
+                data
+        );
+
+        if (
+                requestCode != REQUEST_SELECIONAR_ARQUIVO
+                        || resultCode != RESULT_OK
+                        || data == null
+                        || data.getData() == null
+        ) {
+
+            return;
+        }
+
+        Uri uri = data.getData();
+
+        lerArquivoSelecionado(uri);
+    }
+
+    // ============================================================
+    // LER ARQUIVO
+    // ============================================================
+
+    private void lerArquivoSelecionado(Uri uri) {
+
+        executor.execute(() -> {
+
+            try {
+
+                String nome =
+                        obterNomeArquivo(uri);
+
+                String conteudo =
+                        lerConteudoArquivo(uri);
+
+                nomeArquivoSelecionado =
+                        nome != null && !nome.isEmpty()
+                                ? nome
+                                : "arquivo_selecionado";
+
+                conteudoArquivoSelecionado =
+                        conteudo;
+
+                runOnUiThread(() -> {
+
+                    adicionarMensagem(
+                            "📎 Arquivo carregado: "
+                                    + nomeArquivoSelecionado
+                                    + "\n"
+                                    + "Tamanho: "
+                                    + conteudoArquivoSelecionado.length()
+                                    + " caracteres."
+                    );
+
+                    adicionarMensagem(
+                            "📎 Arquivo pronto para a próxima etapa."
+                    );
+                });
+
+            } catch (Exception erro) {
+
+                runOnUiThread(() -> {
+
+                    adicionarMensagem(
+                            "📎 Não foi possível ler o arquivo."
+                    );
+                });
+            }
+        });
+    }
+
+    // ============================================================
+    // OBTER NOME DO ARQUIVO
+    // ============================================================
+
+    private String obterNomeArquivo(Uri uri) {
+
+        Cursor cursor = null;
+
+        try {
+
+            cursor =
+                    getContentResolver().query(
+                            uri,
+                            null,
+                            null,
+                            null,
+                            null
+                    );
+
+            if (
+                    cursor != null
+                            && cursor.moveToFirst()
+            ) {
+
+                int indice =
+                        cursor.getColumnIndex(
+                                OpenableColumns.DISPLAY_NAME
+                        );
+
+                if (indice >= 0) {
+
+                    return cursor.getString(
+                            indice
+                    );
+                }
+            }
+
+        } finally {
+
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return "";
+    }
+
+    // ============================================================
+    // LER CONTEÚDO UTF-8
+    // ============================================================
+
+    private String lerConteudoArquivo(Uri uri)
+            throws Exception {
+
+        InputStream entrada =
+                getContentResolver()
+                        .openInputStream(uri);
+
+        if (entrada == null) {
+            throw new Exception(
+                    "Não foi possível abrir o arquivo."
+            );
+        }
+
+        StringBuilder resultado =
+                new StringBuilder();
+
+        BufferedReader leitor =
+                new BufferedReader(
+                        new InputStreamReader(
+                                entrada,
+                                StandardCharsets.UTF_8
+                        )
+                );
+
+        String linha;
+
+        while (
+                (linha = leitor.readLine())
+                        != null
+        ) {
+
+            resultado
+                    .append(linha)
+                    .append("\n");
+        }
+
+        leitor.close();
+        entrada.close();
+
+        return resultado.toString();
     }
 
     // ============================================================
@@ -355,7 +588,8 @@ public class MainActivity extends Activity {
 
             try {
 
-                JSONObject pedido = new JSONObject();
+                JSONObject pedido =
+                        new JSONObject();
 
                 pedido.put(
                         "pergunta",
@@ -384,31 +618,45 @@ public class MainActivity extends Activity {
                         ""
                 );
 
-                URL url = new URL(API_URL);
+                URL url =
+                        new URL(API_URL);
 
                 HttpURLConnection conexao =
-                        (HttpURLConnection) url.openConnection();
+                        (HttpURLConnection)
+                                url.openConnection();
 
                 conexao.setRequestMethod("POST");
+
                 conexao.setRequestProperty(
                         "Content-Type",
                         "application/json"
                 );
+
                 conexao.setRequestProperty(
                         "Accept",
                         "application/json"
                 );
 
                 conexao.setDoOutput(true);
-                conexao.setConnectTimeout(30000);
-                conexao.setReadTimeout(60000);
+
+                conexao.setConnectTimeout(
+                        30000
+                );
+
+                conexao.setReadTimeout(
+                        60000
+                );
 
                 byte[] dados =
                         pedido.toString()
-                                .getBytes(StandardCharsets.UTF_8);
+                                .getBytes(
+                                        StandardCharsets.UTF_8
+                                );
 
-                try (OutputStream saida =
-                             conexao.getOutputStream()) {
+                try (
+                        OutputStream saida =
+                                conexao.getOutputStream()
+                ) {
 
                     saida.write(dados);
                 }
@@ -418,21 +666,31 @@ public class MainActivity extends Activity {
 
                 InputStream entradaResposta;
 
-                if (codigo >= 200 && codigo < 300) {
+                if (
+                        codigo >= 200
+                                && codigo < 300
+                ) {
+
                     entradaResposta =
                             conexao.getInputStream();
+
                 } else {
+
                     entradaResposta =
                             conexao.getErrorStream();
                 }
 
                 String respostaTexto =
-                        lerResposta(entradaResposta);
+                        lerResposta(
+                                entradaResposta
+                        );
 
                 conexao.disconnect();
 
                 JSONObject resposta =
-                        new JSONObject(respostaTexto);
+                        new JSONObject(
+                                respostaTexto
+                        );
 
                 boolean sucesso =
                         resposta.optBoolean(
@@ -487,18 +745,9 @@ public class MainActivity extends Activity {
 
                     removerMensagemPensando();
 
-                    if (sucesso) {
-
-                        adicionarMensagem(
-                                "Alex: " + respostaAlex
-                        );
-
-                    } else {
-
-                        adicionarMensagem(
-                                "Alex: " + respostaAlex
-                        );
-                    }
+                    adicionarMensagem(
+                            "Alex: " + respostaAlex
+                    );
                 });
 
             } catch (Exception erro) {
@@ -525,6 +774,7 @@ public class MainActivity extends Activity {
     ) throws Exception {
 
         if (entrada == null) {
+
             return "{\"success\":false,"
                     + "\"resposta\":\"Resposta vazia do servidor.\"}";
         }
@@ -542,7 +792,11 @@ public class MainActivity extends Activity {
 
         String linha;
 
-        while ((linha = leitor.readLine()) != null) {
+        while (
+                (linha = leitor.readLine())
+                        != null
+        ) {
+
             resultado.append(linha);
         }
 
@@ -550,6 +804,7 @@ public class MainActivity extends Activity {
 
         return resultado.toString();
     }
+
     // ============================================================
     // PROCESSAR CÓDIGO PELA PONTE ALEX V2
     // ============================================================
@@ -574,7 +829,7 @@ public class MainActivity extends Activity {
         if (instrucao.isEmpty()) {
 
             adicionarMensagem(
-                   "Ponte: informe o que deseja modificar."
+                    "Ponte: informe o que deseja modificar."
             );
 
             return;
@@ -593,7 +848,8 @@ public class MainActivity extends Activity {
 
             try {
 
-                JSONObject pedido = new JSONObject();
+                JSONObject pedido =
+                        new JSONObject();
 
                 pedido.put(
                         "fileContent",
@@ -601,7 +857,7 @@ public class MainActivity extends Activity {
                 );
 
                 pedido.put(
-                       "instruction",
+                        "instruction",
                         instrucaoFinal
                 );
 
@@ -811,9 +1067,11 @@ public class MainActivity extends Activity {
             String valor =
                     texto.getText().toString();
 
-            if (valor.equals(
-                    "Alex: pensando..."
-            )) {
+            if (
+                    valor.equals(
+                            "Alex: pensando..."
+                    )
+            ) {
 
                 mensagens.removeView(
                         ultima
@@ -836,6 +1094,7 @@ public class MainActivity extends Activity {
         mensagem.setText(texto);
         mensagem.setTextColor(Color.WHITE);
         mensagem.setTextSize(16);
+
         mensagem.setPadding(
                 20,
                 15,
@@ -843,7 +1102,9 @@ public class MainActivity extends Activity {
                 15
         );
 
-        mensagens.addView(mensagem);
+        mensagens.addView(
+                mensagem
+        );
     }
 
     @Override
@@ -858,4 +1119,4 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         super.onBackPressed();
     }
-}
+   }
