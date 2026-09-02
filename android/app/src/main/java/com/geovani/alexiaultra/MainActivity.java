@@ -534,7 +534,53 @@ public class MainActivity extends Activity {
         });
     }
 
-    
+    // ============================================================
+    // LISTAR ARQUIVOS DO ZIP
+    // ============================================================
+
+    private List<String> listarArquivosZip(Uri uri)
+            throws Exception {
+
+        List<String> arquivos =
+                new ArrayList<>();
+
+        InputStream entrada =
+                getContentResolver()
+                        .openInputStream(uri);
+
+        if (entrada == null) {
+            throw new Exception(
+                    "Não foi possível abrir o ZIP."
+            );
+        }
+
+        ZipInputStream zip =
+                new ZipInputStream(
+                        entrada
+                );
+
+        ZipEntry entradaZip;
+
+        while (
+                (entradaZip = zip.getNextEntry())
+                        != null
+        ) {
+
+            if (!entradaZip.isDirectory()) {
+
+                arquivos.add(
+                        entradaZip.getName()
+                );
+            }
+
+            zip.closeEntry();
+        }
+
+        zip.close();
+        entrada.close();
+
+        return arquivos;
+    }
 
     // ============================================================
     // OBTER NOME DO ARQUIVO
