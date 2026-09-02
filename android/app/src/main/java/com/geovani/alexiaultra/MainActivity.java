@@ -17,6 +17,8 @@ import android.widget.TextView;
 import android.provider.OpenableColumns;
 import android.database.Cursor;
 import android.os.Build;
+import android.provider.Settings;
+import android.content.ActivityNotFoundException;
 
 import androidx.core.content.FileProvider;
 
