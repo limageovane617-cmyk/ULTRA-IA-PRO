@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
     private LinearLayout tela;
     private LinearLayout mensagens;
     private EditText campoMensagem;
+    private EditText campoCodigo;
     
     // ============================================================
     // ARQUIVO SELECIONADO
@@ -311,7 +312,7 @@ public class MainActivity extends Activity {
                 )
         );
 
-        EditText campoCodigo = new EditText(this);
+        campoCodigo = new EditText(this);
 
         campoCodigo.setHint(
                 "Cole aqui o código do arquivo..."
