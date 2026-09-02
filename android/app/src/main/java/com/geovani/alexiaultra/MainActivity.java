@@ -581,11 +581,184 @@ public class MainActivity extends Activity {
 
             zip.closeEntry();
         }
-
+                
         zip.close();
         entrada.close();
 
         return arquivos;
+    }
+
+    // ============================================================
+    // EXTRAIR E INSTALAR APK
+    // ============================================================
+
+    private void extrairEInstalarApk(Uri uri)
+            throws Exception {
+
+        InputStream entrada =
+                getContentResolver()
+                        .openInputStream(uri);
+
+        if (entrada == null) {
+            throw new Exception(
+                    "Não foi possível abrir o ZIP."
+            );
+        }
+
+        ZipInputStream zip =
+                new ZipInputStream(entrada);
+
+        ZipEntry entradaZip;
+
+        while (
+                (entradaZip = zip.getNextEntry())
+                        != null
+        ) {
+
+            if (
+                    !entradaZip.isDirectory()
+                            &&
+                    entradaZip.getName()
+                            .toLowerCase()
+                            .endsWith(".apk")
+            ) {
+
+                File apkFile =
+                        new File(
+                                getCacheDir(),
+                                "apk_instalacao.apk"
+                        );
+
+                FileOutputStream saida =
+                        new FileOutputStream(
+                                apkFile
+                        );
+
+                byte[] buffer =
+                        new byte[8192];
+
+                int quantidade;
+
+                while (
+                        (quantidade = zip.read(buffer))
+                                != -1
+                ) {
+
+                    saida.write(
+                            buffer,
+                            0,
+                            quantidade
+                    );
+                }
+
+                saida.flush();
+                saida.close();
+
+                zip.closeEntry();
+                zip.close();
+                entrada.close();
+
+                abrirInstaladorApk(apkFile);
+
+                return;
+            }
+
+            zip.closeEntry();
+        }
+
+        zip.close();
+        entrada.close();
+
+        throw new Exception(
+                "Nenhum APK foi encontrado dentro do ZIP."
+        );
+    }
+
+    // ============================================================
+    // ABRIR INSTALADOR DO APK
+    // ============================================================
+
+    private void abrirInstaladorApk(File apkFile) {
+
+        try {
+
+            if (
+                    Build.VERSION.SDK_INT >=
+                            Build.VERSION_CODES.O
+            ) {
+
+                if (
+                        !getPackageManager()
+                                .canRequestPackageInstalls()
+                ) {
+
+                    Intent configuracao =
+                            new Intent(
+                                    Settings
+                                            .ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    Uri.parse(
+                                            "package:"
+                                                    + getPackageName()
+                                    )
+                            );
+
+                    startActivity(
+                            configuracao
+                    );
+
+                    adicionarMensagem(
+                            "📱 Permita a instalação deste aplicativo e depois tente instalar o APK novamente."
+                    );
+
+                    return;
+                }
+            }
+
+            Uri apkUri =
+                    FileProvider.getUriForFile(
+                            this,
+                            getPackageName()
+                                    + ".fileprovider",
+                            apkFile
+                    );
+
+            Intent instalador =
+                    new Intent(
+                            Intent.ACTION_VIEW
+                    );
+
+            instalador.setDataAndType(
+                    apkUri,
+                    "application/vnd.android.package-archive"
+            );
+
+            instalador.addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            instalador.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+            );
+
+            startActivity(
+                    instalador
+            );
+
+        } catch (
+                ActivityNotFoundException erro
+        ) {
+
+            adicionarMensagem(
+                    "📱 Não foi possível abrir o instalador do APK."
+            );
+
+        } catch (Exception erro) {
+
+            adicionarMensagem(
+                    "📱 Erro ao abrir o APK: "
+                            + erro.getMessage()
+            );
+        }
     }
 
     // ============================================================
