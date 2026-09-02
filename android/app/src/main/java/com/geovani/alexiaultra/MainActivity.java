@@ -41,6 +41,8 @@ public class MainActivity extends Activity {
 
     private static final String API_URL =
             "https://ultra-ia-pro.onrender.com/api/chat";
+    private static final String PONTE_API_URL =
+        "https://ultra-ia-pro.onrender.com/api/ponte/processar";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
