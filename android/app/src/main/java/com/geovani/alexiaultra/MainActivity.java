@@ -16,6 +16,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.provider.OpenableColumns;
 import android.database.Cursor;
+import android.os.Build;
+
+import androidx.core.content.FileProvider;
+
+import java.io.File;
+import java.io.FileOutputStream;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -39,7 +45,7 @@ public class MainActivity extends Activity {
     private LinearLayout tela;
     private LinearLayout mensagens;
     private EditText campoMensagem;
-
+    
     // ============================================================
     // ARQUIVO SELECIONADO
     // ============================================================
