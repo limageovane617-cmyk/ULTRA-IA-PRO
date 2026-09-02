@@ -453,54 +453,96 @@ public class MainActivity extends Activity {
 
                 if (nome.toLowerCase().endsWith(".zip")) {
 
-                    List<String> arquivosZip =
-                            listarArquivosZip(uri);
+                    List<String> arquivosZip = listarArquivosZip(uri);
+
+                    boolean encontrouApk = false;
+
+                    for (String arquivo : arquivosZip) {
+                        if (arquivo.toLowerCase().endsWith(".apk")) {
+                            encontrouApk = true;
+                            break;
+                        }
+                    }
+
+                    final boolean apkEncontrado = encontrouApk;
 
                     runOnUiThread(() -> {
 
-                        if (arquivosZip.isEmpty()) {
-
+                         if (arquivosZip.isEmpty()) {
                             adicionarMensagem(
                                     "📦 ZIP carregado: "
                                             + nomeFinal
                                             + "\n"
                                             + "Nenhum arquivo encontrado dentro do ZIP."
                             );
-
                             return;
                         }
 
-                        StringBuilder lista =
-                                new StringBuilder();
+                        StringBuilder lista = new StringBuilder();
 
-                        lista.append(
-                                "📦 ZIP carregado: "
-                        );
-
+                        lista.append("📦 ZIP carregado: ");
                         lista.append(nomeFinal);
-
-                        lista.append(
-                                "\n\nArquivos encontrados:"
-                        );
+                        lista.append("\n\nArquivos encontrados:");
 
                         for (String arquivo : arquivosZip) {
-
                             lista.append("\n📄 ");
                             lista.append(arquivo);
                         }
 
-                        lista.append(
-                                "\n\n📦 ZIP pronto para a próxima etapa."
-                        );
+                        if (apkEncontrado) {
+                           lista.append(
+                                   "\n\n📱 APK encontrado dentro do ZIP!"
+                            );
+                            lista.append(
+                                  "\n📱 Pronto para instalar."
+                            );
+                        } else {
+                            lista.append(
+                                    "\n\n📦 Nenhum APK encontrado dentro do ZIP."
+                            );
+                        }
 
-                        adicionarMensagem(
-                                lista.toString()
-                        );
+                        adicionarMensagem(lista.toString());
                     });
+
+                    // ========================================================
+                    // INSTALAR APK ENCONTRADO
+                    // ========================================================
+
+                   if (apkEncontrado) {
+
+                        runOnUiThread(() -> {
+
+                            Button botaoInstalar = new Button(this);
+
+                            botaoInstalar.setText("📱 Instalar APK");
+
+                            botaoInstalar.setOnClickListener(v -> {
+
+                                executor.execute(() -> {
+
+                                    try {
+                                         extrairEInstalarApk(uri);
+
+                                    } catch (Exception erro) {
+
+                                        runOnUiThread(() -> {
+
+                                            adicionarMensagem(
+                                                    "📱 Não foi possível instalar o APK: "
+                                                            + erro.getMessage()
+                                            );
+                                        });
+                                    }
+                                });
+                            });
+
+                            tela.addView(botaoInstalar);
+                        });
+                    }
 
                     return;
                 }
-
                 // ========================================================
                 // ARQUIVO DE TEXTO
                 // ========================================================
