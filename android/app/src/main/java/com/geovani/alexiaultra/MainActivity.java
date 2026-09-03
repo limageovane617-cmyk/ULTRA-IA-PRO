@@ -939,10 +939,48 @@ public class MainActivity extends Activity {
     // ============================================================
     // ENVIAR MENSAGEM PARA A API
     // ============================================================
-    
+    // ENVIAR MENSAGEM PARA A API
+    // ============================================================
+
+    private void enviarMensagem() {
+
+        String texto =
+                campoMensagem.getText()
+                        .toString()
+                        .trim();
+
+        if (texto.isEmpty()) {
+            return;
+        }
+
+        adicionarMensagem(
+                "Você: " + texto
+        );
+
+        campoMensagem.setText("");
+
+        adicionarMensagem(
+                "Alex: pensando..."
+        );
+
+        executor.execute(() -> {
+
+            try {
+
+                JSONObject pedido =
+                        new JSONObject();
+
+                JSONArray arrayHistorico =
+                        new JSONArray();
+
                 for (JSONObject item : historico) {
                     arrayHistorico.put(item);
                 }
+
+                pedido.put(
+                        "pergunta",
+                        texto
+                );
 
                 pedido.put(
                         "historico",
@@ -963,7 +1001,7 @@ public class MainActivity extends Activity {
                         new URL(API_URL);
 
                 HttpURLConnection conexao =
-                        (HttpURLConnection)
+                       (HttpURLConnection)
                                 url.openConnection();
 
                 conexao.setRequestMethod("POST");
@@ -991,7 +1029,7 @@ public class MainActivity extends Activity {
                 byte[] dados =
                         pedido.toString()
                                 .getBytes(
-                                        StandardCharsets.UTF_8
+                                       StandardCharsets.UTF_8
                                 );
 
                 try (
@@ -1037,7 +1075,7 @@ public class MainActivity extends Activity {
                         resposta.optBoolean(
                                 "success",
                                 false
-                        );
+                       );
 
                 String respostaAlex =
                         resposta.optString(
@@ -1104,8 +1142,7 @@ public class MainActivity extends Activity {
                 });
             }
         });
-    }
-
+    }  
     // ============================================================
     // LER RESPOSTA DO SERVIDOR
     // ============================================================
