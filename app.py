@@ -1105,16 +1105,37 @@ if ferramenta:
                         nome_arquivo="codigo_alex.py"
                     )
 
+                nome_arquivo="codigo_alex.py"
+                    )
+
                 # ============================================================
                 # 📄 LER CONTEÚDO RETORNADO PELA PONTE
                 # ============================================================
 
                 conteudo_resultado = ""
 
-                processed_file = resultado.get(
-                    "processedFile",
+                # A resposta original da Ponte fica dentro de
+                # "resposta_completa" no ClientePonteAlex.
+                resposta_completa = resultado.get(
+                    "resposta_completa",
                     {}
                 )
+
+                if isinstance(
+                    resposta_completa,
+                    dict
+                ):
+
+                    processed_file = (
+                        resposta_completa.get(
+                            "processedFile",
+                            {}
+                        )
+                    )
+
+                else:
+
+                    processed_file = {}
 
                 if isinstance(
                     processed_file,
@@ -1129,7 +1150,7 @@ if ferramenta:
                     )
 
                 # ============================================================
-                # 📄 COMPATIBILIDADE COM RESPOSTAS ANTIGAS
+                # 📄 COMPATIBILIDADE COM ARQUIVO SALVO
                 # ============================================================
 
                 if not conteudo_resultado:
