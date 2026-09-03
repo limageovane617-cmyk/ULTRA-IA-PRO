@@ -638,6 +638,21 @@ public class MainActivity extends Activity {
                     );
                 });
 
+                return;
+
+            } catch (Exception erro) {
+
+                runOnUiThread(() -> {
+
+                    adicionarMensagem(
+                            "📎 Erro ao ler o arquivo: "
+                                    + erro.getMessage()
+                    );
+                });
+            }
+        });
+    }
+
     // ============================================================
     // LISTAR ARQUIVOS DO ZIP
     // ============================================================
