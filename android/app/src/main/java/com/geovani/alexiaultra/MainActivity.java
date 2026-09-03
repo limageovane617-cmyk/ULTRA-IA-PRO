@@ -241,14 +241,12 @@ public class MainActivity extends Activity {
         scroll.addView(mensagens);
 
         tela.addView(
-                scroll,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        0,
-                        1
-                )
+              scroll,
+              new LinearLayout.LayoutParams(
+                  ViewGroup.LayoutParams.MATCH_PARENT,
+                  (int) (280 * getResources().getDisplayMetrics().density)
+              )
         );
-
         // ============================================================
         // ÁREA DE DIGITAÇÃO
         // ============================================================
