@@ -1463,13 +1463,74 @@ public class MainActivity extends Activity {
                                 "Ponte: " + status
                                         + "\nArquivo processado: "
                                         + nomeArquivo
-                                        + (
-                                            download.isEmpty()
-                                                ? ""
-                                                : "\nDownload: "
-                                                    + download
-                                        )
                         );
+
+                        if (!download.isEmpty()) {
+
+                            Button botaoDownload =
+                                    new Button(this);
+
+                            botaoDownload.setText(
+                                    "📥 Baixar arquivo processado"
+                            );
+
+                            botaoDownload.setOnClickListener(
+                                    v -> {
+
+                                        try {
+
+                                            String urlDownload =
+                                                    download;
+
+                                            if (
+                                                    !urlDownload.startsWith(
+                                                            "http://"
+                                                    )
+                                                    &&
+                                                    !urlDownload.startsWith(
+                                                            "https://"
+                                                    )
+                                            ) {
+
+                                                urlDownload =
+                                                        "https://ponte-alex-v2.onrender.com"
+                                                                + (
+                                                                    urlDownload.startsWith("/")
+                                                                            ? urlDownload
+                                                                            : "/" + urlDownload
+                                                                );
+                                            }
+
+                                            Intent navegador =
+                                                    new Intent(
+                                                            Intent.ACTION_VIEW,
+                                                            Uri.parse(
+                                                                    urlDownload
+                                                            )
+                                                    );
+
+                                            startActivity(
+                                                    navegador
+                                            );
+
+                                        } catch (Exception erro) {
+
+                                            adicionarMensagem(
+                                                    "📥 Não foi possível abrir o download: "
+                                                            + erro.getMessage()
+                                            );
+                                        }
+                                    }
+                            );
+
+                            tela.addView(
+                                    botaoDownload,
+                                    new LinearLayout.LayoutParams(
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                            ViewGroup.LayoutParams.WRAP_CONTENT
+                                    )
+                            );
+                        }
                     });
 
                 } else {
