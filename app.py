@@ -1455,8 +1455,9 @@ if ferramenta:
                 )
 
 
+
             # =================================================
-            # 🖥️ SAÍDA DA EXECUÇÃO
+            # 🧪 DIAGNÓSTICO DA EXECUÇÃO
             # =================================================
 
             execucao = resultado.get(
@@ -1464,30 +1465,90 @@ if ferramenta:
                 {}
             )
 
-
             if not isinstance(
                 execucao,
                 dict
             ):
-
                 execucao = {}
 
+            compile_check = resultado.get(
+                "compile_check",
+                {}
+            )
+
+            if not isinstance(
+                compile_check,
+                dict
+            ):
+                compile_check = {}
+
+            test_passed = resultado.get(
+                "test_passed",
+                False
+            )
+
+            test_message = resultado.get(
+                "test_message",
+                ""
+            )
+
+            st.markdown(
+                "### 🧪 Diagnóstico da Ponte Alex v2"
+            )
+
+            if compile_check:
+                st.write("**Compilação:**")
+                st.json(compile_check)
+
+            st.write("**Teste:**")
+            st.write(
+                test_message
+                or (
+                    "OK"
+                    if test_passed
+                    else "Não aprovado"
+                )
+            )
 
             stdout = execucao.get(
                 "stdout",
                 ""
             )
 
-
             if stdout:
-
                 st.markdown(
                     "### 🖥️ Saída da execução"
                 )
 
+                st.code(
+                    stdout,
+                    language="text"
+                )
+
+            stderr = execucao.get(
+                "stderr",
+                ""
+            )
+
+            if stderr:
+                st.markdown(
+                    "### ⚠️ Erro da execução"
+                )
+
+                st.error(
+                    "A Ponte retornou um erro "
+                    "durante a execução do Python."
+                )
 
                 st.code(
-                    stdout
+                    stderr,
+                    language="text"
+                )
+
+            if not stdout and not stderr:
+                st.info(
+                    "A Ponte não retornou saída nem "
+                    "mensagem de erro da execução."
                 )
 
 
