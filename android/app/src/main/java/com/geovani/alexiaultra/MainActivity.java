@@ -587,6 +587,32 @@ public class MainActivity extends Activity {
                 // ARQUIVO DE TEXTO
                 // ========================================================
 
+                // ========================================================
+                // APK DIRETO
+                // ========================================================
+
+                if (nomeFinal.toLowerCase().endsWith(".apk")) {
+
+                    runOnUiThread(() -> {
+
+                        adicionarMensagem(
+                                "📱 APK carregado: "
+                                        + nomeFinal
+                                        + "\n\n"
+                                        + "Este arquivo é um aplicativo Android "
+                                        + "e não deve ser lido como texto."
+                                        + "\n\n"
+                                        + "📱 O APK foi reconhecido corretamente."
+                        );
+                    });
+
+                    return;
+                }
+
+                // ========================================================
+                // ARQUIVO DE TEXTO
+                // ========================================================
+
                 String conteudo =
                         lerConteudoArquivo(uri);
 
@@ -597,8 +623,10 @@ public class MainActivity extends Activity {
                         conteudo;
 
                 runOnUiThread(() -> {
-                    
-                   campoCodigo.setText(conteudoArquivoSelecionado);
+
+                    campoCodigo.setText(
+                            conteudoArquivoSelecionado
+                    );
 
                     adicionarMensagem(
                             "📎 Arquivo carregado: "
@@ -613,18 +641,6 @@ public class MainActivity extends Activity {
                             "📎 Arquivo pronto para a próxima etapa."
                     );
                 });
-
-            } catch (Exception erro) {
-
-                runOnUiThread(() -> {
-
-                    adicionarMensagem(
-                            "📎 Não foi possível ler o arquivo."
-                    );
-                });
-            }
-        });
-    }
 
     // ============================================================
     // LISTAR ARQUIVOS DO ZIP
