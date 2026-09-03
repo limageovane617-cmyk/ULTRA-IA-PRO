@@ -148,18 +148,22 @@ public class MainActivity extends Activity {
                 String ferramenta =
                         item.getTitle().toString();
 
-                // ====================================================
+                // ===================================================
                 // 💻 CÓDIGO
                 // ====================================================
 
                 if (ferramenta.equals("💻 Código")) {
 
-                    adicionarMensagem(
-                            "💻 Código: use a área da Ponte Alex v2 "
-                                    + "para processar seu código."
-                    );
+                   campoCodigo.requestFocus();
 
-                    return true;
+                   adicionarMensagem(
+                           "💻 Modo Código ativado.\n\n"
+                                   + "Cole o código na área da Ponte Alex v2 "
+                                   + "e escreva abaixo o que você quer que "
+                                   + "a Ponte faça."
+                   );
+
+                   return true;
                 }
 
                 // ====================================================
