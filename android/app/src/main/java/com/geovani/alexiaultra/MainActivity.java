@@ -589,16 +589,76 @@ public class MainActivity extends Activity {
 
                 if (nomeFinal.toLowerCase().endsWith(".apk")) {
 
+                    File apkFile =
+                            new File(
+                                    getCacheDir(),
+                                    "apk_direto_instalacao.apk"
+                            );
+
+                    InputStream entradaApk =
+                            getContentResolver()
+                                    .openInputStream(uri);
+
+                    if (entradaApk == null) {
+
+                        throw new Exception(
+                                "Não foi possível abrir o APK."
+                        );
+                    }
+
+                    FileOutputStream saidaApk =
+                            new FileOutputStream(
+                                    apkFile
+                            );
+
+                    byte[] bufferApk =
+                            new byte[8192];
+
+                    int quantidadeApk;
+
+                    while (
+                            (quantidadeApk =
+                                    entradaApk.read(bufferApk))
+                                    != -1
+                    ) {
+
+                        saidaApk.write(
+                                bufferApk,
+                                0,
+                                quantidadeApk
+                        );
+                    }
+
+                    saidaApk.flush();
+                    saidaApk.close();
+                    entradaApk.close();
+
                     runOnUiThread(() -> {
 
                         adicionarMensagem(
                                 "📱 APK carregado: "
                                         + nomeFinal
                                         + "\n\n"
-                                        + "Este arquivo é um aplicativo Android "
-                                        + "e não deve ser lido como texto."
-                                        + "\n\n"
-                                        + "📱 O APK foi reconhecido corretamente."
+                                        + "O APK foi reconhecido corretamente."
+                                        + "\n"
+                                        + "Ele não será lido como texto."
+                        );
+
+                        Button botaoInstalar =
+                                new Button(this);
+
+                        botaoInstalar.setText(
+                                "📱 Instalar APK"
+                        );
+
+                        botaoInstalar.setOnClickListener(
+                                v -> abrirInstaladorApk(
+                                        apkFile
+                                )
+                        );
+
+                        tela.addView(
+                                botaoInstalar
                         );
                     });
 
