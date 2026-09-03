@@ -939,39 +939,7 @@ public class MainActivity extends Activity {
     // ============================================================
     // ENVIAR MENSAGEM PARA A API
     // ============================================================
-
-    private void enviarMensagem() {
-
-        String texto = campoMensagem
-                .getText()
-                .toString()
-                .trim();
-
-        if (texto.isEmpty()) {
-            return;
-        }
-
-        adicionarMensagem("Você: " + texto);
-
-        campoMensagem.setText("");
-
-        adicionarMensagem("Alex: pensando...");
-
-        executor.execute(() -> {
-
-            try {
-
-                JSONObject pedido =
-                        new JSONObject();
-
-                pedido.put(
-                        "pergunta",
-                        texto
-                );
-
-                JSONArray arrayHistorico =
-                        new JSONArray();
-
+    
                 for (JSONObject item : historico) {
                     arrayHistorico.put(item);
                 }
@@ -983,12 +951,12 @@ public class MainActivity extends Activity {
 
                 pedido.put(
                         "contexto_arquivo",
-                        ""
+                        conteudoArquivoSelecionado
                 );
 
                 pedido.put(
                         "nome_arquivo",
-                        ""
+                        nomeArquivoSelecionado
                 );
 
                 URL url =
