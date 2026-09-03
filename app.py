@@ -1,10 +1,11 @@
+```python
 # ============================================================
 # 🤖 ALEX IA ULTRA
 # APP PRINCIPAL
 # ============================================================
 # Criado por: Geovani
 # ============================================================
-#teste do codex
+# teste do codex
 
 import base64
 import os
@@ -113,6 +114,8 @@ for chave, valor in DEFAULTS.items():
 
     if chave not in st.session_state:
         st.session_state[chave] = valor
+
+
 # ============================================================
 # 🔐 SERVIÇOS
 # ============================================================
@@ -150,12 +153,14 @@ FUNDO_URL = (
     "9865081d-da93-4f67-a58d-f304f9feb1cb.jpg"
 )
 
+
 # ============================================================
 # 🎨 CSS
 # ============================================================
 
 CSS = f"""
 <style>
+
 .stApp {{
     background-image: url("{FUNDO_URL}") !important;
     background-size: 100% 100% !important;
@@ -180,6 +185,7 @@ CSS = f"""
     padding-bottom: 8rem;
 }}
 
+
 /* ========================================================
    📱 MODO APP — OCULTAR INTERFACE DO STREAMLIT
    ======================================================== */
@@ -195,6 +201,7 @@ footer {{
 #MainMenu {{
     display: none !important;
 }}
+
 
 /* ========================================================
    📱 REMOVER BARRA INFERIOR DO STREAMLIT
@@ -212,6 +219,7 @@ footer {{
     box-shadow: none !important;
 }}
 
+
 /* ========================================================
    📱 OCULTAR ELEMENTOS INFERIORES DO STREAMLIT
    ======================================================== */
@@ -224,148 +232,147 @@ div[data-testid="stDecoration"] {{
     display: none !important;
 }}
 
+
 /* ========================================================
    ➕ BOTÃO DE FERRAMENTAS
-   ========================================================
+   ======================================================== */
 
-    div[data-testid="stElementContainer"]:has(
-        div[data-testid="stPopover"]
-    ),
-    div[data-testid="stPopover"] {{
+div[data-testid="stElementContainer"]:has(
+    div[data-testid="stPopover"]
+),
+div[data-testid="stPopover"] {{
 
-        position: fixed !important;
+    position: fixed !important;
 
-        bottom: 14px !important;/* Alinha com a altura da barra de chat */
+    bottom: 14px !important;
 
-        left: 1px !important;
+    left: 1px !important;
 
-        width: auto !important;
+    width: auto !important;
 
-        z-index: 99999 !important;
-    }}
-
-
-    div[data-testid="stPopover"] > button {{
-
-        padding: 0 !important;
-
-        min-width: 1px !important;
-
-        width: 1px !important;
-
-        height: 1px !important;
-
-        border-radius: 100% !important;
-
-        border: 1px solid
-            rgba(255, 0, 0, 0.3) !important;
-
-        background-color:
-            rgba(15, 23, 42, 0.85) !important;
-
-        color: #ffffff !important;
-
-        display: flex !important;
-
-        align-items: center !important;
-
-        justify-content: center !important;
-    }}
+    z-index: 99999 !important;
+}}
 
 
-    /* ========================================================
-       🧰 PAINEL DE FERRAMENTAS
-       ======================================================== */
+div[data-testid="stPopover"] > button {{
 
-    .tool-panel {{
+    padding: 0 !important;
 
-        margin: 0 auto .60rem;
+    min-width: 1px !important;
 
-        padding: .75rem;
+    width: 1px !important;
 
-        border-radius: 100px;
+    height: 1px !important;
 
-        background: rgba(8,17,29,.92);
+    border-radius: 100% !important;
 
-        border: 1px solid
-            rgba(130,210,255,.16);
-    }}
+    border: 1px solid
+        rgba(255, 0, 0, 0.3) !important;
 
+    background-color:
+        rgba(15, 23, 42, 0.85) !important;
 
-    /* ========================================================
-       💬 ESPAÇO PARA O +
-       ======================================================== */
+    color: #ffffff !important;
 
-    div[data-testid="stChatInput"] {{
-        padding-left: 55px !important;
-    }}
+    display: flex !important;
 
+    align-items: center !important;
 
-    /* ========================================================
-       💬 CHAT
-       ======================================================== */
-
-    div[data-testid="stChatMessage"] {{
-        background: transparent !important;
-    }}
+    justify-content: center !important;
+}}
 
 
-    div[data-testid="stChatMessage"] > div {{
-        background: transparent !important;
-    }}
+/* ========================================================
+   🧰 PAINEL DE FERRAMENTAS
+   ======================================================== */
+
+.tool-panel {{
+
+    margin: 0 auto .60rem;
+
+    padding: .75rem;
+
+    border-radius: 100px;
+
+    background: rgba(8,17,29,.92);
+
+    border: 1px solid
+        rgba(130,210,255,.16);
+}}
 
 
-    /* ========================================================
-       👤 MENSAGEM DO USUÁRIO
-       ======================================================== */
+/* ========================================================
+   💬 ESPAÇO PARA O +
+   ======================================================== */
 
-    .user-message {{
-        background: rgba(40,110,180,0.90);
-        color: white;
-        padding: 11px 15px;
-        border-radius: 20px 20px 5px 20px;
-        font-size: 16px;
-        line-height: 1.45;
-        word-break: break-word;
-        width: fit-content;
-        max-width: 75%;
-        margin-left: auto;
-    }}
+div[data-testid="stChatInput"] {{
+    padding-left: 55px !important;
+}}
 
 
-    /* ========================================================
-       ✨ MENSAGEM DA ALEX
-       ======================================================== */
+/* ========================================================
+   💬 CHAT
+   ======================================================== */
 
-    .assistant-message {{
-        background: rgba(0,0,0,0.50);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 20px 20px 20px 5px;
-        font-size: 16px;
-        line-height: 1.45;
-        word-wrap: break-word;
-        width: fit-content;
-        max-width: 78%;
-    }}
+div[data-testid="stChatMessage"] {{
+    background: transparent !important;
+}}
+
+div[data-testid="stChatMessage"] > div {{
+    background: transparent !important;
+}}
 
 
-    .alex-name {{
-        font-weight: bold;
-        margin-bottom: 6px;
-        color: #8fd8ff;
-    }}
+/* ========================================================
+   👤 MENSAGEM DO USUÁRIO
+   ======================================================== */
+
+.user-message {{
+    background: rgba(40,110,180,0.90);
+    color: white;
+    padding: 11px 15px;
+    border-radius: 20px 20px 5px 20px;
+    font-size: 16px;
+    line-height: 1.45;
+    word-break: break-word;
+    width: fit-content;
+    max-width: 75%;
+    margin-left: auto;
+}}
 
 
-    /* ========================================================
-       🔊 BOTÃO DE ÁUDIO
-       ======================================================== */
+/* ========================================================
+   ✨ MENSAGEM DA ALEX
+   ======================================================== */
 
-    button[kind="secondary"] {{
-        border-radius: 18px !important;
-    }}
+.assistant-message {{
+    background: rgba(0,0,0,0.50);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 20px 20px 20px 5px;
+    font-size: 16px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    width: fit-content;
+    max-width: 78%;
+}}
 
-    </style>
+.alex-name {{
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #8fd8ff;
+}}
+
+
+/* ========================================================
+   🔊 BOTÃO DE ÁUDIO
+   ======================================================== */
+
+button[kind="secondary"] {{
+    border-radius: 18px !important;
+}}
+
+</style>
 """
 
 st.markdown(
@@ -430,7 +437,6 @@ for indice, mensagem in enumerate(
                 """,
                 unsafe_allow_html=True
             )
-
 
         continue
 
@@ -512,7 +518,6 @@ for indice, mensagem in enumerate(
                 + str(indice)
             )
 
-
             if st.button(
                 "🔊",
                 key=audio_key
@@ -525,7 +530,6 @@ for indice, mensagem in enumerate(
                     audio, erro, formato = (
                         gerar_audio(texto)
                     )
-
 
                 if audio:
 
@@ -552,7 +556,6 @@ with st.popover("＋"):
         "### ☢️ Ferramentas"
     )
 
-
     ferramentas = [
 
         ("imagem", "🖼️ Imagem"),
@@ -570,7 +573,6 @@ with st.popover("＋"):
         ("memoria", "🧠 Memória"),
 
     ]
-
 
     for nome, rotulo in ferramentas:
 
@@ -641,7 +643,6 @@ if ferramenta:
             key="tool_prompt_imagem",
             height=100
         )
-
 
         if st.button(
             "🖼️ Gerar imagem",
@@ -716,16 +717,13 @@ if ferramenta:
 
 
         imagem = st.file_uploader(
-
             "📤 Imagem de referência (opcional)",
-
             type=[
                 "png",
                 "jpg",
                 "jpeg",
                 "webp"
             ],
-
             key="video_imagem_upload"
         )
 
@@ -740,13 +738,9 @@ if ferramenta:
 
 
         descricao = st.text_area(
-
             "📝 Descrição do vídeo",
-
             key="tool_prompt_video",
-
             height=130,
-
             placeholder=(
                 "Exemplo: um personagem "
                 "caminhando lentamente em uma "
@@ -756,13 +750,9 @@ if ferramenta:
 
 
         if st.button(
-
             "🎬 Gerar vídeo",
-
             type="primary",
-
             use_container_width=True,
-
             key="gerar_video_ferramenta"
         ):
 
@@ -795,21 +785,13 @@ if ferramenta:
                 ):
 
                     resultado = gerar_video(
-
                         descricao=descricao.strip(),
-
                         imagem_bytes=imagem_bytes,
-
                         nome_imagem=nome_imagem,
-
                         duracao=duracao,
-
                         width=512,
-
                         height=512,
-
                         camera=camera,
-
                         proporcao=proporcao,
                     )
 
@@ -962,11 +944,8 @@ if ferramenta:
     elif ferramenta == "voz":
 
         st.session_state.usar_voz = st.checkbox(
-
             "🔊 Ler respostas da Alex em voz",
-
             value=st.session_state.usar_voz,
-
             key="ativar_voz_alex"
         )
 
@@ -999,11 +978,13 @@ if ferramenta:
             "### 💻 Código"
         )
 
+
         linguagem = st.selectbox(
             "Linguagem",
             listar_linguagens(),
             key="tool_linguagem_codigo"
         )
+
 
         codigo_entrada = st.text_area(
             "📝 Digite ou cole o código",
@@ -1013,6 +994,7 @@ if ferramenta:
                 "Cole aqui o código que você quer processar..."
             )
         )
+
 
         instrucao_ponte = st.text_area(
             "🔧 O que a Ponte deve fazer?",
@@ -1024,10 +1006,12 @@ if ferramenta:
             )
         )
 
+
         st.caption(
             "🌉 O código será enviado para a Ponte Alex v2 "
             "somente quando você clicar no botão abaixo."
         )
+
 
         # ====================================================
         # 🌉 PROCESSAR CÓDIGO
@@ -1048,6 +1032,7 @@ if ferramenta:
 
                 st.stop()
 
+
             if not instrucao_ponte.strip():
 
                 st.warning(
@@ -1055,6 +1040,7 @@ if ferramenta:
                 )
 
                 st.stop()
+
 
             if linguagem.lower() not in (
                 "python",
@@ -1069,6 +1055,7 @@ if ferramenta:
 
                 st.stop()
 
+
             try:
 
                 # ============================================
@@ -1081,6 +1068,7 @@ if ferramenta:
 
                     ponte_online = verificar_ponte()
 
+
                 if not ponte_online:
 
                     st.error(
@@ -1088,6 +1076,7 @@ if ferramenta:
                     )
 
                     st.stop()
+
 
                 # ============================================
                 # ⚙️ PROCESSAR CÓDIGO
@@ -1105,8 +1094,6 @@ if ferramenta:
                         nome_arquivo="codigo_alex.py"
                     )
 
-                nome_arquivo="codigo_alex.py"
-                    )
 
                 # ============================================================
                 # 📄 LER CONTEÚDO RETORNADO PELA PONTE
@@ -1114,12 +1101,11 @@ if ferramenta:
 
                 conteudo_resultado = ""
 
-                # A resposta original da Ponte fica dentro de
-                # "resposta_completa" no ClientePonteAlex.
                 resposta_completa = resultado.get(
                     "resposta_completa",
                     {}
                 )
+
 
                 if isinstance(
                     resposta_completa,
@@ -1137,6 +1123,7 @@ if ferramenta:
 
                     processed_file = {}
 
+
                 if isinstance(
                     processed_file,
                     dict
@@ -1149,6 +1136,7 @@ if ferramenta:
                         )
                     )
 
+
                 # ============================================================
                 # 📄 COMPATIBILIDADE COM ARQUIVO SALVO
                 # ============================================================
@@ -1160,6 +1148,7 @@ if ferramenta:
                             "arquivo_salvo"
                         )
                     )
+
 
                     if caminho_resultado:
 
@@ -1187,6 +1176,7 @@ if ferramenta:
                                     str(erro_leitura)
                                 )
 
+
                 # ============================================================
                 # 💾 SALVAR TUDO PARA SOBREVIVER AO RERUN
                 # ============================================================
@@ -1201,11 +1191,13 @@ if ferramenta:
 
                 st.session_state["ponte_processado"] = True
 
+
                 # ============================================================
-                # 📄 NOME REAL DO ARQUIVO PROCESSADO PELA PONTE
+                # 📄 NOME REAL DO ARQUIVO PROCESSADO
                 # ============================================================
 
                 nome_processado = ""
+
 
                 if isinstance(
                     processed_file,
@@ -1219,14 +1211,17 @@ if ferramenta:
                         )
                     )
 
+
                 st.session_state["ponte_nome_download"] = (
                     nome_processado
                     or "codigo_alex.py"
                 )
 
+
                 st.success(
                     "🌉 Código processado pela Ponte Alex v2!"
                 )
+
 
             except ErroPonteAlex as erro:
 
@@ -1238,6 +1233,7 @@ if ferramenta:
                     str(erro)
                 )
 
+
             except Exception as erro:
 
                 st.error(
@@ -1247,6 +1243,7 @@ if ferramenta:
                 st.code(
                     str(erro)
                 )
+
 
         # ====================================================
         # 📄 MOSTRAR RESULTADO SALVO
@@ -1262,14 +1259,17 @@ if ferramenta:
                 {}
             )
 
+
             conteudo_resultado = st.session_state.get(
                 "ponte_conteudo",
                 ""
             )
 
+
             st.markdown(
                 "### 📄 Resultado"
             )
+
 
             if conteudo_resultado:
 
@@ -1284,6 +1284,7 @@ if ferramenta:
                     "⚠️ Nenhum conteúdo de arquivo foi retornado."
                 )
 
+
             # =================================================
             # ✏️ EDITOR DO ARQUIVO
             # =================================================
@@ -1294,12 +1295,14 @@ if ferramenta:
                     "### ✏️ Editar arquivo"
                 )
 
+
                 conteudo_editado = st.text_area(
                     "📝 Edite o conteúdo antes de baixar",
                     value=conteudo_resultado,
                     height=500,
                     key="editor_arquivo_ponte"
                 )
+
 
                 if st.button(
                     "💾 Salvar alterações",
@@ -1312,16 +1315,20 @@ if ferramenta:
                         conteudo_editado
                     )
 
+
                     conteudo_resultado = (
                         conteudo_editado
                     )
+
 
                     st.success(
                         "✅ Alterações salvas! "
                         "O arquivo para download foi atualizado."
                     )
 
+
                     st.rerun()
+
 
             # =================================================
             # 📥 CRIAR ARQUIVO PARA DOWNLOAD
@@ -1332,6 +1339,7 @@ if ferramenta:
                 st.markdown(
                     "### 📥 Criar arquivo para download"
                 )
+
 
                 nome_download = st.text_input(
                     "Nome do arquivo",
@@ -1344,6 +1352,7 @@ if ferramenta:
                     key="nome_download_codigo"
                 )
 
+
                 # -------------------------------------------------
                 # 🔐 LIMPAR NOME DO ARQUIVO
                 # -------------------------------------------------
@@ -1355,10 +1364,12 @@ if ferramenta:
                     .split("/")[-1]
                 )
 
+
                 if not nome_download:
 
                     nome_download = "codigo_alex.py"
-                
+
+
                 # -------------------------------------------------
                 # 🔤 VERIFICAR UTF-8 REAL
                 # -------------------------------------------------
@@ -1370,29 +1381,35 @@ if ferramenta:
                         .lstrip("\ufeff")
                     )
 
+
                     st.write(
                         "🔎 TESTE ANTES DO DOWNLOAD:",
                         repr(conteudo_limpo)
                     )
+
 
                     arquivo_utf8 = (
                         b"\xef\xbb\xbf"
                         + conteudo_limpo.encode("utf-8")
                     )
 
+
                 except Exception as erro_utf8:
 
-                   st.error(
+                    st.error(
                         "❌ Não foi possível preparar "
                         "o arquivo em UTF-8."
-                   )
+                    )
 
-                   st.code(
+
+                    st.code(
                         str(erro_utf8)
-                   )
+                    )
 
-                   arquivo_utf8 = None
-                    
+
+                    arquivo_utf8 = None
+
+
                 # -------------------------------------------------
                 # ⬇️ DOWNLOAD DIRETO
                 # -------------------------------------------------
@@ -1417,6 +1434,7 @@ if ferramenta:
                         key="baixar_arquivo_ponte"
                     )
 
+
             # =================================================
             # ✅ TESTE PYTHON
             # =================================================
@@ -1436,6 +1454,7 @@ if ferramenta:
                     "mas o teste de execução não foi aprovado."
                 )
 
+
             # =================================================
             # 🖥️ SAÍDA DA EXECUÇÃO
             # =================================================
@@ -1445,6 +1464,7 @@ if ferramenta:
                 {}
             )
 
+
             if not isinstance(
                 execucao,
                 dict
@@ -1452,10 +1472,12 @@ if ferramenta:
 
                 execucao = {}
 
+
             stdout = execucao.get(
                 "stdout",
                 ""
             )
+
 
             if stdout:
 
@@ -1463,29 +1485,35 @@ if ferramenta:
                     "### 🖥️ Saída da execução"
                 )
 
+
                 st.code(
                     stdout
                 )
 
+
     # ========================================================
     # 📎 CENTRAL DE ARQUIVOS
     # ========================================================
+
     elif ferramenta == "arquivo":
 
         st.markdown(
             "### 📎 Central de Arquivos"
         )
 
+
         st.caption(
             "Envie imagens, documentos, áudios, vídeos, "
             "códigos ou outros arquivos."
         )
+
 
         arquivos_enviados = st.file_uploader(
 
             "📤 Escolher arquivos",
 
             type=[
+
                 # 🖼️ Imagens
                 "png", "jpg", "jpeg", "webp",
                 "gif", "bmp", "tiff",
@@ -1544,6 +1572,7 @@ if ferramenta:
                 # ====================================================
                 # 🖼️ IMAGEM — PREPARAÇÃO PARA VISÃO DA ALEX
                 # ====================================================
+
                 if nome.endswith((
                     ".png",
                     ".jpg",
@@ -1578,6 +1607,7 @@ if ferramenta:
                                 arquivo.getvalue()
                             )
 
+
                             mime = (
                                 arquivo.type
                                 or "image/jpeg"
@@ -1588,9 +1618,11 @@ if ferramenta:
                                 imagem_bytes
                             )
 
+
                             st.session_state.imagem_nome = (
                                 arquivo.name
                             )
+
 
                             st.session_state.imagem_mime = (
                                 mime
@@ -1602,6 +1634,7 @@ if ferramenta:
                                 "foi carregada para a visão "
                                 "da Alex."
                             )
+
 
                             st.info(
                                 "🤖 Agora você pode perguntar "
@@ -1620,6 +1653,7 @@ if ferramenta:
                 # ====================================================
                 # 🎬 VÍDEO
                 # ====================================================
+
                 elif nome.endswith((
                     ".mp4",
                     ".mov",
@@ -1636,6 +1670,7 @@ if ferramenta:
                 # ====================================================
                 # 🎵 ÁUDIO
                 # ====================================================
+
                 elif nome.endswith((
                     ".mp3",
                     ".wav",
@@ -1653,6 +1688,7 @@ if ferramenta:
                 # ====================================================
                 # 📖 ARQUIVOS DE TEXTO / CÓDIGO
                 # ====================================================
+
                 elif nome.endswith((
                     ".txt",
                     ".py",
@@ -1698,9 +1734,11 @@ if ferramenta:
                                 texto[:50000]
                             )
 
+
                             st.session_state.arquivo_nome = (
                                 arquivo.name
                             )
+
 
                             st.success(
                                 f"✅ {arquivo.name} "
@@ -1721,6 +1759,7 @@ if ferramenta:
                 # ====================================================
                 # 📄 PDF / DOCX / RTF
                 # ====================================================
+
                 elif nome.endswith((
                     ".pdf",
                     ".doc",
@@ -1754,9 +1793,11 @@ if ferramenta:
                                 texto[:50000]
                             )
 
+
                             st.session_state.arquivo_nome = (
                                 arquivo.name
                             )
+
 
                             st.success(
                                 f"✅ {arquivo.name} "
@@ -1776,6 +1817,7 @@ if ferramenta:
                 # ====================================================
                 # 📦 ZIP INTELIGENTE
                 # ====================================================
+
                 elif nome.endswith(
                     ".zip"
                 ):
@@ -1783,6 +1825,7 @@ if ferramenta:
                     st.markdown(
                         "### 📦 Arquivo ZIP"
                     )
+
 
                     st.caption(
                         "A Alex pode analisar os arquivos "
@@ -1823,6 +1866,7 @@ if ferramenta:
                                 texto[:50000]
                             )
 
+
                             st.session_state.arquivo_nome = (
                                 arquivo.name
                             )
@@ -1852,6 +1896,7 @@ if ferramenta:
                                 "deste ZIP."
                             )
 
+
     # ========================================================
     # 🎭 PERSONAGEM
     # ========================================================
@@ -1862,11 +1907,8 @@ if ferramenta:
 
 
         escolhido = st.selectbox(
-
             "🎭 Personagem salvo",
-
             ["Nenhum"] + nomes,
-
             key="personagem_escolhido"
         )
 
@@ -1884,7 +1926,6 @@ if ferramenta:
 
 
         nome = st.text_input(
-
             "Nome",
 
             value=(
@@ -1898,7 +1939,6 @@ if ferramenta:
 
 
         idade = st.text_input(
-
             "Idade",
 
             value=(
@@ -1912,7 +1952,6 @@ if ferramenta:
 
 
         aparencia = st.text_area(
-
             "Aparência",
 
             value=(
@@ -1926,7 +1965,6 @@ if ferramenta:
 
 
         roupa = st.text_input(
-
             "Roupa",
 
             value=(
@@ -1940,7 +1978,6 @@ if ferramenta:
 
 
         personalidade = st.text_area(
-
             "Personalidade",
 
             value=(
@@ -1961,15 +1998,10 @@ if ferramenta:
             if nome.strip():
 
                 salvar_personagem(
-
                     nome,
-
                     idade,
-
                     aparencia,
-
                     roupa,
-
                     personalidade
                 )
 
@@ -2007,9 +2039,7 @@ if ferramenta:
     elif ferramenta == "memoria":
 
         nova = st.text_area(
-
             "🧠 Salvar nova memória",
-
             key="memoria_nova"
         )
 
@@ -2024,6 +2054,7 @@ if ferramenta:
                 salvar_memoria(
                     nova.strip()
                 )
+
 
                 st.success(
                     "✅ Memória salva."
@@ -2117,9 +2148,7 @@ if pergunta:
 
 
     comando_imagem = any(
-
         low.startswith(comando)
-
         for comando in comandos_imagem
     )
 
@@ -2338,13 +2367,15 @@ if pergunta:
 
 
                     motor_video = resultado.get(
-                      "motor",
-                      "motor automatico"
+                        "motor",
+                        "motor automatico"
                     )
 
+
                     st.success(
-                       f"🎬 Video gerado com {motor_video}"
+                        f"🎬 Video gerado com {motor_video}"
                     )
+
 
                     st.video(
                         caminho
@@ -2439,6 +2470,7 @@ if pergunta:
     # ========================================================
     # 📚 CONTEXTO
     # ========================================================
+
     contexto = "\n".join(
 
         f"{m['role']}: {m['content']}"
@@ -2468,6 +2500,7 @@ if pergunta:
     # ========================================================
     # 👁️ PREPARAR VISÃO DA ALEX
     # ========================================================
+
     conteudo_gemini = [
         instrucao
     ]
@@ -2485,6 +2518,7 @@ if pergunta:
             imagem_bytes = (
                 st.session_state.imagem_contexto
             )
+
 
             imagem_mime = (
                 st.session_state.get(
@@ -2515,6 +2549,7 @@ if pergunta:
     # ========================================================
     # ✨ GEMINI — RESPOSTA
     # ========================================================
+
     try:
 
         with st.spinner(
@@ -2545,6 +2580,7 @@ if pergunta:
         # ====================================================
         # ✨ MOSTRAR RESPOSTA DA ALEX
         # ====================================================
+
         with st.chat_message(
             "assistant",
             avatar="✨"
@@ -2569,6 +2605,7 @@ if pergunta:
             # ================================================
             # 🔊 VOZ AUTOMÁTICA
             # ================================================
+
             if st.session_state.usar_voz:
 
                 with st.spinner(
@@ -2598,6 +2635,7 @@ if pergunta:
             # ================================================
             # 🔊 BOTÃO PARA OUVIR NOVAMENTE
             # ================================================
+
             audio_key = (
                 "audio_resposta_atual_"
                 + str(
@@ -2640,6 +2678,7 @@ if pergunta:
         # ====================================================
         # 💾 SALVAR RESPOSTA
         # ====================================================
+
         st.session_state.mensagens.append({
 
             "role":
@@ -2655,4 +2694,5 @@ if pergunta:
         st.error(
             "❌ Erro ao conversar com o Gemini: "
             f"{erro}"
-            )
+        )
+```
