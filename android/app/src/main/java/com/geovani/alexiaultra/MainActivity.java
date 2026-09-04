@@ -273,73 +273,220 @@ public class MainActivity extends Activity {
                         )
                 )
         );
-
-        // ============================================================
+        // ===========================================================
         // ÁREA DE DIGITAÇÃO
         // ============================================================
-
+        
         LinearLayout entrada = new LinearLayout(this);
 
         entrada.setOrientation(
-                LinearLayout.HORIZONTAL
+            LinearLayout.HORIZONTAL
+        );
+        
+        entrada.setGravity(
+            Gravity.CENTER_VERTICAL
+        );
+
+        GradientDrawable fundoEntrada =
+      
+            new GradientDrawable();
+
+        fundoEntrada.setColor(
+      
+            Color.rgb(20, 26, 38)
+        );
+
+        fundoEntrada.setCornerRadius(
+      
+            80f
+        );
+
+        entrada.setBackground(
+      
+            fundoEntrada
         );
 
         entrada.setPadding(
-                15,
-                15,
-                15,
-                15
+       
+            12,
+     
+            6,
+     
+            8,
+    
+            6
         );
+
+        // ============================================================
+        // BOTÃO +
+        // ============================================================
+
+        botaoMais.setBackgroundColor(
+     
+            Color.TRANSPARENT
+        );
+
+        botaoMais.setMinWidth(0);
+        botaoMais.setMinimumWidth(0);
+
+        botaoMais.setPadding(
+       
+            6,
+      
+            0,
+       
+            6,
+     
+            0
+        );
+
+        botaoMais.setText("＋");
+        botaoMais.setTextSize(24);
+        botaoMais.setTextColor(Color.WHITE);
+
+        entrada.addView(
+     
+            botaoMais,
+    
+            new LinearLayout.LayoutParams(
+               
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+              
+                ViewGroup.LayoutParams.MATCH_PARENT
+     
+            ));
+
+        // ============================================================
+        // CAMPO DE MENSAGEM
+        // ============================================================
 
         campoMensagem = new EditText(this);
 
         campoMensagem.setHint(
-                "Digite uma mensagem..."
+     
+            "Digite sua mensagem..."
         );
 
         campoMensagem.setHintTextColor(
-                Color.LTGRAY
+       
+            Color.LTGRAY
         );
 
         campoMensagem.setTextColor(
-                Color.WHITE
+      
+            Color.WHITE
         );
 
         campoMensagem.setTextSize(16);
 
-        entrada.addView(
-                campoMensagem,
-                new LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1
-                )
+        campoMensagem.setSingleLine(true);
+
+        campoMensagem.setBackgroundColor(
+      
+            Color.TRANSPARENT
         );
+
+        campoMensagem.setPadding(
+     
+            8,
+    
+            0,
+    
+            8,
+   
+            0
+        );
+
+     
+        entrada.addView(
+     
+            campoMensagem,
+      
+            new LinearLayout.LayoutParams(
+             
+                0,
+              
+                ViewGroup.LayoutParams.MATCH_PARENT,
+               
+                1
+     
+            )
+        );
+
+        // ============================================================
+        // BOTÃO ENVIAR
+        // ============================================================
 
         Button enviar = new Button(this);
 
-        enviar.setText("Enviar");
+        enviar.setText("🚀");
+        enviar.setTextSize(20);
+        enviar.setTextColor(Color.WHITE);
+
+        enviar.setBackgroundColor(
+       
+            Color.TRANSPARENT
+        );
+
+        enviar.setMinWidth(0);
+        enviar.setMinimumWidth(0);
+
+        enviar.setPadding(
+     
+            6,
+     
+            0,
+     
+            4,
+      
+            0
+        );
 
         enviar.setOnClickListener(
-                v -> enviarMensagem()
+      
+            v -> enviarMensagem()
         );
 
         entrada.addView(
-                enviar,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                )
+      
+            enviar,
+     
+            new LinearLayout.LayoutParams(
+              
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+              
+                ViewGroup.LayoutParams.MATCH_PARENT
+       
+            )
+    
         );
 
-        tela.addView(
-                entrada,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                )
+        // ============================================================
+        // COLOCAR O BALÃO NA TELA
+        // ============================================================
+
+float densidade =
+        getResources()
+                .getDisplayMetrics()
+                .density;
+
+LinearLayout.LayoutParams parametrosEntrada =
+        new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (int) (58 * densidade)
         );
 
+parametrosEntrada.setMargins(
+        (int) (12 * densidade),
+        (int) (8 * densidade),
+        (int) (12 * densidade),
+        (int) (12 * densidade)
+);
+
+tela.addView(
+        entrada,
+        parametrosEntrada
+);
         // ============================================================
         // ÁREA DA PONTE ALEX V2
         // ============================================================
