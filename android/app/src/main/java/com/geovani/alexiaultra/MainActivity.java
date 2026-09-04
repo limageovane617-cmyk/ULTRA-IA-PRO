@@ -231,13 +231,25 @@ public class MainActivity extends Activity {
             menu.show();
         });
 
-        tela.addView(
-                botaoMais,
+        // O botão + será colocado dentro do balão de mensagem.
+        // A lógica do PopupMenu continua exatamente a mesma.
+
+        LinearLayout.LayoutParams parametrosBotaoMais =
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-        );
+                );
+
+        parametrosBotaoMais.gravity = Gravity.CENTER_VERTICAL;
+
+        botaoMais.setBackgroundColor(Color.TRANSPARENT);
+        botaoMais.setPadding(0, 0, 0, 0);
+
+        botaoMais.setText("＋");
+        botaoMais.setTextSize(22);
+        botaoMais.setTextColor(Color.WHITE);
+
+        botaoMais.setLayoutParams(parametrosBotaoMais);
 
         // ============================================================
         // ÁREA DE MENSAGENS
