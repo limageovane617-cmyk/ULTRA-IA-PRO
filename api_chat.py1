@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 
+from gerenciador_imagem import gerar_imagem_pixazo
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
 
@@ -68,6 +69,10 @@ class PedidoPonte(BaseModel):
     replaceWith: Optional[str] = None
 
 
+class PedidoImagem(BaseModel):
+    prompt: str
+
+
 # ============================================================
 # GEMINI
 # ============================================================
@@ -119,6 +124,60 @@ def health():
 def chat(pedido: PedidoChat):
 
     cliente = obter_cliente_gemini()
+
+    # ========================================================
+    # 🖼️ DETECÇÃO AUTOMÁTICA DE PEDIDO DE IMAGEM
+    # ========================================================
+
+    pergunta = pedido.pergunta.strip()
+
+    palavras_imagem = (
+        "gera uma imagem",
+        "gerar uma imagem",
+        "cria uma imagem",
+        "criar uma imagem",
+        "faça uma imagem",
+        "fazer uma imagem",
+        "faz uma imagem",
+        "desenha uma imagem",
+        "desenhar uma imagem",
+        "gere uma imagem",
+    )
+
+    pedido_imagem = any(
+        termo in pergunta.lower()
+        for termo in palavras_imagem
+    )
+
+    if pedido_imagem:
+
+        prompt_imagem = pergunta
+
+        try:
+
+            caminho = gerar_imagem_pixazo(
+                prompt_imagem
+            )
+
+            return {
+                "success": True,
+                "tipo": "imagem",
+                "imagem": caminho,
+                "prompt": prompt_imagem,
+                "motor": "Pixazo / Flux 1 Schnell",
+            }
+
+        except Exception as erro:
+
+            return {
+                "success": False,
+                "tipo": "imagem",
+                "error": str(erro),
+            }
+
+    # ========================================================
+    # 🤖 CHAT NORMAL — GEMINI
+    # ========================================================
 
     if cliente is None:
 
@@ -201,6 +260,34 @@ def chat(pedido: PedidoChat):
 
 
 # ============================================================
+# IMAGEM — PIXAZO
+# ============================================================
+
+@app.post("/api/imagem")
+def imagem(pedido: PedidoImagem):
+
+    try:
+
+        caminho = gerar_imagem_pixazo(
+            pedido.prompt
+        )
+
+        return {
+            "success": True,
+            "imagem": caminho,
+            "prompt": pedido.prompt,
+            "motor": "Pixazo / Flux 1 Schnell",
+        }
+
+    except Exception as erro:
+
+        return {
+            "success": False,
+            "error": str(erro),
+        }
+
+
+# ============================================================
 # PONTE ALEX V2 — PROXY SEGURO
 # ============================================================
 
@@ -245,6 +332,7 @@ def processar_ponte(pedido: PedidoPonte):
         )
 
         try:
+
             dados = resposta.json()
 
         except ValueError:
@@ -291,4 +379,4 @@ def processar_ponte(pedido: PedidoPonte):
                 "a Ponte Alex v2."
             ),
             "detalhes": str(erro),
-        }
+            }
