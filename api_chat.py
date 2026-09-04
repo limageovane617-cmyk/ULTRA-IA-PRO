@@ -1,4 +1,5 @@
 import os
+import re
 import base64
 from pathlib import Path
 from typing import List, Optional
@@ -93,7 +94,7 @@ class PedidoVideo(BaseModel):
 
 # ============================================================
 # GEMINI
-# =============================================================
+# ============================================================
 
 def obter_cliente_gemini():
 
@@ -105,7 +106,9 @@ def obter_cliente_gemini():
     if not chave:
         return None
 
-    return genai.Client(api_key=chave)
+    return genai.Client(
+        api_key=chave
+    )
 
 
 # ============================================================
@@ -138,6 +141,7 @@ def health():
         "ponte": bool(PONTE_API_SECRET),
         "hf_token": bool(hf_token),
     }
+
 
 # ============================================================
 # CHAT — GEMINI
@@ -212,6 +216,86 @@ def chat(pedido: PedidoChat):
                 "Não consegui gerar uma resposta."
             )
 
+        # ====================================================
+        # DETECTAR AÇÃO DE GERAÇÃO DE IMAGEM
+        # ====================================================
+
+        texto_resposta = resposta.strip()
+
+        if (
+            "dalle.text2im" in texto_resposta
+            or '"action": "dalle.text2im"' in texto_resposta
+            or "'action': 'dalle.text2im'" in texto_resposta
+        ):
+
+            prompt_imagem = None
+
+            padroes_prompt = [
+                r'"prompt"\s*:\s*"([^"]+)"',
+                r"'prompt'\s*:\s*'([^']+)'",
+            ]
+
+            for padrao in padroes_prompt:
+
+                correspondencia = re.search(
+                    padrao,
+                    texto_resposta,
+                    re.IGNORECASE,
+                )
+
+                if correspondencia:
+
+                    prompt_imagem = (
+                        correspondencia.group(1)
+                    )
+
+                    break
+
+            if not prompt_imagem:
+
+                prompt_imagem = pedido.pergunta
+
+            try:
+
+                caminho_imagem = (
+                    gerar_imagem_pixazo(
+                        prompt_imagem
+                    )
+                )
+
+                return {
+                    "success": True,
+                    "resposta": (
+                        "Pronto, Geovani! "
+                        "A imagem foi gerada."
+                    ),
+                    "imagem": caminho_imagem,
+                    "prompt": prompt_imagem,
+                    "motor": (
+                        "Pixazo / Flux 1 Schnell"
+                    ),
+                    "acao": "imagem",
+                    "modelo": GEMINI_MODEL,
+                }
+
+            except Exception as erro_imagem:
+
+                return {
+                    "success": False,
+                    "resposta": (
+                        "Entendi que você pediu "
+                        "uma imagem, mas ocorreu "
+                        "um erro ao gerar."
+                    ),
+                    "erro": str(erro_imagem),
+                    "acao": "imagem",
+                    "modelo": GEMINI_MODEL,
+                }
+
+        # ====================================================
+        # RESPOSTA NORMAL
+        # ====================================================
+
         return {
             "success": True,
             "resposta": resposta,
@@ -275,10 +359,12 @@ def video(pedido: PedidoVideo):
             # data:image/png;base64,XXXXXX
             if "," in dados_imagem:
 
-                dados_imagem = dados_imagem.split(
-                    ",",
-                    1
-                )[1]
+                dados_imagem = (
+                    dados_imagem.split(
+                        ",",
+                        1
+                    )[1]
+                )
 
             try:
 
@@ -291,7 +377,9 @@ def video(pedido: PedidoVideo):
 
                 raise HTTPException(
                     status_code=400,
-                    detail="Imagem em base64 inválida."
+                    detail=(
+                        "Imagem em base64 inválida."
+                    )
                 )
 
         if imagem_bytes:
@@ -350,7 +438,9 @@ def video(pedido: PedidoVideo):
             "success": True,
             "sucesso": True,
             "motor": resultado.get("motor"),
-            "video": f"/api/videos/{nome_video}",
+            "video": (
+                f"/api/videos/{nome_video}"
+            ),
             "arquivo": nome_video,
             "erro": None,
         }
@@ -376,9 +466,6 @@ def video(pedido: PedidoVideo):
 
 @app.post("/api/ponte/processar")
 def processar_ponte(pedido: PedidoPonte):
-
-    # Nunca enviaremos a requisição para a Ponte
-    # sem a chave configurada no servidor.
 
     if not PONTE_API_SECRET:
 
@@ -462,4 +549,4 @@ def processar_ponte(pedido: PedidoPonte):
                 "a Ponte Alex v2."
             ),
             "detalhes": str(erro),
-        }
+    }
