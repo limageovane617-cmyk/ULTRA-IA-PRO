@@ -9,6 +9,13 @@ from google import genai
 
 from gerenciador_imagem import gerar_imagem_pixazo
 
+from video import (
+    gerar_video,
+    gerar_video_texto,
+    gerar_video_imagem,
+    gerar_video_fallback,
+)
+
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
 
