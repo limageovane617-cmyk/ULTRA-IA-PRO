@@ -1,13 +1,18 @@
 import os
+from pathlib import Path
 from typing import List, Optional
 
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from google import genai
 
-from gerenciador_imagem import gerar_imagem_pixazo
+from gerenciador_imagem import (
+    gerar_imagem_pixazo,
+    gerar_imagem_zimage,
+)
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
 
@@ -24,6 +29,20 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+
+# ============================================================
+# CONFIGURAÇÃO DAS IMAGENS
+# ============================================================
+
+PASTA_IMAGENS = Path(
+    "/tmp/alex_ia_ultra_imagens"
+)
+
+PASTA_IMAGENS.mkdir(
+    parents=True,
+    exist_ok=True,
 )
 
 
@@ -87,7 +106,9 @@ def obter_cliente_gemini():
     if not chave:
         return None
 
-    return genai.Client(api_key=chave)
+    return genai.Client(
+        api_key=chave
+    )
 
 
 # ============================================================
@@ -113,11 +134,170 @@ def health():
         "success": True,
         "gemini": cliente is not None,
         "ponte": bool(PONTE_API_SECRET),
+        "imagens": True,
     }
 
 
 # ============================================================
-# CHAT — GEMINI
+# 🖼️ SERVIR IMAGENS PARA O APK
+# ============================================================
+
+@app.get("/api/imagens/{filename}")
+def servir_imagem(filename: str):
+
+    # --------------------------------------------------------
+    # Segurança:
+    # nunca permitir que o nome recebido saia da pasta
+    # de imagens.
+    # --------------------------------------------------------
+
+    nome_seguro = Path(
+        filename
+    ).name
+
+    caminho = (
+        PASTA_IMAGENS
+        / nome_seguro
+    )
+
+    if not caminho.exists():
+
+        raise HTTPException(
+            status_code=404,
+            detail="Imagem não encontrada.",
+        )
+
+    if not caminho.is_file():
+
+        raise HTTPException(
+            status_code=404,
+            detail="Arquivo de imagem inválido.",
+        )
+
+    try:
+
+        caminho_resolvido = (
+            caminho.resolve()
+        )
+
+        pasta_resolvida = (
+            PASTA_IMAGENS.resolve()
+        )
+
+        caminho_resolvido.relative_to(
+            pasta_resolvida
+        )
+
+    except ValueError:
+
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso ao arquivo bloqueado.",
+        )
+
+    return FileResponse(
+        path=caminho_resolvido,
+        media_type="image/png",
+        filename=nome_seguro,
+    )
+
+
+# ============================================================
+# 🎨 GERADOR DE IMAGEM PARA A API
+# PIXAZO → Z IMAGE TURBO
+# ============================================================
+
+def gerar_imagem_para_api(prompt):
+
+    erros = []
+
+    # ========================================================
+    # 🥇 PIXAZO
+    # ========================================================
+
+    try:
+
+        caminho = gerar_imagem_pixazo(
+            prompt
+        )
+
+        caminho_path = Path(
+            caminho
+        )
+
+        if not caminho_path.exists():
+
+            raise RuntimeError(
+                "Pixazo informou que a imagem "
+                "foi criada, mas o arquivo "
+                "não foi encontrado."
+            )
+
+        return (
+            caminho_path,
+            "Pixazo / Flux 1 Schnell",
+            None,
+        )
+
+    except Exception as erro_pixazo:
+
+        erros.append(
+            f"Pixazo: {erro_pixazo}"
+        )
+
+        print(
+            "⚠️ Pixazo falhou:",
+            erro_pixazo,
+        )
+
+    # ========================================================
+    # 🥈 Z IMAGE TURBO
+    # ========================================================
+
+    try:
+
+        caminho = gerar_imagem_zimage(
+            prompt
+        )
+
+        caminho_path = Path(
+            caminho
+        )
+
+        if not caminho_path.exists():
+
+            raise RuntimeError(
+                "Z Image Turbo informou que "
+                "a imagem foi criada, mas o "
+                "arquivo não foi encontrado."
+            )
+
+        return (
+            caminho_path,
+            "Z Image Turbo",
+            None,
+        )
+
+    except Exception as erro_zimage:
+
+        erros.append(
+            f"Z Image Turbo: {erro_zimage}"
+        )
+
+        print(
+            "⚠️ Z Image Turbo falhou:",
+            erro_zimage,
+        )
+
+    return (
+        None,
+        None,
+        " | ".join(erros),
+    )
+
+
+# ============================================================
+# CHAT — GEMINI + IMAGEM
 # ============================================================
 
 @app.post("/api/chat")
@@ -153,27 +333,42 @@ def chat(pedido: PedidoChat):
 
         prompt_imagem = pergunta
 
-        try:
-
-            caminho = gerar_imagem_pixazo(
+        caminho, motor, erro = (
+            gerar_imagem_para_api(
                 prompt_imagem
             )
+        )
 
-            return {
-                "success": True,
-                "tipo": "imagem",
-                "imagem": caminho,
-                "prompt": prompt_imagem,
-                "motor": "Pixazo / Flux 1 Schnell",
-            }
-
-        except Exception as erro:
+        if caminho is None:
 
             return {
                 "success": False,
                 "tipo": "imagem",
-                "error": str(erro),
+                "resposta": (
+                    "Não consegui gerar a imagem "
+                    "neste momento."
+                ),
+                "error": erro,
+                "prompt": prompt_imagem,
             }
+
+        nome_imagem = caminho.name
+
+        imagem_url = (
+            f"/api/imagens/{nome_imagem}"
+        )
+
+        return {
+            "success": True,
+            "tipo": "imagem",
+            "resposta": (
+                "🖼️ Imagem gerada com sucesso."
+            ),
+            "imagem": imagem_url,
+            "imagem_url": imagem_url,
+            "prompt": prompt_imagem,
+            "motor": motor,
+        }
 
     # ========================================================
     # 🤖 CHAT NORMAL — GEMINI
@@ -189,7 +384,9 @@ def chat(pedido: PedidoChat):
             ),
         }
 
-    partes = [SYSTEM_PROMPT]
+    partes = [
+        SYSTEM_PROMPT
+    ]
 
     if pedido.historico:
 
@@ -222,13 +419,17 @@ def chat(pedido: PedidoChat):
         pedido.pergunta
     )
 
-    instrucao = "\n".join(partes)
+    instrucao = "\n".join(
+        partes
+    )
 
     try:
 
-        resultado = cliente.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=instrucao,
+        resultado = (
+            cliente.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=instrucao,
+            )
         )
 
         resposta = getattr(
@@ -240,7 +441,8 @@ def chat(pedido: PedidoChat):
         if not resposta:
 
             resposta = (
-                "Não consegui gerar uma resposta."
+                "Não consegui gerar "
+                "uma resposta."
             )
 
         return {
@@ -254,48 +456,80 @@ def chat(pedido: PedidoChat):
         return {
             "success": False,
             "resposta": (
-                f"Erro ao consultar a Gemini: {erro}"
+                f"Erro ao consultar a Gemini: "
+                f"{erro}"
             ),
         }
 
 
 # ============================================================
-# IMAGEM — PIXAZO
+# 🖼️ API DIRETA DE IMAGEM
 # ============================================================
 
 @app.post("/api/imagem")
 def imagem(pedido: PedidoImagem):
 
-    try:
+    prompt = pedido.prompt.strip()
 
-        caminho = gerar_imagem_pixazo(
-            pedido.prompt
-        )
-
-        return {
-            "success": True,
-            "imagem": caminho,
-            "prompt": pedido.prompt,
-            "motor": "Pixazo / Flux 1 Schnell",
-        }
-
-    except Exception as erro:
+    if not prompt:
 
         return {
             "success": False,
-            "error": str(erro),
+            "tipo": "imagem",
+            "resposta": (
+                "O prompt da imagem está vazio."
+            ),
         }
+
+    caminho, motor, erro = (
+        gerar_imagem_para_api(
+            prompt
+        )
+    )
+
+    if caminho is None:
+
+        return {
+            "success": False,
+            "tipo": "imagem",
+            "resposta": (
+                "Não consegui gerar a imagem "
+                "neste momento."
+            ),
+            "error": erro,
+            "prompt": prompt,
+        }
+
+    nome_imagem = caminho.name
+
+    imagem_url = (
+        f"/api/imagens/{nome_imagem}"
+    )
+
+    return {
+        "success": True,
+        "tipo": "imagem",
+        "resposta": (
+            "🖼️ Imagem gerada com sucesso."
+        ),
+        "imagem": imagem_url,
+        "imagem_url": imagem_url,
+        "prompt": prompt,
+        "motor": motor,
+    }
 
 
 # ============================================================
-# PONTE ALEX V2 — PROXY SEGURO
+# 🌉 PONTE ALEX V2 — PROXY SEGURO
 # ============================================================
 
 @app.post("/api/ponte/processar")
-def processar_ponte(pedido: PedidoPonte):
+def processar_ponte(
+    pedido: PedidoPonte
+):
 
-    # Nunca enviaremos a requisição para a Ponte
-    # sem a chave configurada no servidor.
+    # Nunca enviaremos a requisição para a
+    # Ponte sem a chave configurada no servidor.
 
     if not PONTE_API_SECRET:
 
@@ -308,26 +542,39 @@ def processar_ponte(pedido: PedidoPonte):
         }
 
     payload = {
+
         "fileContent": pedido.fileContent,
+
         "instruction": pedido.instruction,
+
         "filename": pedido.filename,
+
         "outputFilename": pedido.outputFilename,
+
         "searchTarget": pedido.searchTarget,
+
         "replaceWith": pedido.replaceWith,
     }
 
     headers = {
+
         "Content-Type": "application/json",
+
         "Accept": "application/json",
+
         "x-api-secret": PONTE_API_SECRET,
     }
 
     try:
 
         resposta = requests.post(
+
             PONTE_API_URL,
+
             json=payload,
+
             headers=headers,
+
             timeout=90,
         )
 
@@ -338,13 +585,21 @@ def processar_ponte(pedido: PedidoPonte):
         except ValueError:
 
             dados = {
+
                 "success": False,
+
                 "error": (
                     "A Ponte retornou uma "
                     "resposta inválida."
                 ),
-                "status_code": resposta.status_code,
-                "resposta": resposta.text[:2000],
+
+                "status_code": (
+                    resposta.status_code
+                ),
+
+                "resposta": (
+                    resposta.text[:2000]
+                ),
             }
 
         return dados
@@ -352,7 +607,9 @@ def processar_ponte(pedido: PedidoPonte):
     except requests.Timeout:
 
         return {
+
             "success": False,
+
             "error": (
                 "A Ponte demorou muito "
                 "para responder."
@@ -362,21 +619,27 @@ def processar_ponte(pedido: PedidoPonte):
     except requests.RequestException as erro:
 
         return {
+
             "success": False,
+
             "error": (
                 "Não foi possível conectar "
                 "à Ponte Alex v2."
             ),
+
             "detalhes": str(erro),
         }
 
     except Exception as erro:
 
         return {
+
             "success": False,
+
             "error": (
                 "Erro inesperado ao acessar "
                 "a Ponte Alex v2."
             ),
+
             "detalhes": str(erro),
-            }
+    }
