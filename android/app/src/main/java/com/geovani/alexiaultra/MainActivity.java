@@ -2,6 +2,8 @@ package com.geovani.alexiaultra;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -10,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
@@ -48,7 +51,7 @@ public class MainActivity extends Activity {
     private LinearLayout mensagens;
     private EditText campoMensagem;
     private EditText campoCodigo;
-    
+
     // ============================================================
     // ARQUIVO SELECIONADO
     // ============================================================
@@ -147,6 +150,7 @@ public class MainActivity extends Activity {
 
                 String ferramenta =
                         item.getTitle().toString();
+
                 // ====================================================
                 // 🖼️ IMAGEM
                 // ====================================================
@@ -170,20 +174,20 @@ public class MainActivity extends Activity {
 
                 // ===================================================
                 // 💻 CÓDIGO
-                // ====================================================
+                // ===================================================
 
                 if (ferramenta.equals("💻 Código")) {
 
-                   campoCodigo.requestFocus();
+                    campoCodigo.requestFocus();
 
-                   adicionarMensagem(
-                           "💻 Modo Código ativado.\n\n"
-                                   + "Cole o código na área da Ponte Alex v2 "
-                                   + "e escreva abaixo o que você quer que "
-                                   + "a Ponte faça."
-                   );
+                    adicionarMensagem(
+                            "💻 Modo Código ativado.\n\n"
+                                    + "Cole o código na área da Ponte Alex v2 "
+                                    + "e escreva abaixo o que você quer que "
+                                    + "a Ponte faça."
+                    );
 
-                   return true;
+                    return true;
                 }
 
                 // ====================================================
@@ -261,25 +265,49 @@ public class MainActivity extends Activity {
         scroll.addView(mensagens);
 
         tela.addView(
-              scroll,
-              new LinearLayout.LayoutParams(
-                  ViewGroup.LayoutParams.MATCH_PARENT,
-                  (int) (280 * getResources().getDisplayMetrics().density)
-              )
+                scroll,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        (int) (
+                                280
+                                        * getResources()
+                                                .getDisplayMetrics()
+                                                .density
+                        )
+                )
         );
+
         // ============================================================
         // ÁREA DE DIGITAÇÃO
         // ============================================================
 
         LinearLayout entrada = new LinearLayout(this);
-        entrada.setOrientation(LinearLayout.HORIZONTAL);
-        entrada.setPadding(15, 15, 15, 15);
+
+        entrada.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        entrada.setPadding(
+                15,
+                15,
+                15,
+                15
+        );
 
         campoMensagem = new EditText(this);
 
-        campoMensagem.setHint("Digite uma mensagem...");
-        campoMensagem.setHintTextColor(Color.LTGRAY);
-        campoMensagem.setTextColor(Color.WHITE);
+        campoMensagem.setHint(
+                "Digite uma mensagem..."
+        );
+
+        campoMensagem.setHintTextColor(
+                Color.LTGRAY
+        );
+
+        campoMensagem.setTextColor(
+                Color.WHITE
+        );
+
         campoMensagem.setTextSize(16);
 
         entrada.addView(
@@ -321,10 +349,22 @@ public class MainActivity extends Activity {
 
         TextView tituloPonte = new TextView(this);
 
-        tituloPonte.setText("🌉 Ponte Alex v2");
-        tituloPonte.setTextColor(Color.WHITE);
+        tituloPonte.setText(
+                "🌉 Ponte Alex v2"
+        );
+
+        tituloPonte.setTextColor(
+                Color.WHITE
+        );
+
         tituloPonte.setTextSize(19);
-        tituloPonte.setPadding(20, 20, 20, 10);
+
+        tituloPonte.setPadding(
+                20,
+                20,
+                20,
+                10
+        );
 
         tela.addView(
                 tituloPonte,
@@ -340,12 +380,28 @@ public class MainActivity extends Activity {
                 "Cole aqui o código do arquivo..."
         );
 
-        campoCodigo.setHintTextColor(Color.LTGRAY);
-        campoCodigo.setTextColor(Color.WHITE);
+        campoCodigo.setHintTextColor(
+                Color.LTGRAY
+        );
+
+        campoCodigo.setTextColor(
+                Color.WHITE
+        );
+
         campoCodigo.setTextSize(15);
-        campoCodigo.setGravity(Gravity.TOP);
+
+        campoCodigo.setGravity(
+                Gravity.TOP
+        );
+
         campoCodigo.setMinLines(5);
-        campoCodigo.setPadding(20, 20, 20, 20);
+
+        campoCodigo.setPadding(
+                20,
+                20,
+                20,
+                20
+        );
 
         tela.addView(
                 campoCodigo,
@@ -355,16 +411,29 @@ public class MainActivity extends Activity {
                 )
         );
 
-        EditText campoInstrucao = new EditText(this);
+        EditText campoInstrucao =
+                new EditText(this);
 
         campoInstrucao.setHint(
                 "O que a Ponte deve fazer?"
         );
 
-        campoInstrucao.setHintTextColor(Color.LTGRAY);
-        campoInstrucao.setTextColor(Color.WHITE);
+        campoInstrucao.setHintTextColor(
+                Color.LTGRAY
+        );
+
+        campoInstrucao.setTextColor(
+                Color.WHITE
+        );
+
         campoInstrucao.setTextSize(15);
-        campoInstrucao.setPadding(20, 15, 20, 15);
+
+        campoInstrucao.setPadding(
+                20,
+                15,
+                20,
+                15
+        );
 
         tela.addView(
                 campoInstrucao,
@@ -382,8 +451,12 @@ public class MainActivity extends Activity {
 
         enviarPonte.setOnClickListener(
                 v -> processarPelaPonte(
-                        campoCodigo.getText().toString(),
-                        campoInstrucao.getText().toString()
+                        campoCodigo
+                                .getText()
+                                .toString(),
+                        campoInstrucao
+                                .getText()
+                                .toString()
                 )
         );
 
@@ -405,7 +478,9 @@ public class MainActivity extends Activity {
     private void abrirSeletorDeArquivo() {
 
         Intent intent =
-                new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                new Intent(
+                        Intent.ACTION_OPEN_DOCUMENT
+                );
 
         intent.addCategory(
                 Intent.CATEGORY_OPENABLE
@@ -437,8 +512,10 @@ public class MainActivity extends Activity {
         );
 
         if (
-                requestCode != REQUEST_SELECIONAR_ARQUIVO
-                        || resultCode != RESULT_OK
+                requestCode
+                        != REQUEST_SELECIONAR_ARQUIVO
+                        || resultCode
+                        != RESULT_OK
                         || data == null
                         || data.getData() == null
         ) {
@@ -455,7 +532,9 @@ public class MainActivity extends Activity {
     // LER ARQUIVO
     // ============================================================
 
-    private void lerArquivoSelecionado(Uri uri) {
+    private void lerArquivoSelecionado(
+            Uri uri
+    ) {
 
         executor.execute(() -> {
 
@@ -464,30 +543,47 @@ public class MainActivity extends Activity {
                 String nome =
                         obterNomeArquivo(uri);
 
-                if (nome == null || nome.isEmpty()) {
-                    nome = "arquivo_selecionado";
+                if (
+                        nome == null
+                                || nome.isEmpty()
+                ) {
+
+                    nome =
+                            "arquivo_selecionado";
                 }
 
-                final String nomeFinal = nome;
+                final String nomeFinal =
+                        nome;
 
                 // ========================================================
                 // ZIP
                 // ========================================================
 
-                if (nome.toLowerCase().endsWith(".zip")) {
+                if (
+                        nome.toLowerCase()
+                                .endsWith(".zip")
+                ) {
 
                     List<String> arquivosZip =
                             listarArquivosZip(uri);
 
-                    boolean encontrouApk = false;
+                    boolean encontrouApk =
+                            false;
 
-                    for (String arquivo : arquivosZip) {
+                    for (
+                            String arquivo :
+                            arquivosZip
+                    ) {
 
                         if (
-                                arquivo.toLowerCase()
+                                arquivo
+                                        .toLowerCase()
                                         .endsWith(".apk")
                         ) {
-                            encontrouApk = true;
+
+                            encontrouApk =
+                                    true;
+
                             break;
                         }
                     }
@@ -497,7 +593,9 @@ public class MainActivity extends Activity {
 
                     runOnUiThread(() -> {
 
-                        if (arquivosZip.isEmpty()) {
+                        if (
+                                arquivosZip.isEmpty()
+                        ) {
 
                             adicionarMensagem(
                                     "📦 ZIP carregado: "
@@ -516,19 +614,31 @@ public class MainActivity extends Activity {
                                 "📦 ZIP carregado: "
                         );
 
-                        lista.append(nomeFinal);
+                        lista.append(
+                                nomeFinal
+                        );
 
                         lista.append(
                                 "\n\nArquivos encontrados:"
                         );
 
-                        for (String arquivo : arquivosZip) {
+                        for (
+                                String arquivo :
+                                arquivosZip
+                        ) {
 
-                            lista.append("\n📄 ");
-                            lista.append(arquivo);
+                            lista.append(
+                                    "\n📄 "
+                            );
+
+                            lista.append(
+                                    arquivo
+                            );
                         }
 
-                        if (apkEncontrado) {
+                        if (
+                                apkEncontrado
+                        ) {
 
                             lista.append(
                                     "\n\n📱 APK encontrado dentro do ZIP!"
@@ -554,7 +664,9 @@ public class MainActivity extends Activity {
                     // INSTALAR APK ENCONTRADO
                     // ========================================================
 
-                    if (apkEncontrado) {
+                    if (
+                            apkEncontrado
+                    ) {
 
                         runOnUiThread(() -> {
 
@@ -605,7 +717,11 @@ public class MainActivity extends Activity {
                 // APK DIRETO
                 // ========================================================
 
-                if (nomeFinal.toLowerCase().endsWith(".apk")) {
+                if (
+                        nomeFinal
+                                .toLowerCase()
+                                .endsWith(".apk")
+                ) {
 
                     File apkFile =
                             new File(
@@ -617,7 +733,9 @@ public class MainActivity extends Activity {
                             getContentResolver()
                                     .openInputStream(uri);
 
-                    if (entradaApk == null) {
+                    if (
+                            entradaApk == null
+                    ) {
 
                         throw new Exception(
                                 "Não foi possível abrir o APK."
@@ -636,7 +754,9 @@ public class MainActivity extends Activity {
 
                     while (
                             (quantidadeApk =
-                                    entradaApk.read(bufferApk))
+                                    entradaApk.read(
+                                            bufferApk
+                                    ))
                                     != -1
                     ) {
 
@@ -718,7 +838,9 @@ public class MainActivity extends Activity {
 
                 return;
 
-            } catch (Exception erro) {
+            } catch (
+                    Exception erro
+            ) {
 
                 runOnUiThread(() -> {
 
@@ -735,8 +857,9 @@ public class MainActivity extends Activity {
     // LISTAR ARQUIVOS DO ZIP
     // ============================================================
 
-    private List<String> listarArquivosZip(Uri uri)
-            throws Exception {
+    private List<String> listarArquivosZip(
+            Uri uri
+    ) throws Exception {
 
         List<String> arquivos =
                 new ArrayList<>();
@@ -745,7 +868,10 @@ public class MainActivity extends Activity {
                 getContentResolver()
                         .openInputStream(uri);
 
-        if (entrada == null) {
+        if (
+                entrada == null
+        ) {
+
             throw new Exception(
                     "Não foi possível abrir o ZIP."
             );
@@ -759,11 +885,14 @@ public class MainActivity extends Activity {
         ZipEntry entradaZip;
 
         while (
-                (entradaZip = zip.getNextEntry())
+                (entradaZip =
+                        zip.getNextEntry())
                         != null
         ) {
 
-            if (!entradaZip.isDirectory()) {
+            if (
+                    !entradaZip.isDirectory()
+            ) {
 
                 arquivos.add(
                         entradaZip.getName()
@@ -772,7 +901,7 @@ public class MainActivity extends Activity {
 
             zip.closeEntry();
         }
-                
+
         zip.close();
         entrada.close();
 
@@ -783,26 +912,33 @@ public class MainActivity extends Activity {
     // EXTRAIR E INSTALAR APK
     // ============================================================
 
-    private void extrairEInstalarApk(Uri uri)
-            throws Exception {
+    private void extrairEInstalarApk(
+            Uri uri
+    ) throws Exception {
 
         InputStream entrada =
                 getContentResolver()
                         .openInputStream(uri);
 
-        if (entrada == null) {
+        if (
+                entrada == null
+        ) {
+
             throw new Exception(
                     "Não foi possível abrir o ZIP."
             );
         }
 
         ZipInputStream zip =
-                new ZipInputStream(entrada);
+                new ZipInputStream(
+                        entrada
+                );
 
         ZipEntry entradaZip;
 
         while (
-                (entradaZip = zip.getNextEntry())
+                (entradaZip =
+                        zip.getNextEntry())
                         != null
         ) {
 
@@ -831,7 +967,8 @@ public class MainActivity extends Activity {
                 int quantidade;
 
                 while (
-                        (quantidade = zip.read(buffer))
+                        (quantidade =
+                                zip.read(buffer))
                                 != -1
                 ) {
 
@@ -849,7 +986,9 @@ public class MainActivity extends Activity {
                 zip.close();
                 entrada.close();
 
-                abrirInstaladorApk(apkFile);
+                abrirInstaladorApk(
+                        apkFile
+                );
 
                 return;
             }
@@ -869,13 +1008,15 @@ public class MainActivity extends Activity {
     // ABRIR INSTALADOR DO APK
     // ============================================================
 
-    private void abrirInstaladorApk(File apkFile) {
+    private void abrirInstaladorApk(
+            File apkFile
+    ) {
 
         try {
 
             if (
-                    Build.VERSION.SDK_INT >=
-                            Build.VERSION_CODES.O
+                    Build.VERSION.SDK_INT
+                            >= Build.VERSION_CODES.O
             ) {
 
                 if (
@@ -943,7 +1084,9 @@ public class MainActivity extends Activity {
                     "📱 Não foi possível abrir o instalador do APK."
             );
 
-        } catch (Exception erro) {
+        } catch (
+                Exception erro
+        ) {
 
             adicionarMensagem(
                     "📱 Erro ao abrir o APK: "
@@ -956,7 +1099,9 @@ public class MainActivity extends Activity {
     // OBTER NOME DO ARQUIVO
     // ============================================================
 
-    private String obterNomeArquivo(Uri uri) {
+    private String obterNomeArquivo(
+            Uri uri
+    ) {
 
         Cursor cursor = null;
 
@@ -981,7 +1126,9 @@ public class MainActivity extends Activity {
                                 OpenableColumns.DISPLAY_NAME
                         );
 
-                if (indice >= 0) {
+                if (
+                        indice >= 0
+                ) {
 
                     return cursor.getString(
                             indice
@@ -991,7 +1138,10 @@ public class MainActivity extends Activity {
 
         } finally {
 
-            if (cursor != null) {
+            if (
+                    cursor != null
+            ) {
+
                 cursor.close();
             }
         }
@@ -1003,14 +1153,18 @@ public class MainActivity extends Activity {
     // LER CONTEÚDO UTF-8
     // ============================================================
 
-    private String lerConteudoArquivo(Uri uri)
-            throws Exception {
+    private String lerConteudoArquivo(
+            Uri uri
+    ) throws Exception {
 
         InputStream entrada =
                 getContentResolver()
                         .openInputStream(uri);
 
-        if (entrada == null) {
+        if (
+                entrada == null
+        ) {
+
             throw new Exception(
                     "Não foi possível abrir o arquivo."
             );
@@ -1057,7 +1211,10 @@ public class MainActivity extends Activity {
                         .toString()
                         .trim();
 
-        if (texto.isEmpty()) {
+        if (
+                texto.isEmpty()
+        ) {
+
             return;
         }
 
@@ -1073,7 +1230,8 @@ public class MainActivity extends Activity {
 
         executor.execute(() -> {
 
-            HttpURLConnection connection = null;
+            HttpURLConnection connection =
+                    null;
 
             try {
 
@@ -1088,7 +1246,10 @@ public class MainActivity extends Activity {
                 JSONArray arrayHistorico =
                         new JSONArray();
 
-                for (JSONObject item : historico) {
+                for (
+                        JSONObject item :
+                        historico
+                ) {
 
                     arrayHistorico.put(
                             item
@@ -1111,7 +1272,9 @@ public class MainActivity extends Activity {
                 );
 
                 URL url =
-                        new URL(API_URL);
+                        new URL(
+                                API_URL
+                        );
 
                 connection =
                         (HttpURLConnection)
@@ -1131,7 +1294,9 @@ public class MainActivity extends Activity {
                         "application/json"
                 );
 
-                connection.setDoOutput(true);
+                connection.setDoOutput(
+                        true
+                );
 
                 connection.setConnectTimeout(
                         30000
@@ -1149,19 +1314,45 @@ public class MainActivity extends Activity {
                                 );
 
                 OutputStream saida =
-                        connection.getOutputStream();
+                        connection
+                                .getOutputStream();
 
-                saida.write(dados);
+                saida.write(
+                        dados
+                );
+
                 saida.flush();
                 saida.close();
 
                 int responseCode =
-                        connection.getResponseCode();
+                        connection
+                                .getResponseCode();
+
+                // ========================================================
+                // ESCOLHER STREAM DA RESPOSTA
+                // ========================================================
+
+                InputStream entradaResposta;
+
+                if (
+                        responseCode >= 200
+                                && responseCode < 300
+                ) {
+
+                    entradaResposta =
+                            connection
+                                    .getInputStream();
+
+                } else {
+
+                    entradaResposta =
+                            connection
+                                    .getErrorStream();
+                }
 
                 String respostaTexto =
                         lerResposta(
-                                connection,
-                                responseCode
+                                entradaResposta
                         );
 
                 JSONObject resposta =
@@ -1229,7 +1420,9 @@ public class MainActivity extends Activity {
                                 "Não consegui obter uma resposta."
                         );
 
-                if (sucesso) {
+                if (
+                        sucesso
+                ) {
 
                     historico.add(
                             new JSONObject()
@@ -1261,11 +1454,14 @@ public class MainActivity extends Activity {
                     removerMensagemPensando();
 
                     adicionarMensagem(
-                            "Alex: " + respostaAlex
+                            "Alex: "
+                                    + respostaAlex
                     );
                 });
 
-            } catch (Exception erro) {
+            } catch (
+                    Exception erro
+            ) {
 
                 runOnUiThread(() -> {
 
@@ -1288,7 +1484,7 @@ public class MainActivity extends Activity {
             }
         });
     }
-     
+
     // ============================================================
     // LER RESPOSTA DO SERVIDOR
     // ============================================================
@@ -1297,7 +1493,9 @@ public class MainActivity extends Activity {
             InputStream entrada
     ) throws Exception {
 
-        if (entrada == null) {
+        if (
+                entrada == null
+        ) {
 
             return "{\"success\":false,"
                     + "\"resposta\":\"Resposta vazia do servidor.\"}";
@@ -1321,12 +1519,185 @@ public class MainActivity extends Activity {
                         != null
         ) {
 
-            resultado.append(linha);
+            resultado.append(
+                    linha
+            );
         }
 
         leitor.close();
 
         return resultado.toString();
+    }
+
+    // ============================================================
+    // ADICIONAR IMAGEM NA TELA
+    // ============================================================
+
+    private void adicionarImagemNaTela(
+            String imagem
+    ) {
+
+        if (
+                imagem == null
+                        || imagem.trim().isEmpty()
+        ) {
+
+            return;
+        }
+
+        executor.execute(() -> {
+
+            HttpURLConnection conexaoImagem =
+                    null;
+
+            try {
+
+                String urlImagem =
+                        imagem.trim();
+
+                // ========================================================
+                // ACEITAR URL HTTP/HTTPS
+                // ========================================================
+
+                if (
+                        !urlImagem.startsWith(
+                                "http://"
+                        )
+                        &&
+                        !urlImagem.startsWith(
+                                "https://"
+                        )
+                ) {
+
+                    urlImagem =
+                            "https://ultra-ia-pro.onrender.com"
+                                    + (
+                                        urlImagem.startsWith("/")
+                                                ? urlImagem
+                                                : "/" + urlImagem
+                                    );
+                }
+
+                URL url =
+                        new URL(
+                                urlImagem
+                        );
+
+                conexaoImagem =
+                        (HttpURLConnection)
+                                url.openConnection();
+
+                conexaoImagem.setRequestMethod(
+                        "GET"
+                );
+
+                conexaoImagem.setConnectTimeout(
+                        30000
+                );
+
+                conexaoImagem.setReadTimeout(
+                        60000
+                );
+
+                conexaoImagem.connect();
+
+                int codigo =
+                        conexaoImagem
+                                .getResponseCode();
+
+                if (
+                        codigo < 200
+                                || codigo >= 300
+                ) {
+
+                    throw new Exception(
+                            "Servidor de imagem respondeu HTTP "
+                                    + codigo
+                    );
+                }
+
+                InputStream entrada =
+                        conexaoImagem
+                                .getInputStream();
+
+                Bitmap bitmap =
+                        BitmapFactory
+                                .decodeStream(
+                                        entrada
+                                );
+
+                entrada.close();
+
+                if (
+                        bitmap == null
+                ) {
+
+                    throw new Exception(
+                            "Não foi possível decodificar a imagem."
+                    );
+                }
+
+                runOnUiThread(() -> {
+
+                    ImageView imagemView =
+                            new ImageView(
+                                    MainActivity.this
+                            );
+
+                    imagemView.setImageBitmap(
+                            bitmap
+                    );
+
+                    imagemView.setAdjustViewBounds(
+                            true
+                    );
+
+                    imagemView.setScaleType(
+                            ImageView.ScaleType
+                                    .FIT_CENTER
+                    );
+
+                    LinearLayout.LayoutParams parametros =
+                            new LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                            );
+
+                    parametros.setMargins(
+                            20,
+                            10,
+                            20,
+                            20
+                    );
+
+                    mensagens.addView(
+                            imagemView,
+                            parametros
+                    );
+                });
+
+            } catch (
+                    Exception erro
+            ) {
+
+                runOnUiThread(() -> {
+
+                    adicionarMensagem(
+                            "🖼️ Não foi possível carregar a imagem: "
+                                    + erro.getMessage()
+                    );
+                });
+
+            } finally {
+
+                if (
+                        conexaoImagem != null
+                ) {
+
+                    conexaoImagem.disconnect();
+                }
+            }
+        });
     }
 
     // ============================================================
@@ -1338,10 +1709,15 @@ public class MainActivity extends Activity {
             String instrucao
     ) {
 
-        codigo = codigo.trim();
-        instrucao = instrucao.trim();
+        codigo =
+                codigo.trim();
 
-        if (codigo.isEmpty()) {
+        instrucao =
+                instrucao.trim();
+
+        if (
+                codigo.isEmpty()
+        ) {
 
             adicionarMensagem(
                     "Ponte: cole um código para processar."
@@ -1350,7 +1726,9 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (instrucao.isEmpty()) {
+        if (
+                instrucao.isEmpty()
+        ) {
 
             adicionarMensagem(
                     "Ponte: informe o que deseja modificar."
@@ -1363,12 +1741,16 @@ public class MainActivity extends Activity {
                 "Você → Ponte: processando..."
         );
 
-        final String codigoFinal = codigo;
-        final String instrucaoFinal = instrucao;
+        final String codigoFinal =
+                codigo;
+
+        final String instrucaoFinal =
+                instrucao;
 
         executor.execute(() -> {
 
-            HttpURLConnection conexao = null;
+            HttpURLConnection conexao =
+                    null;
 
             try {
 
@@ -1406,13 +1788,17 @@ public class MainActivity extends Activity {
                 );
 
                 URL url =
-                        new URL(PONTE_API_URL);
+                        new URL(
+                                PONTE_API_URL
+                        );
 
                 conexao =
                         (HttpURLConnection)
                                 url.openConnection();
 
-                conexao.setRequestMethod("POST");
+                conexao.setRequestMethod(
+                        "POST"
+                );
 
                 conexao.setRequestProperty(
                         "Content-Type",
@@ -1424,7 +1810,9 @@ public class MainActivity extends Activity {
                         "application/json"
                 );
 
-                conexao.setDoOutput(true);
+                conexao.setDoOutput(
+                        true
+                );
 
                 conexao.setConnectTimeout(
                         30000
@@ -1435,7 +1823,8 @@ public class MainActivity extends Activity {
                 );
 
                 byte[] dados =
-                        pedido.toString()
+                        pedido
+                                .toString()
                                 .getBytes(
                                         StandardCharsets.UTF_8
                                 );
@@ -1445,11 +1834,14 @@ public class MainActivity extends Activity {
                                 conexao.getOutputStream()
                 ) {
 
-                    saida.write(dados);
+                    saida.write(
+                            dados
+                    );
                 }
 
                 int codigoHttp =
-                        conexao.getResponseCode();
+                        conexao
+                                .getResponseCode();
 
                 InputStream entradaResposta;
 
@@ -1459,12 +1851,14 @@ public class MainActivity extends Activity {
                 ) {
 
                     entradaResposta =
-                            conexao.getInputStream();
+                            conexao
+                                    .getInputStream();
 
                 } else {
 
                     entradaResposta =
-                            conexao.getErrorStream();
+                            conexao
+                                    .getErrorStream();
                 }
 
                 String respostaTexto =
@@ -1483,7 +1877,9 @@ public class MainActivity extends Activity {
                                 false
                         );
 
-                if (sucesso) {
+                if (
+                        sucesso
+                ) {
 
                     JSONObject arquivo =
                             resposta.optJSONObject(
@@ -1515,12 +1911,15 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
 
                         adicionarMensagem(
-                                "Ponte: " + status
+                                "Ponte: "
+                                        + status
                                         + "\nArquivo processado: "
                                         + nomeArquivo
                         );
 
-                        if (!download.isEmpty()) {
+                        if (
+                                !download.isEmpty()
+                        ) {
 
                             Button botaoDownload =
                                     new Button(this);
@@ -1538,19 +1937,24 @@ public class MainActivity extends Activity {
                                                     download;
 
                                             if (
-                                                    !urlDownload.startsWith(
-                                                            "http://"
-                                                    )
-                                                    &&
-                                                    !urlDownload.startsWith(
-                                                            "https://"
-                                                    )
+                                                    !urlDownload
+                                                            .startsWith(
+                                                                    "http://"
+                                                            )
+                                                            &&
+                                                    !urlDownload
+                                                            .startsWith(
+                                                                    "https://"
+                                                            )
                                             ) {
 
                                                 urlDownload =
                                                         "https://ponte-alex-v2.onrender.com"
                                                                 + (
-                                                                    urlDownload.startsWith("/")
+                                                                    urlDownload
+                                                                            .startsWith(
+                                                                                    "/"
+                                                                            )
                                                                             ? urlDownload
                                                                             : "/" + urlDownload
                                                                 );
@@ -1568,7 +1972,9 @@ public class MainActivity extends Activity {
                                                     navegador
                                             );
 
-                                        } catch (Exception erro) {
+                                        } catch (
+                                                Exception erro
+                                        ) {
 
                                             adicionarMensagem(
                                                     "📥 Não foi possível abrir o download: "
@@ -1602,12 +2008,15 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
 
                         adicionarMensagem(
-                                "Ponte: " + erro
+                                "Ponte: "
+                                        + erro
                         );
                     });
                 }
 
-            } catch (Exception erro) {
+            } catch (
+                    Exception erro
+            ) {
 
                 runOnUiThread(() -> {
 
@@ -1619,7 +2028,10 @@ public class MainActivity extends Activity {
 
             } finally {
 
-                if (conexao != null) {
+                if (
+                        conexao != null
+                ) {
+
                     conexao.disconnect();
                 }
             }
@@ -1635,7 +2047,10 @@ public class MainActivity extends Activity {
         int quantidade =
                 mensagens.getChildCount();
 
-        if (quantidade == 0) {
+        if (
+                quantidade == 0
+        ) {
+
             return;
         }
 
@@ -1644,13 +2059,16 @@ public class MainActivity extends Activity {
                         quantidade - 1
                 );
 
-        if (ultima instanceof TextView) {
+        if (
+                ultima instanceof TextView
+        ) {
 
             TextView texto =
                     (TextView) ultima;
 
             String valor =
-                    texto.getText().toString();
+                    texto.getText()
+                            .toString();
 
             if (
                     valor.equals(
@@ -1676,9 +2094,17 @@ public class MainActivity extends Activity {
         TextView mensagem =
                 new TextView(this);
 
-        mensagem.setText(texto);
-        mensagem.setTextColor(Color.WHITE);
-        mensagem.setTextSize(16);
+        mensagem.setText(
+                texto
+        );
+
+        mensagem.setTextColor(
+                Color.WHITE
+        );
+
+        mensagem.setTextSize(
+                16
+        );
 
         mensagem.setPadding(
                 20,
@@ -1692,6 +2118,10 @@ public class MainActivity extends Activity {
         );
     }
 
+    // ============================================================
+    // DESTRUIR ACTIVITY
+    // ============================================================
+
     @Override
     protected void onDestroy() {
 
@@ -1700,8 +2130,13 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    // ============================================================
+    // BOTÃO VOLTAR
+    // ============================================================
+
     @Override
     public void onBackPressed() {
+
         super.onBackPressed();
     }
    }
