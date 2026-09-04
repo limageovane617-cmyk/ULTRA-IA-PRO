@@ -252,6 +252,120 @@ def imagem(pedido: PedidoImagem):
 
 
 # ============================================================
+# VÍDEO — GERENCIADOR DE VÍDEO
+# ============================================================
+
+@app.post("/api/video")
+def video(pedido: PedidoVideo):
+
+    try:
+
+        imagem_bytes = None
+
+        if pedido.imagem:
+
+            dados_imagem = pedido.imagem
+
+            # Aceita também:
+            # data:image/png;base64,XXXXXX
+            if "," in dados_imagem:
+
+                dados_imagem = dados_imagem.split(
+                    ",",
+                    1
+                )[1]
+
+            try:
+
+                imagem_bytes = base64.b64decode(
+                    dados_imagem,
+                    validate=True
+                )
+
+            except Exception:
+
+                raise HTTPException(
+                    status_code=400,
+                    detail="Imagem em base64 inválida."
+                )
+
+        if imagem_bytes:
+
+            resultado = gerar_video_imagem(
+                imagem_bytes=imagem_bytes,
+                nome_imagem="imagem_alex.png",
+                prompt=pedido.prompt,
+                duracao=float(
+                    pedido.duracao or 5
+                ),
+            )
+
+        else:
+
+            resultado = gerar_video_texto(
+                prompt=pedido.prompt,
+                duracao=float(
+                    pedido.duracao or 5
+                ),
+            )
+
+        if not resultado.get("sucesso"):
+
+            return {
+                "success": False,
+                "sucesso": False,
+                "motor": resultado.get("motor"),
+                "erro": resultado.get("erro"),
+                "video": None,
+            }
+
+        caminho_video = (
+            resultado.get("video")
+            or resultado.get("arquivo")
+        )
+
+        if not caminho_video:
+
+            return {
+                "success": False,
+                "sucesso": False,
+                "motor": resultado.get("motor"),
+                "erro": (
+                    "O vídeo foi processado, "
+                    "mas nenhum arquivo foi retornado."
+                ),
+                "video": None,
+            }
+
+        nome_video = Path(
+            caminho_video
+        ).name
+
+        return {
+            "success": True,
+            "sucesso": True,
+            "motor": resultado.get("motor"),
+            "video": f"/api/videos/{nome_video}",
+            "arquivo": nome_video,
+            "erro": None,
+        }
+
+    except HTTPException:
+
+        raise
+
+    except Exception as erro:
+
+        return {
+            "success": False,
+            "sucesso": False,
+            "motor": None,
+            "erro": str(erro),
+            "video": None,
+        }
+
+
+# ============================================================
 # PONTE ALEX V2 — PROXY SEGURO
 # ============================================================
 
