@@ -1102,6 +1102,11 @@ def gerar_ltx_huggingface(
             LTX_HF_SPACE
         )
 
+    print(
+        "[DIAGNÓSTICO HF] Token Hugging Face encontrado:",
+        bool(token_hf)
+    )
+
     duracao_segundos = max(
         0.5,
         min(
