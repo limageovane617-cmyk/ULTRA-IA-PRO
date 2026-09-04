@@ -1092,6 +1092,11 @@ def gerar_ltx_huggingface(
 
     token_hf = obter_token_huggingface()
 
+    print(
+        "[DIAGNÓSTICO HF] Token Hugging Face encontrado:",
+        bool(token_hf)
+    )
+
     if token_hf:
         client = Client(
             LTX_HF_SPACE,
