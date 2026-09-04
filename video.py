@@ -237,6 +237,14 @@ def obter_api_key_magichour() -> str:
     )
 
 
+def obter_token_huggingface() -> str:
+
+    return (
+        _secret("HF_TOKEN")
+        or _secret("HUGGINGFACE_TOKEN")
+    )
+
+
 def obter_token_replicate() -> str:
 
     return _secret(
