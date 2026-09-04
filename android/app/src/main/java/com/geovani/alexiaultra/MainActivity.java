@@ -147,6 +147,26 @@ public class MainActivity extends Activity {
 
                 String ferramenta =
                         item.getTitle().toString();
+                // ====================================================
+                // 🖼️ IMAGEM
+                // ====================================================
+
+                if (ferramenta.equals("🖼️ Imagem")) {
+
+                    campoMensagem.setHint(
+                            "Descreva a imagem que você quer criar..."
+                    );
+
+                    campoMensagem.requestFocus();
+
+                    adicionarMensagem(
+                            "🖼️ Modo Imagem ativado.\n\n"
+                                    + "Digite a descrição da imagem "
+                                    + "que você quer gerar."
+                    );
+
+                    return true;
+                }
 
                 // ===================================================
                 // 💻 CÓDIGO
