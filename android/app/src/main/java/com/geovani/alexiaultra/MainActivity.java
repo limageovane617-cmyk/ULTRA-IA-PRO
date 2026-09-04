@@ -1288,7 +1288,6 @@ public class MainActivity extends Activity {
             }
         });
     }
-}
      
     // ============================================================
     // LER RESPOSTA DO SERVIDOR
