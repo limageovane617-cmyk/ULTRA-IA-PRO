@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
-from gerenciador_imagem import gerar_imagem_pixazo
 
+from gerenciador_imagem import gerar_imagem_pixazo
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
 
@@ -67,6 +67,10 @@ class PedidoPonte(BaseModel):
     outputFilename: Optional[str] = None
     searchTarget: Optional[str] = None
     replaceWith: Optional[str] = None
+
+
+class PedidoImagem(BaseModel):
+    prompt: str
 
 
 # ============================================================
@@ -202,6 +206,34 @@ def chat(pedido: PedidoChat):
 
 
 # ============================================================
+# IMAGEM — PIXAZO
+# ============================================================
+
+@app.post("/api/imagem")
+def imagem(pedido: PedidoImagem):
+
+    try:
+
+        caminho = gerar_imagem_pixazo(
+            pedido.prompt
+        )
+
+        return {
+            "success": True,
+            "imagem": caminho,
+            "prompt": pedido.prompt,
+            "motor": "Pixazo / Flux 1 Schnell",
+        }
+
+    except Exception as erro:
+
+        return {
+            "success": False,
+            "error": str(erro),
+        }
+
+
+# ============================================================
 # PONTE ALEX V2 — PROXY SEGURO
 # ============================================================
 
@@ -246,6 +278,7 @@ def processar_ponte(pedido: PedidoPonte):
         )
 
         try:
+
             dados = resposta.json()
 
         except ValueError:
