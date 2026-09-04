@@ -1,8 +1,11 @@
 import os
+import base64
+from pathlib import Path
 from typing import List, Optional
 
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
