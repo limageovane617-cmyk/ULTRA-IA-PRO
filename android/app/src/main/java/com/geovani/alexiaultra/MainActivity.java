@@ -100,7 +100,6 @@ public class MainActivity extends Activity {
         tela.setBackgroundColor(Color.rgb(8, 12, 20));
 
         // ============================================================
-        // ============================================================
         // CABEÇALHO
         // ============================================================
 
@@ -249,21 +248,6 @@ public class MainActivity extends Activity {
         mensagens = new LinearLayout(this);
         mensagens.setOrientation(LinearLayout.VERTICAL);
         mensagens.setPadding(20, 20, 20, 20);
-
-        TextView boasVindas = new TextView(this);
-
-        boasVindas.setText(
-                "Olá! Eu sou a Alex IA Ultra.\n\n"
-                        + "Agora estou conectada ao meu cérebro de IA."
-        );
-
-        boasVindas.setTextColor(Color.WHITE);
-        boasVindas.setTextSize(17);
-        boasVindas.setPadding(25, 25, 25, 25);
-
-        mensagens.addView(boasVindas);
-
-        scroll.addView(mensagens);
 
         tela.addView(
                 scroll,
