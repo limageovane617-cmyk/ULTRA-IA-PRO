@@ -1098,11 +1098,23 @@ def gerar_ltx_huggingface(
     )
 
     if token_hf:
-        client = Client(
-            LTX_HF_SPACE,
-            token=token_hf
-        )
+
+        try:
+
+            client = Client(
+                LTX_HF_SPACE,
+                token=token_hf
+            )
+
+        except TypeError:
+
+            client = Client(
+                LTX_HF_SPACE,
+                hf_token=token_hf
+            )
+
     else:
+
         client = Client(
             LTX_HF_SPACE
         )
