@@ -81,9 +81,16 @@ class PedidoImagem(BaseModel):
     prompt: str
 
 
+class PedidoVideo(BaseModel):
+    prompt: str
+    imagem: Optional[str] = None
+    duracao: Optional[int] = 5
+    motor: Optional[str] = "automatico"
+
+
 # ============================================================
 # GEMINI
-# ============================================================
+# =============================================================
 
 def obter_cliente_gemini():
 
