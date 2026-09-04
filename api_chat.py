@@ -14,539 +14,700 @@ from google import genai
 from gerenciador_imagem import gerar_imagem_pixazo
 
 from video import (
-    gerar_video,
-    gerar_video_texto,
-    gerar_video_imagem,
-    gerar_video_fallback,
+gerar_video,
+gerar_video_texto,
+gerar_video_imagem,
+gerar_video_fallback,
 )
 
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
-
 app = FastAPI(title="Alex IA Ultra API")
 
+============================================================
 
-# ============================================================
-# CORS
-# ============================================================
+CORS
+
+============================================================
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+CORSMiddleware,
+allow_origins=[""],
+allow_credentials=False,
+allow_methods=[""],
+allow_headers=["*"],
 )
 
+============================================================
 
-# ============================================================
-# CONFIGURAÇÃO DA PONTE
-# ============================================================
+CONFIGURAÇÃO DA PONTE
+
+============================================================
 
 PONTE_API_URL = os.environ.get(
-    "PONTE_API_URL",
-    "https://ponte-alex-v2.onrender.com/api/ponte/v2/processar",
+"PONTE_API_URL",
+"https://ponte-alex-v2.onrender.com/api/ponte/v2/processar",
 ).rstrip("/")
 
-
 PONTE_API_SECRET = (
-    os.environ.get("PONTE_API_SECRET")
-    or os.environ.get("PONTE_API_SECRETO")
-    or os.environ.get("ALEX_BRIDGE_SECRET")
+os.environ.get("PONTE_API_SECRET")
+or os.environ.get("PONTE_API_SECRETO")
+or os.environ.get("ALEX_BRIDGE_SECRET")
 )
 
+============================================================
 
-# ============================================================
-# MODELOS
-# ============================================================
+CONFIGURAÇÃO DOS ARQUIVOS GERADOS
+
+============================================================
+
+PASTA_IMAGENS = Path(
+"/tmp/alex_ia_ultra_imagens"
+)
+
+PASTA_IMAGENS.mkdir(
+parents=True,
+exist_ok=True
+)
+
+============================================================
+
+MODELOS
+
+============================================================
 
 class Mensagem(BaseModel):
-    role: str
-    content: str
-
+role: str
+content: str
 
 class PedidoChat(BaseModel):
-    pergunta: str
-    historico: Optional[List[Mensagem]] = []
-    contexto_arquivo: Optional[str] = ""
-    nome_arquivo: Optional[str] = ""
-
+pergunta: str
+historico: Optional[List[Mensagem]] = []
+contexto_arquivo: Optional[str] = ""
+nome_arquivo: Optional[str] = ""
 
 class PedidoPonte(BaseModel):
-    fileContent: str
-    instruction: str
-    filename: Optional[str] = "script_alex.py"
-    outputFilename: Optional[str] = None
-    searchTarget: Optional[str] = None
-    replaceWith: Optional[str] = None
-
+fileContent: str
+instruction: str
+filename: Optional[str] = "script_alex.py"
+outputFilename: Optional[str] = None
+searchTarget: Optional[str] = None
+replaceWith: Optional[str] = None
 
 class PedidoImagem(BaseModel):
-    prompt: str
-
+prompt: str
 
 class PedidoVideo(BaseModel):
-    prompt: str
-    imagem: Optional[str] = None
-    duracao: Optional[int] = 5
-    motor: Optional[str] = "automatico"
+prompt: str
+imagem: Optional[str] = None
+duracao: Optional[int] = 5
+motor: Optional[str] = "automatico"
 
+============================================================
 
-# ============================================================
-# GEMINI
-# ============================================================
+GEMINI
+
+============================================================
 
 def obter_cliente_gemini():
 
-    chave = (
-        os.environ.get("GEMINI_API_KEY")
-        or os.environ.get("GOOGLE_API_KEY")
-    )
+chave = (
+    os.environ.get("GEMINI_API_KEY")
+    or os.environ.get("GOOGLE_API_KEY")
+)
 
-    if not chave:
-        return None
+if not chave:
+    return None
 
-    return genai.Client(
-        api_key=chave
-    )
+return genai.Client(
+    api_key=chave
+)
 
+============================================================
 
-# ============================================================
-# ROTAS BÁSICAS
-# ============================================================
+URL PÚBLICA DA IMAGEM
+
+============================================================
+
+def criar_url_imagem(caminho_imagem):
+
+if not caminho_imagem:
+    return None
+
+nome = Path(
+    str(caminho_imagem)
+).name
+
+return (
+    f"/api/imagens/{nome}"
+)
+
+============================================================
+
+ROTAS BÁSICAS
+
+============================================================
 
 @app.get("/")
 def inicio():
 
-    return {
-        "success": True,
-        "service": "Alex IA Ultra API",
-        "status": "online",
-    }
-
+return {
+    "success": True,
+    "service": "Alex IA Ultra API",
+    "status": "online",
+}
 
 @app.get("/api/health")
 def health():
 
-    cliente = obter_cliente_gemini()
+cliente = obter_cliente_gemini()
 
-    hf_token = (
-        os.environ.get("HF_TOKEN")
-        or os.environ.get("HUGGINGFACE_TOKEN")
+hf_token = (
+    os.environ.get("HF_TOKEN")
+    or os.environ.get("HUGGINGFACE_TOKEN")
+)
+
+return {
+    "success": True,
+    "gemini": cliente is not None,
+    "ponte": bool(PONTE_API_SECRET),
+    "hf_token": bool(hf_token),
+}
+
+============================================================
+
+SERVIR IMAGENS GERADAS
+
+============================================================
+
+@app.get("/api/imagens/{filename}")
+def servir_imagem(filename: str):
+
+nome = Path(
+    filename
+).name
+
+caminho = (
+    PASTA_IMAGENS / nome
+)
+
+if not caminho.exists():
+
+    raise HTTPException(
+        status_code=404,
+        detail="Imagem não encontrada."
     )
 
-    return {
-        "success": True,
-        "gemini": cliente is not None,
-        "ponte": bool(PONTE_API_SECRET),
-        "hf_token": bool(hf_token),
-    }
+if not caminho.is_file():
 
+    raise HTTPException(
+        status_code=404,
+        detail="Imagem inválida."
+    )
 
-# ============================================================
-# CHAT — GEMINI
-# ============================================================
+return FileResponse(
+    caminho,
+    media_type="image/png",
+    filename=nome,
+)
+
+============================================================
+
+CHAT — GEMINI
+
+============================================================
 
 @app.post("/api/chat")
 def chat(pedido: PedidoChat):
 
-    cliente = obter_cliente_gemini()
+cliente = obter_cliente_gemini()
 
-    if cliente is None:
+if cliente is None:
 
-        return {
-            "success": False,
-            "resposta": (
-                "A chave da Gemini não está "
-                "configurada no servidor."
-            ),
-        }
+    return {
+        "success": False,
+        "resposta": (
+            "A chave da Gemini não está "
+            "configurada no servidor."
+        ),
+    }
 
-    partes = [SYSTEM_PROMPT]
+partes = [SYSTEM_PROMPT]
 
-    if pedido.historico:
-
-        partes.append(
-            "\nHISTÓRICO DA CONVERSA:\n"
-        )
-
-        for mensagem in pedido.historico[-20:]:
-
-            partes.append(
-                f"{mensagem.role}: "
-                f"{mensagem.content}"
-            )
-
-    if pedido.contexto_arquivo:
-
-        partes.append(
-            "\nCONTEXTO DO ARQUIVO:\n"
-        )
-
-        partes.append(
-            pedido.contexto_arquivo
-        )
+if pedido.historico:
 
     partes.append(
-        "\nNOVA PERGUNTA:\n"
+        "\nHISTÓRICO DA CONVERSA:\n"
+    )
+
+    for mensagem in pedido.historico[-20:]:
+
+        partes.append(
+            f"{mensagem.role}: "
+            f"{mensagem.content}"
+        )
+
+if pedido.contexto_arquivo:
+
+    partes.append(
+        "\nCONTEXTO DO ARQUIVO:\n"
     )
 
     partes.append(
-        pedido.pergunta
+        pedido.contexto_arquivo
     )
 
-    instrucao = "\n".join(partes)
+partes.append(
+    "\nNOVA PERGUNTA:\n"
+)
 
-    try:
+partes.append(
+    pedido.pergunta
+)
 
-        resultado = cliente.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=instrucao,
+instrucao = "\n".join(partes)
+
+try:
+
+    resultado = cliente.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=instrucao,
+    )
+
+    resposta = getattr(
+        resultado,
+        "text",
+        None,
+    )
+
+    if not resposta:
+
+        resposta = (
+            "Não consegui gerar uma resposta."
         )
 
-        resposta = getattr(
-            resultado,
-            "text",
-            None,
-        )
+    # ====================================================
+    # DETECTAR AÇÃO DE GERAÇÃO DE IMAGEM
+    # ====================================================
 
-        if not resposta:
+    texto_resposta = resposta.strip()
 
-            resposta = (
-                "Não consegui gerar uma resposta."
+    if (
+        "dalle.text2im" in texto_resposta
+        or '"action": "dalle.text2im"' in texto_resposta
+        or "'action': 'dalle.text2im'" in texto_resposta
+    ):
+
+        prompt_imagem = None
+
+        padroes_prompt = [
+
+            r'"prompt"\s*:\s*"([^"]+)"',
+
+            r"'prompt'\s*:\s*'([^']+)'",
+        ]
+
+        for padrao in padroes_prompt:
+
+            correspondencia = re.search(
+                padrao,
+                texto_resposta,
+                re.IGNORECASE,
             )
 
-        # ====================================================
-        # DETECTAR AÇÃO DE GERAÇÃO DE IMAGEM
-        # ====================================================
+            if correspondencia:
 
-        texto_resposta = resposta.strip()
-
-        if (
-            "dalle.text2im" in texto_resposta
-            or '"action": "dalle.text2im"' in texto_resposta
-            or "'action': 'dalle.text2im'" in texto_resposta
-        ):
-
-            prompt_imagem = None
-
-            padroes_prompt = [
-                r'"prompt"\s*:\s*"([^"]+)"',
-                r"'prompt'\s*:\s*'([^']+)'",
-            ]
-
-            for padrao in padroes_prompt:
-
-                correspondencia = re.search(
-                    padrao,
-                    texto_resposta,
-                    re.IGNORECASE,
+                prompt_imagem = (
+                    correspondencia.group(1)
                 )
 
-                if correspondencia:
+                break
 
-                    prompt_imagem = (
-                        correspondencia.group(1)
-                    )
+        if not prompt_imagem:
 
-                    break
+            prompt_imagem = pedido.pergunta
 
-            if not prompt_imagem:
+        try:
 
-                prompt_imagem = pedido.pergunta
-
-            try:
-
-                caminho_imagem = (
-                    gerar_imagem_pixazo(
-                        prompt_imagem
-                    )
+            caminho_imagem = (
+                gerar_imagem_pixazo(
+                    prompt_imagem
                 )
+            )
 
-                return {
-                    "success": True,
-                    "resposta": (
-                        "Pronto, Geovani! "
-                        "A imagem foi gerada."
-                    ),
-                    "imagem": caminho_imagem,
-                    "prompt": prompt_imagem,
-                    "motor": (
-                        "Pixazo / Flux 1 Schnell"
-                    ),
-                    "acao": "imagem",
-                    "modelo": GEMINI_MODEL,
-                }
+            # --------------------------------------------
+            # CONVERTER CAMINHO INTERNO EM URL DA API
+            # --------------------------------------------
 
-            except Exception as erro_imagem:
+            url_imagem = criar_url_imagem(
+                caminho_imagem
+            )
 
-                return {
-                    "success": False,
-                    "resposta": (
-                        "Entendi que você pediu "
-                        "uma imagem, mas ocorreu "
-                        "um erro ao gerar."
-                    ),
-                    "erro": str(erro_imagem),
-                    "acao": "imagem",
-                    "modelo": GEMINI_MODEL,
-                }
+            return {
+                "success": True,
 
-        # ====================================================
-        # RESPOSTA NORMAL
-        # ====================================================
+                "resposta": (
+                    "Pronto, Geovani! "
+                    "A imagem foi gerada."
+                ),
 
-        return {
-            "success": True,
-            "resposta": resposta,
-            "modelo": GEMINI_MODEL,
-        }
+                "imagem": url_imagem,
 
-    except Exception as erro:
+                "imagem_url": url_imagem,
 
-        return {
-            "success": False,
-            "resposta": (
-                f"Erro ao consultar a Gemini: {erro}"
-            ),
-        }
+                "arquivo_imagem": (
+                    Path(
+                        caminho_imagem
+                    ).name
+                ),
 
+                "prompt": prompt_imagem,
 
-# ============================================================
-# IMAGEM — PIXAZO
-# ============================================================
+                "motor": (
+                    "Pixazo / Flux 1 Schnell"
+                ),
+
+                "acao": "imagem",
+
+                "modelo": GEMINI_MODEL,
+            }
+
+        except Exception as erro_imagem:
+
+            return {
+                "success": False,
+
+                "resposta": (
+                    "Entendi que você pediu "
+                    "uma imagem, mas ocorreu "
+                    "um erro ao gerar."
+                ),
+
+                "erro": str(
+                    erro_imagem
+                ),
+
+                "acao": "imagem",
+
+                "modelo": GEMINI_MODEL,
+            }
+
+    # ====================================================
+    # RESPOSTA NORMAL
+    # ====================================================
+
+    return {
+        "success": True,
+        "resposta": resposta,
+        "modelo": GEMINI_MODEL,
+    }
+
+except Exception as erro:
+
+    return {
+        "success": False,
+        "resposta": (
+            f"Erro ao consultar a Gemini: {erro}"
+        ),
+    }
+
+============================================================
+
+IMAGEM — PIXAZO
+
+============================================================
 
 @app.post("/api/imagem")
 def imagem(pedido: PedidoImagem):
 
-    try:
+try:
 
-        caminho = gerar_imagem_pixazo(
-            pedido.prompt
-        )
+    caminho = gerar_imagem_pixazo(
+        pedido.prompt
+    )
 
-        return {
-            "success": True,
-            "imagem": caminho,
-            "prompt": pedido.prompt,
-            "motor": "Pixazo / Flux 1 Schnell",
-        }
+    # ----------------------------------------------------
+    # CONVERTER CAMINHO INTERNO EM URL PÚBLICA
+    # ----------------------------------------------------
 
-    except Exception as erro:
+    url_imagem = criar_url_imagem(
+        caminho
+    )
 
-        return {
-            "success": False,
-            "error": str(erro),
-        }
+    return {
+        "success": True,
 
+        "imagem": url_imagem,
 
-# ============================================================
-# VÍDEO — GERENCIADOR DE VÍDEO
-# ============================================================
+        "imagem_url": url_imagem,
+
+        "arquivo_imagem": (
+            Path(caminho).name
+        ),
+
+        "prompt": pedido.prompt,
+
+        "motor": (
+            "Pixazo / Flux 1 Schnell"
+        ),
+    }
+
+except Exception as erro:
+
+    return {
+        "success": False,
+        "imagem": None,
+        "imagem_url": None,
+        "error": str(erro),
+    }
+
+============================================================
+
+VÍDEO — GERENCIADOR DE VÍDEO
+
+============================================================
 
 @app.post("/api/video")
 def video(pedido: PedidoVideo):
 
-    try:
+try:
 
-        imagem_bytes = None
+    imagem_bytes = None
 
-        if pedido.imagem:
+    if pedido.imagem:
 
-            dados_imagem = pedido.imagem
+        dados_imagem = pedido.imagem
 
-            # Aceita também:
-            # data:image/png;base64,XXXXXX
-            if "," in dados_imagem:
+        # Aceita também:
+        # data:image/png;base64,XXXXXX
 
-                dados_imagem = (
-                    dados_imagem.split(
-                        ",",
-                        1
-                    )[1]
-                )
+        if "," in dados_imagem:
 
-            try:
-
-                imagem_bytes = base64.b64decode(
-                    dados_imagem,
-                    validate=True
-                )
-
-            except Exception:
-
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "Imagem em base64 inválida."
-                    )
-                )
-
-        if imagem_bytes:
-
-            resultado = gerar_video_imagem(
-                imagem_bytes=imagem_bytes,
-                nome_imagem="imagem_alex.png",
-                prompt=pedido.prompt,
-                duracao=float(
-                    pedido.duracao or 5
-                ),
+            dados_imagem = (
+                dados_imagem.split(
+                    ",",
+                    1
+                )[1]
             )
 
-        else:
+        try:
 
-            resultado = gerar_video_texto(
-                prompt=pedido.prompt,
-                duracao=float(
-                    pedido.duracao or 5
-                ),
+            imagem_bytes = base64.b64decode(
+                dados_imagem,
+                validate=True
             )
 
-        if not resultado.get("sucesso"):
+        except Exception:
 
-            return {
-                "success": False,
-                "sucesso": False,
-                "motor": resultado.get("motor"),
-                "erro": resultado.get("erro"),
-                "video": None,
-            }
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Imagem em base64 inválida."
+                )
+            )
 
-        caminho_video = (
-            resultado.get("video")
-            or resultado.get("arquivo")
+    if imagem_bytes:
+
+        resultado = gerar_video_imagem(
+
+            imagem_bytes=imagem_bytes,
+
+            nome_imagem="imagem_alex.png",
+
+            prompt=pedido.prompt,
+
+            duracao=float(
+                pedido.duracao or 5
+            ),
         )
 
-        if not caminho_video:
+    else:
 
-            return {
-                "success": False,
-                "sucesso": False,
-                "motor": resultado.get("motor"),
-                "erro": (
-                    "O vídeo foi processado, "
-                    "mas nenhum arquivo foi retornado."
-                ),
-                "video": None,
-            }
+        resultado = gerar_video_texto(
 
-        nome_video = Path(
-            caminho_video
-        ).name
+            prompt=pedido.prompt,
 
-        return {
-            "success": True,
-            "sucesso": True,
-            "motor": resultado.get("motor"),
-            "video": (
-                f"/api/videos/{nome_video}"
+            duracao=float(
+                pedido.duracao or 5
             ),
-            "arquivo": nome_video,
-            "erro": None,
-        }
+        )
 
-    except HTTPException:
-
-        raise
-
-    except Exception as erro:
+    if not resultado.get("sucesso"):
 
         return {
             "success": False,
             "sucesso": False,
-            "motor": None,
-            "erro": str(erro),
+            "motor": resultado.get("motor"),
+            "erro": resultado.get("erro"),
             "video": None,
         }
 
+    caminho_video = (
+        resultado.get("video")
+        or resultado.get("arquivo")
+    )
 
-# ============================================================
-# PONTE ALEX V2 — PROXY SEGURO
-# ============================================================
+    if not caminho_video:
+
+        return {
+            "success": False,
+            "sucesso": False,
+            "motor": resultado.get("motor"),
+            "erro": (
+                "O vídeo foi processado, "
+                "mas nenhum arquivo foi retornado."
+            ),
+            "video": None,
+        }
+
+    nome_video = Path(
+        caminho_video
+    ).name
+
+    return {
+        "success": True,
+        "sucesso": True,
+        "motor": resultado.get("motor"),
+        "video": (
+            f"/api/videos/{nome_video}"
+        ),
+        "arquivo": nome_video,
+        "erro": None,
+    }
+
+except HTTPException:
+
+    raise
+
+except Exception as erro:
+
+    return {
+        "success": False,
+        "sucesso": False,
+        "motor": None,
+        "erro": str(erro),
+        "video": None,
+    }
+
+============================================================
+
+PONTE ALEX V2 — PROXY SEGURO
+
+============================================================
 
 @app.post("/api/ponte/processar")
 def processar_ponte(pedido: PedidoPonte):
 
-    if not PONTE_API_SECRET:
+if not PONTE_API_SECRET:
 
-        return {
-            "success": False,
-            "error": (
-                "A chave da Ponte não está "
-                "configurada no servidor."
-            ),
-        }
-
-    payload = {
-        "fileContent": pedido.fileContent,
-        "instruction": pedido.instruction,
-        "filename": pedido.filename,
-        "outputFilename": pedido.outputFilename,
-        "searchTarget": pedido.searchTarget,
-        "replaceWith": pedido.replaceWith,
+    return {
+        "success": False,
+        "error": (
+            "A chave da Ponte não está "
+            "configurada no servidor."
+        ),
     }
 
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "x-api-secret": PONTE_API_SECRET,
-    }
+payload = {
+
+    "fileContent": pedido.fileContent,
+
+    "instruction": pedido.instruction,
+
+    "filename": pedido.filename,
+
+    "outputFilename": pedido.outputFilename,
+
+    "searchTarget": pedido.searchTarget,
+
+    "replaceWith": pedido.replaceWith,
+}
+
+headers = {
+
+    "Content-Type":
+        "application/json",
+
+    "Accept":
+        "application/json",
+
+    "x-api-secret":
+        PONTE_API_SECRET,
+}
+
+try:
+
+    resposta = requests.post(
+
+        PONTE_API_URL,
+
+        json=payload,
+
+        headers=headers,
+
+        timeout=90,
+    )
 
     try:
 
-        resposta = requests.post(
-            PONTE_API_URL,
-            json=payload,
-            headers=headers,
-            timeout=90,
-        )
+        dados = resposta.json()
 
-        try:
+    except ValueError:
 
-            dados = resposta.json()
+        dados = {
 
-        except ValueError:
-
-            dados = {
-                "success": False,
-                "error": (
-                    "A Ponte retornou uma "
-                    "resposta inválida."
-                ),
-                "status_code": resposta.status_code,
-                "resposta": resposta.text[:2000],
-            }
-
-        return dados
-
-    except requests.Timeout:
-
-        return {
             "success": False,
+
             "error": (
-                "A Ponte demorou muito "
-                "para responder."
+                "A Ponte retornou uma "
+                "resposta inválida."
             ),
+
+            "status_code":
+                resposta.status_code,
+
+            "resposta":
+                resposta.text[:2000],
         }
 
-    except requests.RequestException as erro:
+    return dados
 
-        return {
-            "success": False,
-            "error": (
-                "Não foi possível conectar "
-                "à Ponte Alex v2."
-            ),
-            "detalhes": str(erro),
-        }
+except requests.Timeout:
 
-    except Exception as erro:
+    return {
 
-        return {
-            "success": False,
-            "error": (
-                "Erro inesperado ao acessar "
-                "a Ponte Alex v2."
-            ),
-            "detalhes": str(erro),
+        "success": False,
+
+        "error": (
+            "A Ponte demorou muito "
+            "para responder."
+        ),
     }
+
+except requests.RequestException as erro:
+
+    return {
+
+        "success": False,
+
+        "error": (
+            "Não foi possível conectar "
+            "à Ponte Alex v2."
+        ),
+
+        "detalhes": str(erro),
+    }
+
+except Exception as erro:
+
+    return {
+
+        "success": False,
+
+        "error": (
+            "Erro inesperado ao acessar "
+            "a Ponte Alex v2."
+        ),
+
+        "detalhes": str(erro),
+}
