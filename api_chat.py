@@ -127,12 +127,17 @@ def health():
 
     cliente = obter_cliente_gemini()
 
+    hf_token = (
+        os.environ.get("HF_TOKEN")
+        or os.environ.get("HUGGINGFACE_TOKEN")
+    )
+
     return {
         "success": True,
         "gemini": cliente is not None,
         "ponte": bool(PONTE_API_SECRET),
+        "hf_token": bool(hf_token),
     }
-
 
 # ============================================================
 # CHAT — GEMINI
