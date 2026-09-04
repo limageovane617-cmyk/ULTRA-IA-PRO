@@ -1075,16 +1075,24 @@ def gerar_ltx_huggingface(
     if imagem_bytes:
 
         caminho_imagem = (
-            _salvar_imagem_temp(
-                imagem_bytes,
-                nome_imagem,
-                "entrada_ltx"
-            )
+        _salvar_imagem_temp(
+            imagem_bytes,
+            nome_imagem,
+            "entrada_ltx"
         )
-
-    client = Client(
-        LTX_HF_SPACE
     )
+
+    token_hf = obter_token_huggingface()
+
+    if token_hf:
+        client = Client(
+            LTX_HF_SPACE,
+            token=token_hf
+        )
+    else:
+        client = Client(
+            LTX_HF_SPACE
+        )
 
     duracao_segundos = max(
         0.5,
