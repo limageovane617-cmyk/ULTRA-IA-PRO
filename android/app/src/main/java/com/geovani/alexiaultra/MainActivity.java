@@ -73,25 +73,16 @@ public class MainActivity extends Activity {
 
     private static final String PONTE_API_URL =
             "https://ultra-ia-pro.onrender.com/api/ponte/processar";
-
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+       super.onCreate(savedInstanceState);
 
-        entrarEmTelaCheia();
-        criarInterface();
-    }
+       getWindow().setSoftInputMode(
+               android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+       );
 
-    private void entrarEmTelaCheia() {
-
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        );
+       criarInterface();
     }
 
     private void criarInterface() {
