@@ -184,7 +184,7 @@ public class MainActivity extends Activity {
                 new Button(this);
 
         botaoMais.setText(
-                "＋"
+                "➕"
         );
 
         botaoMais.setTextSize(
