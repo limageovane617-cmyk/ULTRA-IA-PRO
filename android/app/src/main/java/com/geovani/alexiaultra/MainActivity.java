@@ -2,13 +2,18 @@ package com.geovani.alexiaultra;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,21 +24,15 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.provider.OpenableColumns;
-import android.database.Cursor;
-import android.os.Build;
-import android.provider.Settings;
-import android.content.ActivityNotFoundException;
 
 import androidx.core.content.FileProvider;
-
-import java.io.File;
-import java.io.FileOutputStream;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -98,20 +97,47 @@ public class MainActivity extends Activity {
     private void criarInterface() {
 
         tela = new LinearLayout(this);
-        tela.setOrientation(LinearLayout.VERTICAL);
-        tela.setBackgroundColor(Color.rgb(8, 12, 20));
+
+        tela.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        tela.setBackgroundColor(
+                Color.rgb(8, 12, 20)
+        );
 
         // ============================================================
         // ÁREA DO CHAT
         // ============================================================
 
-        ScrollView scroll = new ScrollView(this);
+        ScrollView scroll =
+                new ScrollView(this);
 
-        mensagens = new LinearLayout(this);
-        mensagens.setOrientation(LinearLayout.VERTICAL);
-        mensagens.setPadding(20, 20, 20, 20);
+        scroll.setFillViewport(
+                true
+        );
 
-        scroll.addView(mensagens);
+        mensagens =
+                new LinearLayout(this);
+
+        mensagens.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        mensagens.setPadding(
+                20,
+                20,
+                20,
+                20
+        );
+
+        scroll.addView(
+                mensagens,
+                new ScrollView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
 
         tela.addView(
                 scroll,
@@ -121,111 +147,6 @@ public class MainActivity extends Activity {
                         1
                 )
         );
-
-        // ============================================================
-        // BOTÃO + DE FERRAMENTAS
-        // ============================================================
-
-        Button botaoMais = new Button(this);
-
-        botaoMais.setText("＋");
-        botaoMais.setTextSize(22);
-        botaoMais.setTextColor(Color.WHITE);
-
-        botaoMais.setOnClickListener(v -> {
-
-            PopupMenu menu =
-                    new PopupMenu(
-                            MainActivity.this,
-                            botaoMais
-                    );
-
-            menu.getMenu().add("🖼️ Imagem");
-            menu.getMenu().add("🎬 Vídeo");
-            menu.getMenu().add("🔊 Voz");
-            menu.getMenu().add("💻 Código");
-            menu.getMenu().add("📎 Arquivo");
-            menu.getMenu().add("🎭 Personagem");
-            menu.getMenu().add("🧠 Memória");
-            menu.getMenu().add("🗑️ Limpar chat");
-
-            menu.setOnMenuItemClickListener(item -> {
-
-                String ferramenta =
-                        item.getTitle().toString();
-
-                // ====================================================
-                // 🖼️ IMAGEM
-                // ====================================================
-
-                if (ferramenta.equals("🖼️ Imagem")) {
-
-                    campoMensagem.setHint(
-                            "Descreva a imagem que você quer criar..."
-                    );
-
-                    campoMensagem.requestFocus();
-
-                    adicionarMensagem(
-                            "🖼️ Modo Imagem ativado.\n\n"
-                                    + "Digite a descrição da imagem "
-                                    + "que você quer gerar."
-                    );
-
-                    return true;
-                }
-
-                // ====================================================
-                // 💻 CÓDIGO
-                // ====================================================
-
-                if (ferramenta.equals("💻 Código")) {
-
-                    mostrarInterfaceCodigo();
-
-                    return true;
-                }
-
-                // ====================================================
-                // 📎 ARQUIVO
-                // ====================================================
-
-                if (ferramenta.equals("📎 Arquivo")) {
-
-                    abrirSeletorDeArquivo();
-
-                    return true;
-                }
-
-                // ====================================================
-                // 🗑️ LIMPAR CHAT
-                // ====================================================
-
-                if (ferramenta.equals("🗑️ Limpar chat")) {
-
-                    mensagens.removeAllViews();
-
-                    adicionarMensagem(
-                            "🗑️ Chat limpo."
-                    );
-
-                    return true;
-                }
-
-                // ====================================================
-                // OUTRAS FERRAMENTAS
-                // ====================================================
-
-                adicionarMensagem(
-                        "🧰 Ferramenta selecionada: "
-                                + ferramenta
-                );
-
-                return true;
-            });
-
-            menu.show();
-        });
 
         // ============================================================
         // ÁREA DE DIGITAÇÃO
@@ -268,12 +189,32 @@ public class MainActivity extends Activity {
         // BOTÃO +
         // ============================================================
 
+        Button botaoMais =
+                new Button(this);
+
+        botaoMais.setText(
+                "＋"
+        );
+
+        botaoMais.setTextSize(
+                22
+        );
+
+        botaoMais.setTextColor(
+                Color.WHITE
+        );
+
         botaoMais.setBackgroundColor(
                 Color.TRANSPARENT
         );
 
-        botaoMais.setMinWidth(0);
-        botaoMais.setMinimumWidth(0);
+        botaoMais.setMinWidth(
+                0
+        );
+
+        botaoMais.setMinimumWidth(
+                0
+        );
 
         botaoMais.setPadding(
                 6,
@@ -282,9 +223,143 @@ public class MainActivity extends Activity {
                 0
         );
 
-        botaoMais.setText("＋");
-        botaoMais.setTextSize(24);
-        botaoMais.setTextColor(Color.WHITE);
+        botaoMais.setOnClickListener(
+                v -> {
+
+                    PopupMenu menu =
+                            new PopupMenu(
+                                    MainActivity.this,
+                                    botaoMais
+                            );
+
+                    menu.getMenu().add(
+                            "🖼️ Imagem"
+                    );
+
+                    menu.getMenu().add(
+                            "🎬 Vídeo"
+                    );
+
+                    menu.getMenu().add(
+                            "🔊 Voz"
+                    );
+
+                    menu.getMenu().add(
+                            "💻 Código"
+                    );
+
+                    menu.getMenu().add(
+                            "📎 Arquivo"
+                    );
+
+                    menu.getMenu().add(
+                            "🎭 Personagem"
+                    );
+
+                    menu.getMenu().add(
+                            "🧠 Memória"
+                    );
+
+                    menu.getMenu().add(
+                            "🗑️ Limpar chat"
+                    );
+
+                    menu.setOnMenuItemClickListener(
+                            item -> {
+
+                                String ferramenta =
+                                        item.getTitle().toString();
+
+                                // ====================================================
+                                // 🖼️ IMAGEM
+                                // ====================================================
+
+                                if (
+                                        ferramenta.equals(
+                                                "🖼️ Imagem"
+                                        )
+                                ) {
+
+                                    campoMensagem.setHint(
+                                            "Descreva a imagem que você quer criar..."
+                                    );
+
+                                    campoMensagem.requestFocus();
+
+                                    adicionarMensagem(
+                                            "🖼️ Modo Imagem ativado.\n\n"
+                                                    + "Digite a descrição da imagem "
+                                                    + "que você quer gerar."
+                                    );
+
+                                    return true;
+                                }
+
+                                // ====================================================
+                                // 💻 CÓDIGO
+                                // ====================================================
+
+                                if (
+                                        ferramenta.equals(
+                                                "💻 Código"
+                                        )
+                                ) {
+
+                                    mostrarInterfaceCodigo();
+
+                                    return true;
+                                }
+
+                                // ====================================================
+                                // 📎 ARQUIVO
+                                // ====================================================
+
+                                if (
+                                        ferramenta.equals(
+                                                "📎 Arquivo"
+                                        )
+                                ) {
+
+                                    abrirSeletorDeArquivo();
+
+                                    return true;
+                                }
+
+                                // ====================================================
+                                // 🗑️ LIMPAR CHAT
+                                // ====================================================
+
+                                if (
+                                        ferramenta.equals(
+                                                "🗑️ Limpar chat"
+                                        )
+                                ) {
+
+                                    mensagens.removeAllViews();
+
+                                    adicionarMensagem(
+                                            "🗑️ Chat limpo."
+                                    );
+
+                                    return true;
+                                }
+
+                                // ====================================================
+                                // OUTRAS FERRAMENTAS
+                                // ====================================================
+
+                                adicionarMensagem(
+                                        "🧰 Ferramenta selecionada: "
+                                                + ferramenta
+                                );
+
+                                return true;
+                            }
+                    );
+
+                    menu.show();
+                }
+        );
 
         entrada.addView(
                 botaoMais,
@@ -313,9 +388,13 @@ public class MainActivity extends Activity {
                 Color.WHITE
         );
 
-        campoMensagem.setTextSize(16);
+        campoMensagem.setTextSize(
+                16
+        );
 
-        campoMensagem.setSingleLine(true);
+        campoMensagem.setSingleLine(
+                true
+        );
 
         campoMensagem.setBackgroundColor(
                 Color.TRANSPARENT
@@ -344,16 +423,29 @@ public class MainActivity extends Activity {
         Button enviar =
                 new Button(this);
 
-        enviar.setText("🚀");
-        enviar.setTextSize(20);
-        enviar.setTextColor(Color.WHITE);
+        enviar.setText(
+                "🚀"
+        );
+
+        enviar.setTextSize(
+                20
+        );
+
+        enviar.setTextColor(
+                Color.WHITE
+        );
 
         enviar.setBackgroundColor(
                 Color.TRANSPARENT
         );
 
-        enviar.setMinWidth(0);
-        enviar.setMinimumWidth(0);
+        enviar.setMinWidth(
+                0
+        );
+
+        enviar.setMinimumWidth(
+                0
+        );
 
         enviar.setPadding(
                 6,
@@ -375,7 +467,7 @@ public class MainActivity extends Activity {
         );
 
         // ============================================================
-        // COLOCAR O BALÃO NA TELA
+        // COLOCAR O BALÃO DE ENTRADA NA PARTE INFERIOR
         // ============================================================
 
         float densidade =
@@ -401,7 +493,13 @@ public class MainActivity extends Activity {
                 parametrosEntrada
         );
 
-        setContentView(tela);
+        // ============================================================
+        // FINALIZAR INTERFACE
+        // ============================================================
+
+        setContentView(
+                tela
+        );
     }
 
     // ============================================================
@@ -439,13 +537,17 @@ public class MainActivity extends Activity {
                 Color.WHITE
         );
 
-        campoCodigo.setTextSize(15);
+        campoCodigo.setTextSize(
+                15
+        );
 
         campoCodigo.setGravity(
                 Gravity.TOP
         );
 
-        campoCodigo.setMinLines(8);
+        campoCodigo.setMinLines(
+                8
+        );
 
         campoCodigo.setPadding(
                 15,
@@ -493,7 +595,9 @@ public class MainActivity extends Activity {
                 Color.WHITE
         );
 
-        campoInstrucao.setTextSize(15);
+        campoInstrucao.setTextSize(
+                15
+        );
 
         campoInstrucao.setPadding(
                 15,
@@ -537,8 +641,12 @@ public class MainActivity extends Activity {
 
         AlertDialog dialog =
                 new AlertDialog.Builder(this)
-                        .setTitle("💻 Código")
-                        .setView(layout)
+                        .setTitle(
+                                "💻 Código"
+                        )
+                        .setView(
+                                layout
+                        )
                         .setNegativeButton(
                                 "Cancelar",
                                 null
@@ -599,7 +707,9 @@ public class MainActivity extends Activity {
                 Intent.CATEGORY_OPENABLE
         );
 
-        intent.setType("*/*");
+        intent.setType(
+                "*/*"
+        );
 
         startActivityForResult(
                 intent,
@@ -636,9 +746,12 @@ public class MainActivity extends Activity {
             return;
         }
 
-        Uri uri = data.getData();
+        Uri uri =
+                data.getData();
 
-        lerArquivoSelecionado(uri);
+        lerArquivoSelecionado(
+                uri
+        );
     }
 
     // ============================================================
@@ -649,317 +762,347 @@ public class MainActivity extends Activity {
             Uri uri
     ) {
 
-        executor.execute(() -> {
+        executor.execute(
+                () -> {
 
-            try {
+                    try {
 
-                String nome =
-                        obterNomeArquivo(uri);
-
-                if (
-                        nome == null
-                                || nome.isEmpty()
-                ) {
-
-                    nome =
-                            "arquivo_selecionado";
-                }
-
-                final String nomeFinal =
-                        nome;
-
-                // ========================================================
-                // ZIP
-                // ========================================================
-
-                if (
-                        nome.toLowerCase()
-                                .endsWith(".zip")
-                ) {
-
-                    List<String> arquivosZip =
-                            listarArquivosZip(uri);
-
-                    boolean encontrouApk =
-                            false;
-
-                    for (
-                            String arquivo :
-                            arquivosZip
-                    ) {
+                        String nome =
+                                obterNomeArquivo(
+                                        uri
+                                );
 
                         if (
-                                arquivo
+                                nome == null
+                                        || nome.isEmpty()
+                        ) {
+
+                            nome =
+                                    "arquivo_selecionado";
+                        }
+
+                        final String nomeFinal =
+                                nome;
+
+                        // ========================================================
+                        // ZIP
+                        // ========================================================
+
+                        if (
+                                nome.toLowerCase()
+                                        .endsWith(".zip")
+                        ) {
+
+                            List<String> arquivosZip =
+                                    listarArquivosZip(
+                                            uri
+                                    );
+
+                            boolean encontrouApk =
+                                    false;
+
+                            for (
+                                    String arquivo :
+                                    arquivosZip
+                            ) {
+
+                                if (
+                                        arquivo
+                                                .toLowerCase()
+                                                .endsWith(".apk")
+                                ) {
+
+                                    encontrouApk =
+                                            true;
+
+                                    break;
+                                }
+                            }
+
+                            final boolean apkEncontrado =
+                                    encontrouApk;
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        if (
+                                                arquivosZip.isEmpty()
+                                        ) {
+
+                                            adicionarMensagem(
+                                                    "📦 ZIP carregado: "
+                                                            + nomeFinal
+                                                            + "\n"
+                                                            + "Nenhum arquivo encontrado dentro do ZIP."
+                                            );
+
+                                            return;
+                                        }
+
+                                        StringBuilder lista =
+                                                new StringBuilder();
+
+                                        lista.append(
+                                                "📦 ZIP carregado: "
+                                        );
+
+                                        lista.append(
+                                                nomeFinal
+                                        );
+
+                                        lista.append(
+                                                "\n\nArquivos encontrados:"
+                                        );
+
+                                        for (
+                                                String arquivo :
+                                                arquivosZip
+                                        ) {
+
+                                            lista.append(
+                                                    "\n📄 "
+                                            );
+
+                                            lista.append(
+                                                    arquivo
+                                            );
+                                        }
+
+                                        if (
+                                                apkEncontrado
+                                        ) {
+
+                                            lista.append(
+                                                    "\n\n📱 APK encontrado dentro do ZIP!"
+                                            );
+
+                                            lista.append(
+                                                    "\n📱 Pronto para instalar."
+                                            );
+
+                                        } else {
+
+                                            lista.append(
+                                                    "\n\n📦 Nenhum APK encontrado dentro do ZIP."
+                                            );
+                                        }
+
+                                        adicionarMensagem(
+                                                lista.toString()
+                                        );
+                                    }
+                            );
+
+                            // ========================================================
+                            // INSTALAR APK ENCONTRADO
+                            // ========================================================
+
+                            if (
+                                    apkEncontrado
+                            ) {
+
+                                runOnUiThread(
+                                        () -> {
+
+                                            Button botaoInstalar =
+                                                    new Button(
+                                                            this
+                                                    );
+
+                                            botaoInstalar.setText(
+                                                    "📱 Instalar APK"
+                                            );
+
+                                            botaoInstalar.setOnClickListener(
+                                                    v -> {
+
+                                                        executor.execute(
+                                                                () -> {
+
+                                                                    try {
+
+                                                                        extrairEInstalarApk(
+                                                                                uri
+                                                                        );
+
+                                                                    } catch (
+                                                                            Exception erro
+                                                                    ) {
+
+                                                                        runOnUiThread(
+                                                                                () -> {
+
+                                                                                    adicionarMensagem(
+                                                                                            "📱 Não foi possível instalar o APK: "
+                                                                                                    + erro.getMessage()
+                                                                                    );
+                                                                                }
+                                                                        );
+                                                                    }
+                                                                }
+                                                        );
+                                                    }
+                                            );
+
+                                            mensagens.addView(
+                                                    botaoInstalar
+                                            );
+                                        }
+                                );
+                            }
+
+                            return;
+                        }
+
+                        // ========================================================
+                        // APK DIRETO
+                        // ========================================================
+
+                        if (
+                                nomeFinal
                                         .toLowerCase()
                                         .endsWith(".apk")
                         ) {
 
-                            encontrouApk =
-                                    true;
+                            File apkFile =
+                                    new File(
+                                            getCacheDir(),
+                                            "apk_direto_instalacao.apk"
+                                    );
 
-                            break;
-                        }
-                    }
+                            InputStream entradaApk =
+                                    getContentResolver()
+                                            .openInputStream(
+                                                    uri
+                                            );
 
-                    final boolean apkEncontrado =
-                            encontrouApk;
+                            if (
+                                    entradaApk == null
+                            ) {
 
-                    runOnUiThread(() -> {
+                                throw new Exception(
+                                        "Não foi possível abrir o APK."
+                                );
+                            }
 
-                        if (
-                                arquivosZip.isEmpty()
-                        ) {
+                            FileOutputStream saidaApk =
+                                    new FileOutputStream(
+                                            apkFile
+                                    );
 
-                            adicionarMensagem(
-                                    "📦 ZIP carregado: "
-                                            + nomeFinal
-                                            + "\n"
-                                            + "Nenhum arquivo encontrado dentro do ZIP."
+                            byte[] bufferApk =
+                                    new byte[8192];
+
+                            int quantidadeApk;
+
+                            while (
+                                    (
+                                            quantidadeApk =
+                                                    entradaApk.read(
+                                                            bufferApk
+                                                    )
+                                    )
+                                            != -1
+                            ) {
+
+                                saidaApk.write(
+                                        bufferApk,
+                                        0,
+                                        quantidadeApk
+                                );
+                            }
+
+                            saidaApk.flush();
+                            saidaApk.close();
+                            entradaApk.close();
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        adicionarMensagem(
+                                                "📱 APK carregado: "
+                                                        + nomeFinal
+                                                        + "\n\n"
+                                                        + "O APK foi reconhecido corretamente."
+                                                        + "\n"
+                                                        + "Ele não será lido como texto."
+                                        );
+
+                                        Button botaoInstalar =
+                                                new Button(
+                                                        this
+                                                );
+
+                                        botaoInstalar.setText(
+                                                "📱 Instalar APK"
+                                        );
+
+                                        botaoInstalar.setOnClickListener(
+                                                v -> abrirInstaladorApk(
+                                                        apkFile
+                                                )
+                                        );
+
+                                        mensagens.addView(
+                                                botaoInstalar
+                                        );
+                                    }
                             );
 
                             return;
                         }
 
-                        StringBuilder lista =
-                                new StringBuilder();
+                        // ========================================================
+                        // ARQUIVO DE TEXTO
+                        // ========================================================
 
-                        lista.append(
-                                "📦 ZIP carregado: "
+                        String conteudo =
+                                lerConteudoArquivo(
+                                        uri
+                                );
+
+                        nomeArquivoSelecionado =
+                                nomeFinal;
+
+                        conteudoArquivoSelecionado =
+                                conteudo;
+
+                        runOnUiThread(
+                                () -> {
+
+                                    adicionarMensagem(
+                                            "📎 Arquivo carregado: "
+                                                    + nomeArquivoSelecionado
+                                                    + "\n"
+                                                    + "Tamanho: "
+                                                    + conteudoArquivoSelecionado.length()
+                                                    + " caracteres."
+                                    );
+
+                                    adicionarMensagem(
+                                            "📎 Arquivo pronto para a próxima etapa."
+                                    );
+                                }
                         );
 
-                        lista.append(
-                                nomeFinal
-                        );
+                        return;
 
-                        lista.append(
-                                "\n\nArquivos encontrados:"
-                        );
-
-                        for (
-                                String arquivo :
-                                arquivosZip
-                        ) {
-
-                            lista.append(
-                                    "\n📄 "
-                            );
-
-                            lista.append(
-                                    arquivo
-                            );
-                        }
-
-                        if (
-                                apkEncontrado
-                        ) {
-
-                            lista.append(
-                                    "\n\n📱 APK encontrado dentro do ZIP!"
-                            );
-
-                            lista.append(
-                                    "\n📱 Pronto para instalar."
-                            );
-
-                        } else {
-
-                            lista.append(
-                                    "\n\n📦 Nenhum APK encontrado dentro do ZIP."
-                            );
-                        }
-
-                        adicionarMensagem(
-                                lista.toString()
-                        );
-                    });
-
-                    // ========================================================
-                    // INSTALAR APK ENCONTRADO
-                    // ========================================================
-
-                    if (
-                            apkEncontrado
+                    } catch (
+                            Exception erro
                     ) {
 
-                        runOnUiThread(() -> {
+                        runOnUiThread(
+                                () -> {
 
-                            Button botaoInstalar =
-                                    new Button(this);
-
-                            botaoInstalar.setText(
-                                    "📱 Instalar APK"
-                            );
-
-                            botaoInstalar.setOnClickListener(
-                                    v -> {
-
-                                        executor.execute(() -> {
-
-                                            try {
-
-                                                extrairEInstalarApk(
-                                                        uri
-                                                );
-
-                                            } catch (
-                                                    Exception erro
-                                            ) {
-
-                                                runOnUiThread(() -> {
-
-                                                    adicionarMensagem(
-                                                            "📱 Não foi possível instalar o APK: "
-                                                                    + erro.getMessage()
-                                                    );
-                                                });
-                                            }
-                                        });
-                                    }
-                            );
-
-                            mensagens.addView(
-                                    botaoInstalar
-                            );
-                        });
+                                    adicionarMensagem(
+                                            "📎 Erro ao ler o arquivo: "
+                                                    + erro.getMessage()
+                                    );
+                                }
+                        );
                     }
-
-                    return;
                 }
-
-                // ========================================================
-                // APK DIRETO
-                // ========================================================
-
-                if (
-                        nomeFinal
-                                .toLowerCase()
-                                .endsWith(".apk")
-                ) {
-
-                    File apkFile =
-                            new File(
-                                    getCacheDir(),
-                                    "apk_direto_instalacao.apk"
-                            );
-
-                    InputStream entradaApk =
-                            getContentResolver()
-                                    .openInputStream(uri);
-
-                    if (
-                            entradaApk == null
-                    ) {
-
-                        throw new Exception(
-                                "Não foi possível abrir o APK."
-                        );
-                    }
-
-                    FileOutputStream saidaApk =
-                            new FileOutputStream(
-                                    apkFile
-                            );
-
-                    byte[] bufferApk =
-                            new byte[8192];
-
-                    int quantidadeApk;
-
-                    while (
-                            (quantidadeApk =
-                                    entradaApk.read(
-                                            bufferApk
-                                    ))
-                                    != -1
-                    ) {
-
-                        saidaApk.write(
-                                bufferApk,
-                                0,
-                                quantidadeApk
-                        );
-                    }
-
-                    saidaApk.flush();
-                    saidaApk.close();
-                    entradaApk.close();
-
-                    runOnUiThread(() -> {
-
-                        adicionarMensagem(
-                                "📱 APK carregado: "
-                                        + nomeFinal
-                                        + "\n\n"
-                                        + "O APK foi reconhecido corretamente."
-                                        + "\n"
-                                        + "Ele não será lido como texto."
-                        );
-
-                        Button botaoInstalar =
-                                new Button(this);
-
-                        botaoInstalar.setText(
-                                "📱 Instalar APK"
-                        );
-
-                        botaoInstalar.setOnClickListener(
-                                v -> abrirInstaladorApk(
-                                        apkFile
-                                )
-                        );
-
-                        mensagens.addView(
-                                botaoInstalar
-                        );
-                    });
-
-                    return;
-                }
-
-                // ========================================================
-                // ARQUIVO DE TEXTO
-                // ========================================================
-
-                String conteudo =
-                        lerConteudoArquivo(uri);
-
-                nomeArquivoSelecionado =
-                        nomeFinal;
-
-                conteudoArquivoSelecionado =
-                        conteudo;
-
-                runOnUiThread(() -> {
-
-                    adicionarMensagem(
-                            "📎 Arquivo carregado: "
-                                    + nomeArquivoSelecionado
-                                    + "\n"
-                                    + "Tamanho: "
-                                    + conteudoArquivoSelecionado.length()
-                                    + " caracteres."
-                    );
-
-                    adicionarMensagem(
-                            "📎 Arquivo pronto para a próxima etapa."
-                    );
-                });
-
-                return;
-
-            } catch (
-                    Exception erro
-            ) {
-
-                runOnUiThread(() -> {
-
-                    adicionarMensagem(
-                            "📎 Erro ao ler o arquivo: "
-                                    + erro.getMessage()
-                    );
-                });
-            }
-        });
+        );
     }
 
     // ============================================================
@@ -975,7 +1118,9 @@ public class MainActivity extends Activity {
 
         InputStream entrada =
                 getContentResolver()
-                        .openInputStream(uri);
+                        .openInputStream(
+                                uri
+                        );
 
         if (
                 entrada == null
@@ -994,8 +1139,10 @@ public class MainActivity extends Activity {
         ZipEntry entradaZip;
 
         while (
-                (entradaZip =
-                        zip.getNextEntry())
+                (
+                        entradaZip =
+                                zip.getNextEntry()
+                )
                         != null
         ) {
 
@@ -1027,7 +1174,9 @@ public class MainActivity extends Activity {
 
         InputStream entrada =
                 getContentResolver()
-                        .openInputStream(uri);
+                        .openInputStream(
+                                uri
+                        );
 
         if (
                 entrada == null
@@ -1046,8 +1195,10 @@ public class MainActivity extends Activity {
         ZipEntry entradaZip;
 
         while (
-                (entradaZip =
-                        zip.getNextEntry())
+                (
+                        entradaZip =
+                                zip.getNextEntry()
+                )
                         != null
         ) {
 
@@ -1076,8 +1227,12 @@ public class MainActivity extends Activity {
                 int quantidade;
 
                 while (
-                        (quantidade =
-                                zip.read(buffer))
+                        (
+                                quantidade =
+                                        zip.read(
+                                                buffer
+                                        )
+                        )
                                 != -1
                 ) {
 
@@ -1212,7 +1367,8 @@ public class MainActivity extends Activity {
             Uri uri
     ) {
 
-        Cursor cursor = null;
+        Cursor cursor =
+                null;
 
         try {
 
@@ -1268,7 +1424,9 @@ public class MainActivity extends Activity {
 
         InputStream entrada =
                 getContentResolver()
-                        .openInputStream(uri);
+                        .openInputStream(
+                                uri
+                        );
 
         if (
                 entrada == null
@@ -1293,13 +1451,20 @@ public class MainActivity extends Activity {
         String linha;
 
         while (
-                (linha = leitor.readLine())
+                (
+                        linha =
+                                leitor.readLine()
+                )
                         != null
         ) {
 
             resultado
-                    .append(linha)
-                    .append("\n");
+                    .append(
+                            linha
+                    )
+                    .append(
+                            "\n"
+                    );
         }
 
         leitor.close();
@@ -1331,263 +1496,273 @@ public class MainActivity extends Activity {
                 "Você: " + texto
         );
 
-        campoMensagem.setText("");
+        campoMensagem.setText(
+                ""
+        );
 
         adicionarMensagem(
                 "Alex: pensando..."
         );
 
-        executor.execute(() -> {
+        executor.execute(
+                () -> {
 
-            HttpURLConnection connection =
-                    null;
+                    HttpURLConnection connection =
+                            null;
 
-            try {
+                    try {
 
-                JSONObject pedido =
-                        new JSONObject();
+                        JSONObject pedido =
+                                new JSONObject();
 
-                pedido.put(
-                        "pergunta",
-                        texto
-                );
-
-                JSONArray arrayHistorico =
-                        new JSONArray();
-
-                for (
-                        JSONObject item :
-                        historico
-                ) {
-
-                    arrayHistorico.put(
-                            item
-                    );
-                }
-
-                pedido.put(
-                        "historico",
-                        arrayHistorico
-                );
-
-                pedido.put(
-                        "contexto_arquivo",
-                        conteudoArquivoSelecionado
-                );
-
-                pedido.put(
-                        "nome_arquivo",
-                        nomeArquivoSelecionado
-                );
-
-                URL url =
-                        new URL(
-                                API_URL
+                        pedido.put(
+                                "pergunta",
+                                texto
                         );
 
-                connection =
-                        (HttpURLConnection)
-                                url.openConnection();
+                        JSONArray arrayHistorico =
+                                new JSONArray();
 
-                connection.setRequestMethod(
-                        "POST"
-                );
-
-                connection.setRequestProperty(
-                        "Content-Type",
-                        "application/json; charset=UTF-8"
-                );
-
-                connection.setRequestProperty(
-                        "Accept",
-                        "application/json"
-                );
-
-                connection.setDoOutput(
-                        true
-                );
-
-                connection.setConnectTimeout(
-                        30000
-                );
-
-                connection.setReadTimeout(
-                        60000
-                );
-
-                byte[] dados =
-                        pedido
-                                .toString()
-                                .getBytes(
-                                        StandardCharsets.UTF_8
-                                );
-
-                OutputStream saida =
-                        connection
-                                .getOutputStream();
-
-                saida.write(
-                        dados
-                );
-
-                saida.flush();
-                saida.close();
-
-                int responseCode =
-                        connection
-                                .getResponseCode();
-
-                InputStream entradaResposta;
-
-                if (
-                        responseCode >= 200
-                                && responseCode < 300
-                ) {
-
-                    entradaResposta =
-                            connection
-                                    .getInputStream();
-
-                } else {
-
-                    entradaResposta =
-                            connection
-                                    .getErrorStream();
-                }
-
-                String respostaTexto =
-                        lerResposta(
-                                entradaResposta
-                        );
-
-                JSONObject resposta =
-                        new JSONObject(
-                                respostaTexto
-                        );
-
-                boolean sucesso =
-                        resposta.optBoolean(
-                                "success",
-                                false
-                        );
-
-                String tipo =
-                        resposta.optString(
-                                "tipo",
-                                ""
-                        );
-
-                // ========================================================
-                // RESPOSTA DE IMAGEM
-                // ========================================================
-
-                if (
-                        sucesso
-                                && tipo.equalsIgnoreCase(
-                                        "imagem"
-                                )
-                ) {
-
-                    String imagem =
-                            resposta.optString(
-                                    "imagem",
-                                    ""
-                            );
-
-                    runOnUiThread(() -> {
-
-                        removerMensagemPensando();
-
-                        adicionarMensagem(
-                                "Alex: Imagem gerada com sucesso."
-                        );
-
-                        if (
-                                !imagem.isEmpty()
+                        for (
+                                JSONObject item :
+                                historico
                         ) {
 
-                            adicionarImagemNaTela(
-                                    imagem
+                            arrayHistorico.put(
+                                    item
                             );
                         }
-                    });
 
-                    return;
-                }
-
-                // ========================================================
-                // RESPOSTA NORMAL
-                // ========================================================
-
-                String respostaAlex =
-                        resposta.optString(
-                                "resposta",
-                                "Não consegui obter uma resposta."
+                        pedido.put(
+                                "historico",
+                                arrayHistorico
                         );
 
-                if (
-                        sucesso
-                ) {
+                        pedido.put(
+                                "contexto_arquivo",
+                                conteudoArquivoSelecionado
+                        );
 
-                    historico.add(
-                            new JSONObject()
-                                    .put(
-                                            "role",
-                                            "user"
-                                    )
-                                    .put(
-                                            "content",
-                                            texto
-                                    )
-                    );
+                        pedido.put(
+                                "nome_arquivo",
+                                nomeArquivoSelecionado
+                        );
 
-                    historico.add(
-                            new JSONObject()
-                                    .put(
-                                            "role",
-                                            "model"
-                                    )
-                                    .put(
-                                            "content",
-                                            respostaAlex
-                                    )
-                    );
+                        URL url =
+                                new URL(
+                                        API_URL
+                                );
+
+                        connection =
+                                (HttpURLConnection)
+                                        url.openConnection();
+
+                        connection.setRequestMethod(
+                                "POST"
+                        );
+
+                        connection.setRequestProperty(
+                                "Content-Type",
+                                "application/json; charset=UTF-8"
+                        );
+
+                        connection.setRequestProperty(
+                                "Accept",
+                                "application/json"
+                        );
+
+                        connection.setDoOutput(
+                                true
+                        );
+
+                        connection.setConnectTimeout(
+                                30000
+                        );
+
+                        connection.setReadTimeout(
+                                60000
+                        );
+
+                        byte[] dados =
+                                pedido
+                                        .toString()
+                                        .getBytes(
+                                                StandardCharsets.UTF_8
+                                        );
+
+                        OutputStream saida =
+                                connection
+                                        .getOutputStream();
+
+                        saida.write(
+                                dados
+                        );
+
+                        saida.flush();
+                        saida.close();
+
+                        int responseCode =
+                                connection
+                                        .getResponseCode();
+
+                        InputStream entradaResposta;
+
+                        if (
+                                responseCode >= 200
+                                        && responseCode < 300
+                        ) {
+
+                            entradaResposta =
+                                    connection
+                                            .getInputStream();
+
+                        } else {
+
+                            entradaResposta =
+                                    connection
+                                            .getErrorStream();
+                        }
+
+                        String respostaTexto =
+                                lerResposta(
+                                        entradaResposta
+                                );
+
+                        JSONObject resposta =
+                                new JSONObject(
+                                        respostaTexto
+                                );
+
+                        boolean sucesso =
+                                resposta.optBoolean(
+                                        "success",
+                                        false
+                                );
+
+                        String tipo =
+                                resposta.optString(
+                                        "tipo",
+                                        ""
+                                );
+
+                        // ========================================================
+                        // RESPOSTA DE IMAGEM
+                        // ========================================================
+
+                        if (
+                                sucesso
+                                        && tipo.equalsIgnoreCase(
+                                                "imagem"
+                                        )
+                        ) {
+
+                            String imagem =
+                                    resposta.optString(
+                                            "imagem",
+                                            ""
+                                    );
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        removerMensagemPensando();
+
+                                        adicionarMensagem(
+                                                "Alex: Imagem gerada com sucesso."
+                                        );
+
+                                        if (
+                                                !imagem.isEmpty()
+                                        ) {
+
+                                            adicionarImagemNaTela(
+                                                    imagem
+                                            );
+                                        }
+                                    }
+                            );
+
+                            return;
+                        }
+
+                        // ========================================================
+                        // RESPOSTA NORMAL
+                        // ========================================================
+
+                        String respostaAlex =
+                                resposta.optString(
+                                        "resposta",
+                                        "Não consegui obter uma resposta."
+                                );
+
+                        if (
+                                sucesso
+                        ) {
+
+                            historico.add(
+                                    new JSONObject()
+                                            .put(
+                                                    "role",
+                                                    "user"
+                                            )
+                                            .put(
+                                                    "content",
+                                                    texto
+                                            )
+                            );
+
+                            historico.add(
+                                    new JSONObject()
+                                            .put(
+                                                    "role",
+                                                    "model"
+                                            )
+                                            .put(
+                                                    "content",
+                                                    respostaAlex
+                                            )
+                            );
+                        }
+
+                        runOnUiThread(
+                                () -> {
+
+                                    removerMensagemPensando();
+
+                                    adicionarMensagem(
+                                            "Alex: "
+                                                    + respostaAlex
+                                    );
+                                }
+                        );
+
+                    } catch (
+                            Exception erro
+                    ) {
+
+                        runOnUiThread(
+                                () -> {
+
+                                    removerMensagemPensando();
+
+                                    adicionarMensagem(
+                                            "Alex: Não consegui conectar "
+                                                    + "ao servidor agora."
+                                    );
+                                }
+                        );
+
+                    } finally {
+
+                        if (
+                                connection != null
+                        ) {
+
+                            connection.disconnect();
+                        }
+                    }
                 }
-
-                runOnUiThread(() -> {
-
-                    removerMensagemPensando();
-
-                    adicionarMensagem(
-                            "Alex: "
-                                    + respostaAlex
-                    );
-                });
-
-            } catch (
-                    Exception erro
-            ) {
-
-                runOnUiThread(() -> {
-
-                    removerMensagemPensando();
-
-                    adicionarMensagem(
-                            "Alex: Não consegui conectar "
-                                    + "ao servidor agora."
-                    );
-                });
-
-            } finally {
-
-                if (
-                        connection != null
-                ) {
-
-                    connection.disconnect();
-                }
-            }
-        });
+        );
     }
 
     // ============================================================
@@ -1620,7 +1795,10 @@ public class MainActivity extends Activity {
         String linha;
 
         while (
-                (linha = leitor.readLine())
+                (
+                        linha =
+                                leitor.readLine()
+                )
                         != null
         ) {
 
@@ -1650,155 +1828,163 @@ public class MainActivity extends Activity {
             return;
         }
 
-        executor.execute(() -> {
+        executor.execute(
+                () -> {
 
-            HttpURLConnection conexaoImagem =
-                    null;
+                    HttpURLConnection conexaoImagem =
+                            null;
 
-            try {
+                    try {
 
-                String urlImagem =
-                        imagem.trim();
+                        String urlImagem =
+                                imagem.trim();
 
-                if (
-                        !urlImagem.startsWith(
-                                "http://"
-                        )
-                        &&
-                        !urlImagem.startsWith(
-                                "https://"
-                        )
-                ) {
+                        if (
+                                !urlImagem.startsWith(
+                                        "http://"
+                                )
+                                        &&
+                                !urlImagem.startsWith(
+                                        "https://"
+                                )
+                        ) {
 
-                    urlImagem =
-                            "https://ultra-ia-pro.onrender.com"
-                                    + (
-                                        urlImagem.startsWith("/")
-                                                ? urlImagem
-                                                : "/" + urlImagem
-                                    );
-                }
+                            urlImagem =
+                                    "https://ultra-ia-pro.onrender.com"
+                                            + (
+                                                urlImagem.startsWith(
+                                                        "/"
+                                                )
+                                                        ? urlImagem
+                                                        : "/" + urlImagem
+                                            );
+                        }
 
-                URL url =
-                        new URL(
-                                urlImagem
-                        );
-
-                conexaoImagem =
-                        (HttpURLConnection)
-                                url.openConnection();
-
-                conexaoImagem.setRequestMethod(
-                        "GET"
-                );
-
-                conexaoImagem.setConnectTimeout(
-                        30000
-                );
-
-                conexaoImagem.setReadTimeout(
-                        60000
-                );
-
-                conexaoImagem.connect();
-
-                int codigo =
-                        conexaoImagem
-                                .getResponseCode();
-
-                if (
-                        codigo < 200
-                                || codigo >= 300
-                ) {
-
-                    throw new Exception(
-                            "Servidor de imagem respondeu HTTP "
-                                    + codigo
-                    );
-                }
-
-                InputStream entrada =
-                        conexaoImagem
-                                .getInputStream();
-
-                Bitmap bitmap =
-                        BitmapFactory
-                                .decodeStream(
-                                        entrada
+                        URL url =
+                                new URL(
+                                        urlImagem
                                 );
 
-                entrada.close();
+                        conexaoImagem =
+                                (HttpURLConnection)
+                                        url.openConnection();
 
-                if (
-                        bitmap == null
-                ) {
+                        conexaoImagem.setRequestMethod(
+                                "GET"
+                        );
 
-                    throw new Exception(
-                            "Não foi possível decodificar a imagem."
-                    );
-                }
+                        conexaoImagem.setConnectTimeout(
+                                30000
+                        );
 
-                runOnUiThread(() -> {
+                        conexaoImagem.setReadTimeout(
+                                60000
+                        );
 
-                    ImageView imagemView =
-                            new ImageView(
-                                    MainActivity.this
+                        conexaoImagem.connect();
+
+                        int codigo =
+                                conexaoImagem
+                                        .getResponseCode();
+
+                        if (
+                                codigo < 200
+                                        || codigo >= 300
+                        ) {
+
+                            throw new Exception(
+                                    "Servidor de imagem respondeu HTTP "
+                                            + codigo
                             );
+                        }
 
-                    imagemView.setImageBitmap(
-                            bitmap
-                    );
+                        InputStream entrada =
+                                conexaoImagem
+                                        .getInputStream();
 
-                    imagemView.setAdjustViewBounds(
-                            true
-                    );
+                        Bitmap bitmap =
+                                BitmapFactory
+                                        .decodeStream(
+                                                entrada
+                                        );
 
-                    imagemView.setScaleType(
-                            ImageView.ScaleType
-                                    .FIT_CENTER
-                    );
+                        entrada.close();
 
-                    LinearLayout.LayoutParams parametros =
-                            new LinearLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                        if (
+                                bitmap == null
+                        ) {
+
+                            throw new Exception(
+                                    "Não foi possível decodificar a imagem."
                             );
+                        }
 
-                    parametros.setMargins(
-                            20,
-                            10,
-                            20,
-                            20
-                    );
+                        runOnUiThread(
+                                () -> {
 
-                    mensagens.addView(
-                            imagemView,
-                            parametros
-                    );
-                });
+                                    ImageView imagemView =
+                                            new ImageView(
+                                                    MainActivity.this
+                                            );
 
-            } catch (
-                    Exception erro
-            ) {
+                                    imagemView.setImageBitmap(
+                                            bitmap
+                                    );
 
-                runOnUiThread(() -> {
+                                    imagemView.setAdjustViewBounds(
+                                            true
+                                    );
 
-                    adicionarMensagem(
-                            "🖼️ Não foi possível carregar a imagem: "
-                                    + erro.getMessage()
-                    );
-                });
+                                    imagemView.setScaleType(
+                                            ImageView.ScaleType
+                                                    .FIT_CENTER
+                                    );
 
-            } finally {
+                                    LinearLayout.LayoutParams parametros =
+                                            new LinearLayout.LayoutParams(
+                                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                            );
 
-                if (
-                        conexaoImagem != null
-                ) {
+                                    parametros.setMargins(
+                                            20,
+                                            10,
+                                            20,
+                                            20
+                                    );
 
-                    conexaoImagem.disconnect();
+                                    mensagens.addView(
+                                            imagemView,
+                                            parametros
+                                    );
+                                }
+                        );
+
+                    } catch (
+                            Exception erro
+                    ) {
+
+                        runOnUiThread(
+                                () -> {
+
+                                    adicionarMensagem(
+                                            "🖼️ Não foi possível carregar a imagem: "
+                                                    + erro.getMessage()
+                                    );
+                                }
+                        );
+
+                    } finally {
+
+                        if (
+                                conexaoImagem != null
+                        ) {
+
+                            conexaoImagem.disconnect();
+                        }
+                    }
                 }
-            }
-        });
+        );
     }
 
     // ============================================================
@@ -1848,295 +2034,305 @@ public class MainActivity extends Activity {
         final String instrucaoFinal =
                 instrucao;
 
-        executor.execute(() -> {
+        executor.execute(
+                () -> {
 
-            HttpURLConnection conexao =
-                    null;
+                    HttpURLConnection conexao =
+                            null;
 
-            try {
+                    try {
 
-                JSONObject pedido =
-                        new JSONObject();
+                        JSONObject pedido =
+                                new JSONObject();
 
-                pedido.put(
-                        "fileContent",
-                        codigoFinal
-                );
-
-                pedido.put(
-                        "instruction",
-                        instrucaoFinal
-                );
-
-                pedido.put(
-                        "filename",
-                        "script_alex.py"
-                );
-
-                pedido.put(
-                        "outputFilename",
-                        JSONObject.NULL
-                );
-
-                pedido.put(
-                        "searchTarget",
-                        JSONObject.NULL
-                );
-
-                pedido.put(
-                        "replaceWith",
-                        JSONObject.NULL
-                );
-
-                URL url =
-                        new URL(
-                                PONTE_API_URL
+                        pedido.put(
+                                "fileContent",
+                                codigoFinal
                         );
 
-                conexao =
-                        (HttpURLConnection)
-                                url.openConnection();
+                        pedido.put(
+                                "instruction",
+                                instrucaoFinal
+                        );
 
-                conexao.setRequestMethod(
-                        "POST"
-                );
+                        pedido.put(
+                                "filename",
+                                "script_alex.py"
+                        );
 
-                conexao.setRequestProperty(
-                        "Content-Type",
-                        "application/json"
-                );
+                        pedido.put(
+                                "outputFilename",
+                                JSONObject.NULL
+                        );
 
-                conexao.setRequestProperty(
-                        "Accept",
-                        "application/json"
-                );
+                        pedido.put(
+                                "searchTarget",
+                                JSONObject.NULL
+                        );
 
-                conexao.setDoOutput(
-                        true
-                );
+                        pedido.put(
+                                "replaceWith",
+                                JSONObject.NULL
+                        );
 
-                conexao.setConnectTimeout(
-                        30000
-                );
-
-                conexao.setReadTimeout(
-                        90000
-                );
-
-                byte[] dados =
-                        pedido
-                                .toString()
-                                .getBytes(
-                                        StandardCharsets.UTF_8
+                        URL url =
+                                new URL(
+                                        PONTE_API_URL
                                 );
 
-                try (
-                        OutputStream saida =
-                                conexao.getOutputStream()
-                ) {
+                        conexao =
+                                (HttpURLConnection)
+                                        url.openConnection();
 
-                    saida.write(
-                            dados
-                    );
-                }
-
-                int codigoHttp =
-                        conexao
-                                .getResponseCode();
-
-                InputStream entradaResposta;
-
-                if (
-                        codigoHttp >= 200
-                                && codigoHttp < 300
-                ) {
-
-                    entradaResposta =
-                            conexao
-                                    .getInputStream();
-
-                } else {
-
-                    entradaResposta =
-                            conexao
-                                    .getErrorStream();
-                }
-
-                String respostaTexto =
-                        lerResposta(
-                                entradaResposta
+                        conexao.setRequestMethod(
+                                "POST"
                         );
 
-                JSONObject resposta =
-                        new JSONObject(
-                                respostaTexto
+                        conexao.setRequestProperty(
+                                "Content-Type",
+                                "application/json"
                         );
 
-                boolean sucesso =
-                        resposta.optBoolean(
-                                "success",
-                                false
+                        conexao.setRequestProperty(
+                                "Accept",
+                                "application/json"
                         );
 
-                if (
-                        sucesso
-                ) {
-
-                    JSONObject arquivo =
-                            resposta.optJSONObject(
-                                    "processedFile"
-                            );
-
-                    String nomeArquivo =
-                            arquivo != null
-                                    ? arquivo.optString(
-                                            "filename",
-                                            ""
-                                    )
-                                    : "";
-
-                    String download =
-                            arquivo != null
-                                    ? arquivo.optString(
-                                            "downloadUrl",
-                                            ""
-                                    )
-                                    : "";
-
-                    String status =
-                            resposta.optString(
-                                    "status",
-                                    "PROCESSADO"
-                            );
-
-                    runOnUiThread(() -> {
-
-                        adicionarMensagem(
-                                "Ponte: "
-                                        + status
-                                        + "\nArquivo processado: "
-                                        + nomeArquivo
+                        conexao.setDoOutput(
+                                true
                         );
 
-                        if (
-                                !download.isEmpty()
+                        conexao.setConnectTimeout(
+                                30000
+                        );
+
+                        conexao.setReadTimeout(
+                                90000
+                        );
+
+                        byte[] dados =
+                                pedido
+                                        .toString()
+                                        .getBytes(
+                                                StandardCharsets.UTF_8
+                                        );
+
+                        try (
+                                OutputStream saida =
+                                        conexao.getOutputStream()
                         ) {
 
-                            Button botaoDownload =
-                                    new Button(this);
-
-                            botaoDownload.setText(
-                                    "📥 Baixar arquivo processado"
+                            saida.write(
+                                    dados
                             );
+                        }
 
-                            botaoDownload.setOnClickListener(
-                                    v -> {
+                        int codigoHttp =
+                                conexao
+                                        .getResponseCode();
 
-                                        try {
+                        InputStream entradaResposta;
 
-                                            String urlDownload =
-                                                    download;
+                        if (
+                                codigoHttp >= 200
+                                        && codigoHttp < 300
+                        ) {
 
-                                            if (
-                                                    !urlDownload
-                                                            .startsWith(
-                                                                    "http://"
-                                                            )
-                                                            &&
-                                                    !urlDownload
-                                                            .startsWith(
-                                                                    "https://"
-                                                            )
-                                            ) {
+                            entradaResposta =
+                                    conexao
+                                            .getInputStream();
 
-                                                urlDownload =
-                                                        "https://ponte-alex-v2.onrender.com"
-                                                                + (
-                                                                    urlDownload
-                                                                            .startsWith(
-                                                                                    "/"
-                                                                            )
-                                                                            ? urlDownload
-                                                                            : "/" + urlDownload
-                                                                );
-                                            }
+                        } else {
 
-                                            Intent navegador =
-                                                    new Intent(
-                                                            Intent.ACTION_VIEW,
-                                                            Uri.parse(
-                                                                    urlDownload
-                                                            )
-                                                    );
+                            entradaResposta =
+                                    conexao
+                                            .getErrorStream();
+                        }
 
-                                            startActivity(
-                                                    navegador
-                                            );
+                        String respostaTexto =
+                                lerResposta(
+                                        entradaResposta
+                                );
 
-                                        } catch (
-                                                Exception erro
+                        JSONObject resposta =
+                                new JSONObject(
+                                        respostaTexto
+                                );
+
+                        boolean sucesso =
+                                resposta.optBoolean(
+                                        "success",
+                                        false
+                                );
+
+                        if (
+                                sucesso
+                        ) {
+
+                            JSONObject arquivo =
+                                    resposta.optJSONObject(
+                                            "processedFile"
+                                    );
+
+                            String nomeArquivo =
+                                    arquivo != null
+                                            ? arquivo.optString(
+                                                    "filename",
+                                                    ""
+                                            )
+                                            : "";
+
+                            String download =
+                                    arquivo != null
+                                            ? arquivo.optString(
+                                                    "downloadUrl",
+                                                    ""
+                                            )
+                                            : "";
+
+                            String status =
+                                    resposta.optString(
+                                            "status",
+                                            "PROCESSADO"
+                                    );
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        adicionarMensagem(
+                                                "Ponte: "
+                                                        + status
+                                                        + "\nArquivo processado: "
+                                                        + nomeArquivo
+                                        );
+
+                                        if (
+                                                !download.isEmpty()
                                         ) {
 
-                                            adicionarMensagem(
-                                                    "📥 Não foi possível abrir o download: "
-                                                            + erro.getMessage()
+                                            Button botaoDownload =
+                                                    new Button(
+                                                            this
+                                                    );
+
+                                            botaoDownload.setText(
+                                                    "📥 Baixar arquivo processado"
+                                            );
+
+                                            botaoDownload.setOnClickListener(
+                                                    v -> {
+
+                                                        try {
+
+                                                            String urlDownload =
+                                                                    download;
+
+                                                            if (
+                                                                    !urlDownload
+                                                                            .startsWith(
+                                                                                    "http://"
+                                                                            )
+                                                                            &&
+                                                                    !urlDownload
+                                                                            .startsWith(
+                                                                                    "https://"
+                                                                            )
+                                                            ) {
+
+                                                                urlDownload =
+                                                                        "https://ponte-alex-v2.onrender.com"
+                                                                                + (
+                                                                                    urlDownload
+                                                                                            .startsWith(
+                                                                                                    "/"
+                                                                                            )
+                                                                                            ? urlDownload
+                                                                                            : "/" + urlDownload
+                                                                                );
+                                                            }
+
+                                                            Intent navegador =
+                                                                    new Intent(
+                                                                            Intent.ACTION_VIEW,
+                                                                            Uri.parse(
+                                                                                    urlDownload
+                                                                            )
+                                                                    );
+
+                                                            startActivity(
+                                                                    navegador
+                                                            );
+
+                                                        } catch (
+                                                                Exception erro
+                                                        ) {
+
+                                                            adicionarMensagem(
+                                                                    "📥 Não foi possível abrir o download: "
+                                                                            + erro.getMessage()
+                                                            );
+                                                        }
+                                                    }
+                                            );
+
+                                            mensagens.addView(
+                                                    botaoDownload,
+                                                    new LinearLayout.LayoutParams(
+                                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                                            ViewGroup.LayoutParams.WRAP_CONTENT
+                                                    )
                                             );
                                         }
                                     }
                             );
 
-                            mensagens.addView(
-                                    botaoDownload,
-                                    new LinearLayout.LayoutParams(
-                                            ViewGroup.LayoutParams.MATCH_PARENT,
-                                            ViewGroup.LayoutParams.WRAP_CONTENT
-                                    )
+                        } else {
+
+                            String erro =
+                                    resposta.optString(
+                                            "error",
+                                            resposta.optString(
+                                                    "resposta",
+                                                    "A Ponte não conseguiu processar."
+                                            )
+                                    );
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        adicionarMensagem(
+                                                "Ponte: "
+                                                        + erro
+                                        );
+                                    }
                             );
                         }
-                    });
 
-                } else {
+                    } catch (
+                            Exception erro
+                    ) {
 
-                    String erro =
-                            resposta.optString(
-                                    "error",
-                                    resposta.optString(
-                                            "resposta",
-                                            "A Ponte não conseguiu processar."
-                                    )
-                            );
+                        runOnUiThread(
+                                () -> {
 
-                    runOnUiThread(() -> {
-
-                        adicionarMensagem(
-                                "Ponte: "
-                                        + erro
+                                    adicionarMensagem(
+                                            "Ponte: não foi possível "
+                                                    + "conectar ao servidor."
+                                    );
+                                }
                         );
-                    });
+
+                    } finally {
+
+                        if (
+                                conexao != null
+                        ) {
+
+                            conexao.disconnect();
+                        }
+                    }
                 }
-
-            } catch (
-                    Exception erro
-            ) {
-
-                runOnUiThread(() -> {
-
-                    adicionarMensagem(
-                            "Ponte: não foi possível "
-                                    + "conectar ao servidor."
-                    );
-                });
-
-            } finally {
-
-                if (
-                        conexao != null
-                ) {
-
-                    conexao.disconnect();
-                }
-            }
-        });
+        );
     }
 
     // ============================================================
@@ -2240,4 +2436,4 @@ public class MainActivity extends Activity {
 
         super.onBackPressed();
     }
-   }
+    }
