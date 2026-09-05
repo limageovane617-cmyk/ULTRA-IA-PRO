@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -17,11 +18,13 @@ import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
+import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -48,8 +51,13 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
 
+    private FrameLayout raiz;
+
     private LinearLayout tela;
     private LinearLayout mensagens;
+
+    private ScrollView scrollChat;
+
     private EditText campoMensagem;
     private EditText campoCodigo;
 
@@ -68,44 +76,158 @@ public class MainActivity extends Activity {
     private final List<JSONObject> historico =
             new ArrayList<>();
 
+    // ============================================================
+    // APIs
+    // ============================================================
+
     private static final String API_URL =
             "https://ultra-ia-pro.onrender.com/api/chat";
 
     private static final String PONTE_API_URL =
             "https://ultra-ia-pro.onrender.com/api/ponte/processar";
-    
+
+    // ============================================================
+    // CICLO DA ACTIVITY
+    // ============================================================
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-       super.onCreate(savedInstanceState);
 
-       getWindow().setSoftInputMode(
-               android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-       );
+        super.onCreate(savedInstanceState);
 
-       criarInterface();
+        // ========================================================
+        // CORREÇÃO DO TECLADO
+        // ========================================================
+
+        getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+        );
+
+        criarInterface();
     }
+
+    // ============================================================
+    // CONVERTER DP
+    // ============================================================
+
+    private int dp(float valor) {
+
+        return (int) (
+                valor
+                        * getResources()
+                        .getDisplayMetrics()
+                        .density
+        );
+    }
+
+    // ============================================================
+    // CRIAR INTERFACE
+    // ============================================================
 
     private void criarInterface() {
 
-        tela = new LinearLayout(this);
+        // ========================================================
+        // RAIZ
+        // ========================================================
+
+        raiz =
+                new FrameLayout(this);
+
+        raiz.setBackgroundColor(
+                Color.BLACK
+        );
+
+        // ========================================================
+        // FUNDO DA ULTRA
+        // ========================================================
+
+        ImageView fundo =
+                new ImageView(this);
+
+        fundo.setScaleType(
+                ImageView.ScaleType.CENTER_CROP
+        );
+
+        fundo.setImageResource(
+                R.drawable.fundo_ultra
+        );
+
+        fundo.setAlpha(
+                0.82f
+        );
+
+        raiz.addView(
+                fundo,
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                )
+        );
+
+        // ========================================================
+        // CAMADA ESCURA LEVEMENTE TRANSPARENTE
+        // ========================================================
+
+        View camadaEscura =
+                new View(this);
+
+        camadaEscura.setBackgroundColor(
+                Color.argb(
+                        65,
+                        0,
+                        0,
+                        0
+                )
+        );
+
+        raiz.addView(
+                camadaEscura,
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                )
+        );
+
+        // ========================================================
+        // TELA PRINCIPAL
+        // ========================================================
+
+        tela =
+                new LinearLayout(this);
 
         tela.setOrientation(
                 LinearLayout.VERTICAL
         );
 
         tela.setBackgroundColor(
-                Color.rgb(8, 12, 20)
+                Color.TRANSPARENT
         );
 
-        // ============================================================
-        // ÁREA DO CHAT
-        // ============================================================
+        raiz.addView(
+                tela,
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                )
+        );
 
-        ScrollView scroll =
+        // ========================================================
+        // ÁREA DO CHAT
+        // ========================================================
+
+        scrollChat =
                 new ScrollView(this);
 
-        scroll.setFillViewport(
+        scrollChat.setFillViewport(
                 true
+        );
+
+        scrollChat.setClipToPadding(
+                false
+        );
+
+        scrollChat.setBackgroundColor(
+                Color.TRANSPARENT
         );
 
         mensagens =
@@ -116,13 +238,17 @@ public class MainActivity extends Activity {
         );
 
         mensagens.setPadding(
-                20,
-                20,
-                20,
-                20
+                dp(14),
+                dp(20),
+                dp(14),
+                dp(20)
         );
 
-        scroll.addView(
+        mensagens.setBackgroundColor(
+                Color.TRANSPARENT
+        );
+
+        scrollChat.addView(
                 mensagens,
                 new ScrollView.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -130,8 +256,13 @@ public class MainActivity extends Activity {
                 )
         );
 
+        // ========================================================
+        // IMPORTANTE:
+        // A ÁREA DO CHAT OCUPA TODO O ESPAÇO DISPONÍVEL
+        // ========================================================
+
         tela.addView(
-                scroll,
+                scrollChat,
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         0,
@@ -139,9 +270,9 @@ public class MainActivity extends Activity {
                 )
         );
 
-        // ============================================================
+        // ========================================================
         // ÁREA DE DIGITAÇÃO
-        // ============================================================
+        // ========================================================
 
         LinearLayout entrada =
                 new LinearLayout(this);
@@ -158,11 +289,26 @@ public class MainActivity extends Activity {
                 new GradientDrawable();
 
         fundoEntrada.setColor(
-                Color.rgb(20, 26, 38)
+                Color.argb(
+                        145,
+                        15,
+                        20,
+                        30
+                )
         );
 
         fundoEntrada.setCornerRadius(
-                80f
+                dp(40)
+        );
+
+        fundoEntrada.setStroke(
+                dp(1),
+                Color.argb(
+                        70,
+                        255,
+                        255,
+                        255
+                )
         );
 
         entrada.setBackground(
@@ -170,25 +316,25 @@ public class MainActivity extends Activity {
         );
 
         entrada.setPadding(
-                12,
-                6,
-                8,
-                6
+                dp(8),
+                dp(5),
+                dp(7),
+                dp(5)
         );
 
-        // ============================================================
+        // ========================================================
         // BOTÃO +
-        // ============================================================
+        // ========================================================
 
         Button botaoMais =
                 new Button(this);
 
         botaoMais.setText(
-                "➕"
+                "＋"
         );
 
         botaoMais.setTextSize(
-                22
+                27
         );
 
         botaoMais.setTextColor(
@@ -208,161 +354,27 @@ public class MainActivity extends Activity {
         );
 
         botaoMais.setPadding(
-                6,
+                dp(3),
                 0,
-                6,
+                dp(3),
                 0
         );
 
         botaoMais.setOnClickListener(
-                v -> {
-
-                    PopupMenu menu =
-                            new PopupMenu(
-                                    MainActivity.this,
-                                    botaoMais
-                            );
-
-                    menu.getMenu().add(
-                            "🖼️ Imagem"
-                    );
-
-                    menu.getMenu().add(
-                            "🎬 Vídeo"
-                    );
-
-                    menu.getMenu().add(
-                            "🔊 Voz"
-                    );
-
-                    menu.getMenu().add(
-                            "💻 Código"
-                    );
-
-                    menu.getMenu().add(
-                            "📎 Arquivo"
-                    );
-
-                    menu.getMenu().add(
-                            "🎭 Personagem"
-                    );
-
-                    menu.getMenu().add(
-                            "🧠 Memória"
-                    );
-
-                    menu.getMenu().add(
-                            "🗑️ Limpar chat"
-                    );
-
-                    menu.setOnMenuItemClickListener(
-                            item -> {
-
-                                String ferramenta =
-                                        item.getTitle().toString();
-
-                                // ====================================================
-                                // 🖼️ IMAGEM
-                                // ====================================================
-
-                                if (
-                                        ferramenta.equals(
-                                                "🖼️ Imagem"
-                                        )
-                                ) {
-
-                                    campoMensagem.setHint(
-                                            "Descreva a imagem que você quer criar..."
-                                    );
-
-                                    campoMensagem.requestFocus();
-
-                                    adicionarMensagem(
-                                            "🖼️ Modo Imagem ativado.\n\n"
-                                                    + "Digite a descrição da imagem "
-                                                    + "que você quer gerar."
-                                    );
-
-                                    return true;
-                                }
-
-                                // ====================================================
-                                // 💻 CÓDIGO
-                                // ====================================================
-
-                                if (
-                                        ferramenta.equals(
-                                                "💻 Código"
-                                        )
-                                ) {
-
-                                    mostrarInterfaceCodigo();
-
-                                    return true;
-                                }
-
-                                // ====================================================
-                                // 📎 ARQUIVO
-                                // ====================================================
-
-                                if (
-                                        ferramenta.equals(
-                                                "📎 Arquivo"
-                                        )
-                                ) {
-
-                                    abrirSeletorDeArquivo();
-
-                                    return true;
-                                }
-
-                                // ====================================================
-                                // 🗑️ LIMPAR CHAT
-                                // ====================================================
-
-                                if (
-                                        ferramenta.equals(
-                                                "🗑️ Limpar chat"
-                                        )
-                                ) {
-
-                                    mensagens.removeAllViews();
-
-                                    adicionarMensagem(
-                                            "🗑️ Chat limpo."
-                                    );
-
-                                    return true;
-                                }
-
-                                // ====================================================
-                                // OUTRAS FERRAMENTAS
-                                // ====================================================
-
-                                adicionarMensagem(
-                                        "🧰 Ferramenta selecionada: "
-                                                + ferramenta
-                                );
-
-                                return true;
-                            }
-                    );
-
-                    menu.show();
-                }
+                v -> mostrarMenuFerramentas()
         );
 
         entrada.addView(
                 botaoMais,
                 new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        dp(52),
                         ViewGroup.LayoutParams.MATCH_PARENT
                 )
         );
 
-        // ============================================================
+        // ========================================================
         // CAMPO DE MENSAGEM
-        // ============================================================
+        // ========================================================
 
         campoMensagem =
                 new EditText(this);
@@ -372,7 +384,12 @@ public class MainActivity extends Activity {
         );
 
         campoMensagem.setHintTextColor(
-                Color.LTGRAY
+                Color.argb(
+                        190,
+                        220,
+                        225,
+                        235
+                )
         );
 
         campoMensagem.setTextColor(
@@ -392,9 +409,9 @@ public class MainActivity extends Activity {
         );
 
         campoMensagem.setPadding(
-                8,
+                dp(5),
                 0,
-                8,
+                dp(5),
                 0
         );
 
@@ -407,9 +424,9 @@ public class MainActivity extends Activity {
                 )
         );
 
-        // ============================================================
+        // ========================================================
         // BOTÃO ENVIAR
-        // ============================================================
+        // ========================================================
 
         Button enviar =
                 new Button(this);
@@ -439,9 +456,9 @@ public class MainActivity extends Activity {
         );
 
         enviar.setPadding(
-                6,
+                dp(4),
                 0,
-                4,
+                dp(3),
                 0
         );
 
@@ -452,31 +469,26 @@ public class MainActivity extends Activity {
         entrada.addView(
                 enviar,
                 new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        dp(52),
                         ViewGroup.LayoutParams.MATCH_PARENT
                 )
         );
 
-        // ============================================================
-        // COLOCAR O BALÃO DE ENTRADA NA PARTE INFERIOR
-        // ============================================================
-
-        float densidade =
-                getResources()
-                        .getDisplayMetrics()
-                        .density;
+        // ========================================================
+        // BALÃO DE ENTRADA
+        // ========================================================
 
         LinearLayout.LayoutParams parametrosEntrada =
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        (int) (58 * densidade)
+                        dp(58)
                 );
 
         parametrosEntrada.setMargins(
-                (int) (12 * densidade),
-                (int) (8 * densidade),
-                (int) (12 * densidade),
-                (int) (12 * densidade)
+                dp(12),
+                dp(8),
+                dp(12),
+                dp(12)
         );
 
         tela.addView(
@@ -484,12 +496,252 @@ public class MainActivity extends Activity {
                 parametrosEntrada
         );
 
-        // ============================================================
-        // FINALIZAR INTERFACE
-        // ============================================================
+        // ========================================================
+        // FINALIZAR
+        // ========================================================
 
         setContentView(
-                tela
+                raiz
+        );
+    }
+
+    // ============================================================
+    // MENU DE FERRAMENTAS TRANSLÚCIDO
+    // ============================================================
+
+    private void mostrarMenuFerramentas() {
+
+        LinearLayout menuLayout =
+                new LinearLayout(this);
+
+        menuLayout.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        menuLayout.setPadding(
+                dp(8),
+                dp(8),
+                dp(8),
+                dp(8)
+        );
+
+        GradientDrawable fundoMenu =
+                new GradientDrawable();
+
+        fundoMenu.setColor(
+                Color.argb(
+                        185,
+                        15,
+                        18,
+                        27
+                )
+        );
+
+        fundoMenu.setCornerRadius(
+                dp(18)
+        );
+
+        fundoMenu.setStroke(
+                dp(1),
+                Color.argb(
+                        75,
+                        255,
+                        255,
+                        255
+                )
+        );
+
+        menuLayout.setBackground(
+                fundoMenu
+        );
+
+        String[] ferramentas = {
+
+                "🖼️  Imagem",
+                "🎬  Vídeo",
+                "🔊  Voz",
+                "💻  Código",
+                "📎  Arquivo",
+                "🎭  Personagem",
+                "🧠  Memória",
+                "🗑️  Limpar chat"
+        };
+
+        PopupWindow[] janela =
+                new PopupWindow[1];
+
+        for (
+                String ferramenta :
+                ferramentas
+        ) {
+
+            TextView item =
+                    new TextView(this);
+
+            item.setText(
+                    ferramenta
+            );
+
+            item.setTextColor(
+                    Color.WHITE
+            );
+
+            item.setTextSize(
+                    16
+            );
+
+            item.setGravity(
+                    Gravity.CENTER_VERTICAL
+            );
+
+            item.setPadding(
+                    dp(14),
+                    dp(13),
+                    dp(14),
+                    dp(13)
+            );
+
+            item.setBackgroundColor(
+                    Color.TRANSPARENT
+            );
+
+            item.setOnClickListener(
+                    v -> {
+
+                        String selecionada =
+                                ferramenta.trim();
+
+                        if (
+                                janela[0] != null
+                        ) {
+
+                            janela[0].dismiss();
+                        }
+
+                        executarFerramenta(
+                                selecionada
+                        );
+                    }
+            );
+
+            menuLayout.addView(
+                    item,
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            dp(52)
+                    )
+            );
+        }
+
+        PopupWindow popup =
+                new PopupWindow(
+                        menuLayout,
+                        dp(285),
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        true
+                );
+
+        janela[0] =
+                popup;
+
+        popup.setBackgroundDrawable(
+                new ColorDrawable(
+                        Color.TRANSPARENT
+                )
+        );
+
+        popup.setOutsideTouchable(
+                true
+        );
+
+        popup.setElevation(
+                dp(12)
+        );
+
+        popup.setAnimationStyle(
+                android.R.style.Animation_Dialog
+        );
+
+        // ========================================================
+        // COLOCAR O MENU ACIMA DO CAMPO DE DIGITAÇÃO
+        // ========================================================
+
+        popup.showAtLocation(
+                raiz,
+                Gravity.BOTTOM | Gravity.START,
+                dp(16),
+                dp(78)
+        );
+    }
+
+    // ============================================================
+    // EXECUTAR FERRAMENTA
+    // ============================================================
+
+    private void executarFerramenta(
+            String ferramenta
+    ) {
+
+        if (
+                ferramenta.equals(
+                        "🖼️  Imagem"
+                )
+        ) {
+
+            campoMensagem.setHint(
+                    "Descreva a imagem que você quer criar..."
+            );
+
+            campoMensagem.requestFocus();
+
+            adicionarMensagem(
+                    "🖼️ Modo Imagem ativado.\n\n"
+                            + "Digite a descrição da imagem que você quer gerar."
+            );
+
+            return;
+        }
+
+        if (
+                ferramenta.equals(
+                        "💻  Código"
+                )
+        ) {
+
+            mostrarInterfaceCodigo();
+
+            return;
+        }
+
+        if (
+                ferramenta.equals(
+                        "📎  Arquivo"
+                )
+        ) {
+
+            abrirSeletorDeArquivo();
+
+            return;
+        }
+
+        if (
+                ferramenta.equals(
+                        "🗑️  Limpar chat"
+                )
+        ) {
+
+            mensagens.removeAllViews();
+
+            adicionarMensagem(
+                    "🗑️ Chat limpo."
+            );
+
+            return;
+        }
+
+        adicionarMensagem(
+                "🧰 Ferramenta selecionada: "
+                        + ferramenta
         );
     }
 
@@ -507,10 +759,10 @@ public class MainActivity extends Activity {
         );
 
         layout.setPadding(
-                30,
-                20,
-                30,
-                10
+                dp(20),
+                dp(10),
+                dp(20),
+                dp(10)
         );
 
         campoCodigo =
@@ -541,21 +793,36 @@ public class MainActivity extends Activity {
         );
 
         campoCodigo.setPadding(
-                15,
-                15,
-                15,
-                15
+                dp(15),
+                dp(15),
+                dp(15),
+                dp(15)
         );
 
         GradientDrawable fundoCodigo =
                 new GradientDrawable();
 
         fundoCodigo.setColor(
-                Color.rgb(20, 26, 38)
+                Color.argb(
+                        190,
+                        20,
+                        26,
+                        38
+                )
         );
 
         fundoCodigo.setCornerRadius(
-                25f
+                dp(22)
+        );
+
+        fundoCodigo.setStroke(
+                dp(1),
+                Color.argb(
+                        80,
+                        255,
+                        255,
+                        255
+                )
         );
 
         campoCodigo.setBackground(
@@ -570,6 +837,10 @@ public class MainActivity extends Activity {
                         1
                 )
         );
+
+        // ========================================================
+        // INSTRUÇÃO
+        // ========================================================
 
         EditText campoInstrucao =
                 new EditText(this);
@@ -591,21 +862,36 @@ public class MainActivity extends Activity {
         );
 
         campoInstrucao.setPadding(
-                15,
-                15,
-                15,
-                15
+                dp(15),
+                dp(15),
+                dp(15),
+                dp(15)
         );
 
         GradientDrawable fundoInstrucao =
                 new GradientDrawable();
 
         fundoInstrucao.setColor(
-                Color.rgb(20, 26, 38)
+                Color.argb(
+                        190,
+                        20,
+                        26,
+                        38
+                )
         );
 
         fundoInstrucao.setCornerRadius(
-                25f
+                dp(22)
+        );
+
+        fundoInstrucao.setStroke(
+                dp(1),
+                Color.argb(
+                        80,
+                        255,
+                        255,
+                        255
+                )
         );
 
         campoInstrucao.setBackground(
@@ -620,7 +906,7 @@ public class MainActivity extends Activity {
 
         parametrosInstrucao.setMargins(
                 0,
-                12,
+                dp(12),
                 0,
                 0
         );
@@ -709,7 +995,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // RESULTADO DO SELETOR DE ARQUIVO
+    // RESULTADO DO SELETOR
     // ============================================================
 
     @Override
@@ -775,9 +1061,9 @@ public class MainActivity extends Activity {
                         final String nomeFinal =
                                 nome;
 
-                        // ========================================================
+                        // ====================================================
                         // ZIP
-                        // ========================================================
+                        // ====================================================
 
                         if (
                                 nome.toLowerCase()
@@ -884,9 +1170,9 @@ public class MainActivity extends Activity {
                                     }
                             );
 
-                            // ========================================================
-                            // INSTALAR APK ENCONTRADO
-                            // ========================================================
+                            // ====================================================
+                            // INSTALAR APK
+                            // ====================================================
 
                             if (
                                     apkEncontrado
@@ -896,13 +1182,9 @@ public class MainActivity extends Activity {
                                         () -> {
 
                                             Button botaoInstalar =
-                                                    new Button(
-                                                            this
+                                                    criarBotaoAcao(
+                                                            "📱 Instalar APK"
                                                     );
-
-                                            botaoInstalar.setText(
-                                                    "📱 Instalar APK"
-                                            );
 
                                             botaoInstalar.setOnClickListener(
                                                     v -> {
@@ -935,7 +1217,7 @@ public class MainActivity extends Activity {
                                                     }
                                             );
 
-                                            mensagens.addView(
+                                            adicionarBotaoAoChat(
                                                     botaoInstalar
                                             );
                                         }
@@ -945,9 +1227,9 @@ public class MainActivity extends Activity {
                             return;
                         }
 
-                        // ========================================================
+                        // ====================================================
                         // APK DIRETO
-                        // ========================================================
+                        // ====================================================
 
                         if (
                                 nomeFinal
@@ -1020,13 +1302,9 @@ public class MainActivity extends Activity {
                                         );
 
                                         Button botaoInstalar =
-                                                new Button(
-                                                        this
+                                                criarBotaoAcao(
+                                                        "📱 Instalar APK"
                                                 );
-
-                                        botaoInstalar.setText(
-                                                "📱 Instalar APK"
-                                        );
 
                                         botaoInstalar.setOnClickListener(
                                                 v -> abrirInstaladorApk(
@@ -1034,7 +1312,7 @@ public class MainActivity extends Activity {
                                                 )
                                         );
 
-                                        mensagens.addView(
+                                        adicionarBotaoAoChat(
                                                 botaoInstalar
                                         );
                                     }
@@ -1043,9 +1321,9 @@ public class MainActivity extends Activity {
                             return;
                         }
 
-                        // ========================================================
+                        // ====================================================
                         // ARQUIVO DE TEXTO
-                        // ========================================================
+                        // ====================================================
 
                         String conteudo =
                                 lerConteudoArquivo(
@@ -1076,8 +1354,6 @@ public class MainActivity extends Activity {
                                 }
                         );
 
-                        return;
-
                     } catch (
                             Exception erro
                     ) {
@@ -1097,7 +1373,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // LISTAR ARQUIVOS DO ZIP
+    // LISTAR ARQUIVOS ZIP
     // ============================================================
 
     private List<String> listarArquivosZip(
@@ -1223,8 +1499,8 @@ public class MainActivity extends Activity {
                                         zip.read(
                                                 buffer
                                         )
-                        )
-                                != -1
+                                )
+                                        != -1
                 ) {
 
                     saida.write(
@@ -1260,7 +1536,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ABRIR INSTALADOR DO APK
+    // INSTALADOR APK
     // ============================================================
 
     private void abrirInstaladorApk(
@@ -1351,7 +1627,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // OBTER NOME DO ARQUIVO
+    // NOME DO ARQUIVO
     // ============================================================
 
     private String obterNomeArquivo(
@@ -1406,7 +1682,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // LER CONTEÚDO UTF-8
+    // LER ARQUIVO UTF-8
     // ============================================================
 
     private String lerConteudoArquivo(
@@ -1465,7 +1741,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ENVIAR MENSAGEM PARA A API
+    // ENVIAR MENSAGEM
     // ============================================================
 
     private void enviarMensagem() {
@@ -1489,6 +1765,10 @@ public class MainActivity extends Activity {
 
         campoMensagem.setText(
                 ""
+        );
+
+        campoMensagem.setHint(
+                "Digite sua mensagem..."
         );
 
         adicionarMensagem(
@@ -1636,9 +1916,9 @@ public class MainActivity extends Activity {
                                         ""
                                 );
 
-                        // ========================================================
-                        // RESPOSTA DE IMAGEM
-                        // ========================================================
+                        // ====================================================
+                        // IMAGEM
+                        // ====================================================
 
                         if (
                                 sucesso
@@ -1676,9 +1956,9 @@ public class MainActivity extends Activity {
                             return;
                         }
 
-                        // ========================================================
+                        // ====================================================
                         // RESPOSTA NORMAL
-                        // ========================================================
+                        // ====================================================
 
                         String respostaAlex =
                                 resposta.optString(
@@ -1737,8 +2017,7 @@ public class MainActivity extends Activity {
                                     removerMensagemPensando();
 
                                     adicionarMensagem(
-                                            "Alex: Não consegui conectar "
-                                                    + "ao servidor agora."
+                                            "Alex: Não consegui conectar ao servidor agora."
                                     );
                                 }
                         );
@@ -1757,7 +2036,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // LER RESPOSTA DO SERVIDOR
+    // LER RESPOSTA
     // ============================================================
 
     private String lerResposta(
@@ -1804,7 +2083,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ADICIONAR IMAGEM NA TELA
+    // CARREGAR IMAGEM
     // ============================================================
 
     private void adicionarImagemNaTela(
@@ -1931,6 +2210,26 @@ public class MainActivity extends Activity {
                                                     .FIT_CENTER
                                     );
 
+                                    GradientDrawable fundoImagem =
+                                            new GradientDrawable();
+
+                                    fundoImagem.setColor(
+                                            Color.argb(
+                                                    150,
+                                                    10,
+                                                    13,
+                                                    20
+                                            )
+                                    );
+
+                                    fundoImagem.setCornerRadius(
+                                            dp(20)
+                                    );
+
+                                    imagemView.setBackground(
+                                            fundoImagem
+                                    );
+
                                     LinearLayout.LayoutParams parametros =
                                             new LinearLayout.LayoutParams(
                                                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1938,16 +2237,18 @@ public class MainActivity extends Activity {
                                             );
 
                                     parametros.setMargins(
-                                            20,
-                                            10,
-                                            20,
-                                            20
+                                            dp(15),
+                                            dp(8),
+                                            dp(15),
+                                            dp(15)
                                     );
 
                                     mensagens.addView(
                                             imagemView,
                                             parametros
                                     );
+
+                                    rolarChatParaBaixo();
                                 }
                         );
 
@@ -1979,7 +2280,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // PROCESSAR CÓDIGO PELA PONTE ALEX V2
+    // PROCESSAR PELA PONTE
     // ============================================================
 
     private void processarPelaPonte(
@@ -2202,13 +2503,9 @@ public class MainActivity extends Activity {
                                         ) {
 
                                             Button botaoDownload =
-                                                    new Button(
-                                                            this
+                                                    criarBotaoAcao(
+                                                            "📥 Baixar arquivo processado"
                                                     );
-
-                                            botaoDownload.setText(
-                                                    "📥 Baixar arquivo processado"
-                                            );
 
                                             botaoDownload.setOnClickListener(
                                                     v -> {
@@ -2266,12 +2563,8 @@ public class MainActivity extends Activity {
                                                     }
                                             );
 
-                                            mensagens.addView(
-                                                    botaoDownload,
-                                                    new LinearLayout.LayoutParams(
-                                                            ViewGroup.LayoutParams.MATCH_PARENT,
-                                                            ViewGroup.LayoutParams.WRAP_CONTENT
-                                                    )
+                                            adicionarBotaoAoChat(
+                                                    botaoDownload
                                             );
                                         }
                                     }
@@ -2307,8 +2600,7 @@ public class MainActivity extends Activity {
                                 () -> {
 
                                     adicionarMensagem(
-                                            "Ponte: não foi possível "
-                                                    + "conectar ao servidor."
+                                            "Ponte: não foi possível conectar ao servidor."
                                     );
                                 }
                         );
@@ -2327,7 +2619,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // MENSAGEM "PENSANDO..."
+    // REMOVER "PENSANDO..."
     // ============================================================
 
     private void removerMensagemPensando() {
@@ -2348,20 +2640,56 @@ public class MainActivity extends Activity {
                 );
 
         if (
+                ultima instanceof LinearLayout
+        ) {
+
+            LinearLayout layout =
+                    (LinearLayout) ultima;
+
+            if (
+                    layout.getChildCount() > 0
+            ) {
+
+                View filho =
+                        layout.getChildAt(
+                                0
+                        );
+
+                if (
+                        filho instanceof TextView
+                ) {
+
+                    TextView texto =
+                            (TextView) filho;
+
+                    if (
+                            texto.getText()
+                                    .toString()
+                                    .equals(
+                                            "Alex: pensando..."
+                                    )
+                    ) {
+
+                        mensagens.removeView(
+                                ultima
+                        );
+                    }
+                }
+            }
+
+        } else if (
                 ultima instanceof TextView
         ) {
 
             TextView texto =
                     (TextView) ultima;
 
-            String valor =
-                    texto.getText()
-                            .toString();
-
             if (
-                    valor.equals(
-                            "Alex: pensando..."
-                    )
+                    texto.getText()
+                            .toString()
+                            .equals(
+                                    "Alex: pensando..."
+                            )
             ) {
 
                 mensagens.removeView(
@@ -2372,12 +2700,58 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ADICIONAR MENSAGEM NA TELA
+    // ADICIONAR MENSAGEM
     // ============================================================
 
     private void adicionarMensagem(
             String texto
     ) {
+
+        if (
+                texto == null
+                        || texto.trim().isEmpty()
+        ) {
+
+            return;
+        }
+
+        boolean mensagemUsuario =
+                texto.startsWith(
+                        "Você:"
+                );
+
+        boolean mensagemAlex =
+                texto.startsWith(
+                        "Alex:"
+                );
+
+        // ========================================================
+        // CONTAINER DO BALÃO
+        // ========================================================
+
+        LinearLayout linha =
+                new LinearLayout(this);
+
+        linha.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        linha.setGravity(
+                mensagemUsuario
+                        ? Gravity.END
+                        : Gravity.START
+        );
+
+        linha.setPadding(
+                dp(4),
+                dp(4),
+                dp(4),
+                dp(4)
+        );
+
+        // ========================================================
+        // BALÃO
+        // ========================================================
 
         TextView mensagem =
                 new TextView(this);
@@ -2394,15 +2768,210 @@ public class MainActivity extends Activity {
                 16
         );
 
+        mensagem.setGravity(
+                Gravity.START
+        );
+
         mensagem.setPadding(
-                20,
-                15,
-                20,
-                15
+                dp(17),
+                dp(12),
+                dp(17),
+                dp(12)
+        );
+
+        GradientDrawable fundoMensagem =
+                new GradientDrawable();
+
+        if (
+                mensagemUsuario
+        ) {
+
+            fundoMensagem.setColor(
+                    Color.argb(
+                            175,
+                            55,
+                            65,
+                            82
+                    )
+            );
+
+        } else {
+
+            fundoMensagem.setColor(
+                    Color.argb(
+                            150,
+                            12,
+                            17,
+                            27
+                    )
+            );
+        }
+
+        fundoMensagem.setCornerRadius(
+                dp(22)
+        );
+
+        fundoMensagem.setStroke(
+                dp(1),
+                Color.argb(
+                        55,
+                        255,
+                        255,
+                        255
+                )
+        );
+
+        mensagem.setBackground(
+                fundoMensagem
+        );
+
+        // ========================================================
+        // LARGURA DO BALÃO
+        // ========================================================
+
+        int larguraMaxima =
+                (int) (
+                        getResources()
+                                .getDisplayMetrics()
+                                .widthPixels
+                                * 0.82f
+                );
+
+        LinearLayout.LayoutParams parametrosMensagem =
+                new LinearLayout.LayoutParams(
+                        larguraMaxima,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+
+        linha.addView(
+                mensagem,
+                parametrosMensagem
+        );
+
+        // ========================================================
+        // ADICIONAR AO CHAT
+        // ========================================================
+
+        mensagens.addView(
+                linha,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+        );
+
+        rolarChatParaBaixo();
+    }
+
+    // ============================================================
+    // BOTÃO DE AÇÃO NO CHAT
+    // ============================================================
+
+    private Button criarBotaoAcao(
+            String texto
+    ) {
+
+        Button botao =
+                new Button(this);
+
+        botao.setText(
+                texto
+        );
+
+        botao.setTextColor(
+                Color.WHITE
+        );
+
+        botao.setTextSize(
+                14
+        );
+
+        GradientDrawable fundo =
+                new GradientDrawable();
+
+        fundo.setColor(
+                Color.argb(
+                        175,
+                        20,
+                        27,
+                        40
+                )
+        );
+
+        fundo.setCornerRadius(
+                dp(18)
+        );
+
+        fundo.setStroke(
+                dp(1),
+                Color.argb(
+                        65,
+                        255,
+                        255,
+                        255
+                )
+        );
+
+        botao.setBackground(
+                fundo
+        );
+
+        botao.setPadding(
+                dp(12),
+                dp(5),
+                dp(12),
+                dp(5)
+        );
+
+        return botao;
+    }
+
+    // ============================================================
+    // ADICIONAR BOTÃO AO CHAT
+    // ============================================================
+
+    private void adicionarBotaoAoChat(
+            Button botao
+    ) {
+
+        LinearLayout.LayoutParams parametros =
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+
+        parametros.setMargins(
+                dp(12),
+                dp(5),
+                dp(12),
+                dp(10)
         );
 
         mensagens.addView(
-                mensagem
+                botao,
+                parametros
+        );
+
+        rolarChatParaBaixo();
+    }
+
+    // ============================================================
+    // ROLAR CHAT PARA BAIXO
+    // ============================================================
+
+    private void rolarChatParaBaixo() {
+
+        if (
+                scrollChat == null
+        ) {
+
+            return;
+        }
+
+        scrollChat.post(
+                () -> scrollChat.fullScroll(
+                        View.FOCUS_DOWN
+                )
         );
     }
 
@@ -2427,4 +2996,4 @@ public class MainActivity extends Activity {
 
         super.onBackPressed();
     }
-    }
+   }
