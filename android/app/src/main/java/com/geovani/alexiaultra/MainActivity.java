@@ -102,6 +102,27 @@ private void criarInterface() {
     tela.setBackgroundColor(Color.rgb(8, 12, 20));
 
     // ============================================================
+    // ÁREA DO CHAT
+    // ============================================================
+
+    ScrollView scroll = new ScrollView(this);
+
+    mensagens = new LinearLayout(this);
+    mensagens.setOrientation(LinearLayout.VERTICAL);
+    mensagens.setPadding(20, 20, 20, 20);
+
+    scroll.addView(mensagens);
+
+    tela.addView(
+            scroll,
+            new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
+                    1
+            )
+    );
+
+    // ============================================================
     // BOTÃO + DE FERRAMENTAS
     // ============================================================
 
