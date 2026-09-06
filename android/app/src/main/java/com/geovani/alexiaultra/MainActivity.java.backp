@@ -138,7 +138,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // FUNDO DA ULTRA
+        // FUNDO BASE DA ULTRA
         // ========================================================
 
         ImageView fundo =
@@ -152,10 +152,6 @@ public class MainActivity extends Activity {
                 R.drawable.fundo_ultra
         );
 
-        fundo.setAlpha(
-                0.82f
-        );
-
         raiz.addView(
                 fundo,
                 new FrameLayout.LayoutParams(
@@ -165,23 +161,30 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // CAMADA ESCURA LEVEMENTE TRANSPARENTE
+        // CIDADE DA ULTRA
+        // ========================================================
+        // A cidade fica em uma camada separada.
+        // O arquivo cidade_ultra.xml controla a aparência
+        // e utiliza cidade_ultra_imagem.png.
         // ========================================================
 
-        View camadaEscura =
-                new View(this);
+        ImageView cidade =
+                new ImageView(this);
 
-        camadaEscura.setBackgroundColor(
-                Color.argb(
-                        65,
-                        0,
-                        0,
-                        0
-                )
+        cidade.setScaleType(
+                ImageView.ScaleType.CENTER_CROP
+        );
+
+        cidade.setImageResource(
+                R.drawable.cidade_ultra
+        );
+
+        cidade.setAlpha(
+                1.0f
         );
 
         raiz.addView(
-                camadaEscura,
+                cidade,
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -1939,7 +1942,7 @@ public class MainActivity extends Activity {
                                         removerMensagemPensando();
 
                                         adicionarMensagem(
-                                                "Alex: Imagem gerada com sucesso."
+                                                "Imagem gerada com sucesso."
                                         );
 
                                         if (
@@ -2666,7 +2669,7 @@ public class MainActivity extends Activity {
                             texto.getText()
                                     .toString()
                                     .equals(
-                                            "Alex: pensando..."
+                                            "pensando..."
                                     )
                     ) {
 
@@ -2688,7 +2691,7 @@ public class MainActivity extends Activity {
                     texto.getText()
                             .toString()
                             .equals(
-                                    "Alex: pensando..."
+                                    "pensando..."
                             )
             ) {
 
@@ -2756,8 +2759,30 @@ public class MainActivity extends Activity {
         TextView mensagem =
                 new TextView(this);
 
+        String textoExibido =
+                texto;
+
+        if (
+                texto.startsWith("Você:")
+        ) {
+
+            textoExibido =
+                    texto.substring(
+                            "Você:".length()
+                    ).trim();
+
+        } else if (
+                texto.startsWith("Alex:")
+        ) {
+
+            textoExibido =
+                    texto.substring(
+                            "Alex:".length()
+                    ).trim();
+        }
+
         mensagem.setText(
-                texto
+                textoExibido
         );
 
         mensagem.setTextColor(
@@ -2996,4 +3021,4 @@ public class MainActivity extends Activity {
 
         super.onBackPressed();
     }
-   }
+}
