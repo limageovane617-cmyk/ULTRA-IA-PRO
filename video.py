@@ -1720,6 +1720,63 @@ def gerar_video_automatico(
             )
 
     # ========================================================
+    # LTX
+    # ========================================================
+
+    if not _motor_pausado(
+        "LTX-2.3 — Hugging Face"
+    ):
+
+        try:
+
+            resultado = (
+                gerar_ltx_huggingface(
+
+                    montar_prompt(
+                        texto,
+                        camera
+                    ),
+
+                    duration=min(
+                        float(duracao),
+                        5.0
+                    ),
+
+                    height=height,
+
+                    width=width,
+
+                    imagem_bytes=imagem_bytes,
+
+                    nome_imagem=nome_imagem
+
+                )
+            )
+
+            resultado[
+                "erros_anteriores"
+            ] = erros
+
+            return resultado
+
+        except Exception as erro:
+
+            erros.append(
+                "LTX-2.3: "
+                + str(erro)
+            )
+
+    else:
+
+        erros.append(
+            "LTX-2.3: motor pausado — "
+            +
+            _motivo_pausa(
+                "LTX-2.3 — Hugging Face"
+            )
+        )
+
+    # ========================================================
     # MAGIC HOUR
     # ========================================================
 
@@ -1781,64 +1838,6 @@ def gerar_video_automatico(
                     "Magic Hour — LTX-2.3"
                 )
             )
-
-    # ========================================================
-    # LTX
-    # ========================================================
-
-    if not _motor_pausado(
-        "LTX-2.3 — Hugging Face"
-    ):
-
-        try:
-
-            resultado = (
-                gerar_ltx_huggingface(
-
-                    montar_prompt(
-                        texto,
-                        camera
-                    ),
-
-                    duration=min(
-                        float(duracao),
-                        5.0
-                    ),
-
-                    height=height,
-
-                    width=width,
-
-                    imagem_bytes=imagem_bytes,
-
-                    nome_imagem=nome_imagem
-
-                )
-            )
-
-            resultado[
-                "erros_anteriores"
-            ] = erros
-
-            return resultado
-
-        except Exception as erro:
-
-            erros.append(
-                "LTX-2.3: "
-                + str(erro)
-            )
-
-    else:
-
-        erros.append(
-            "LTX-2.3: motor pausado — "
-            +
-            _motivo_pausa(
-                "LTX-2.3 — Hugging Face"
-            )
-        )
-
     # ========================================================
     # NENHUM MOTOR
     # ========================================================
