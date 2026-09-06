@@ -51,14 +51,20 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
 
+    // ============================================================
+    // INTERFACE
+    // ============================================================
+
     private FrameLayout raiz;
 
     private LinearLayout tela;
+
     private LinearLayout mensagens;
 
     private ScrollView scrollChat;
 
     private EditText campoMensagem;
+
     private EditText campoCodigo;
 
     // ============================================================
@@ -66,38 +72,79 @@ public class MainActivity extends Activity {
     // ============================================================
 
     private String nomeArquivoSelecionado = "";
+
     private String conteudoArquivoSelecionado = "";
 
     private static final int REQUEST_SELECIONAR_ARQUIVO = 1001;
 
+    // ============================================================
+    // EXECUTOR
+    // ============================================================
+
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
+
+    // ============================================================
+    // HISTÓRICO
+    // ============================================================
 
     private final List<JSONObject> historico =
             new ArrayList<>();
 
     // ============================================================
+    // MODO ATUAL
+    // ============================================================
+
+    private enum Modo {
+
+        CHAT,
+
+        IMAGEM,
+
+        VIDEO
+    }
+
+    private Modo modoAtual =
+            Modo.CHAT;
+
+    // ============================================================
+    // DURAÇÃO DO VÍDEO
+    // ============================================================
+
+    private int duracaoVideo =
+            5;
+
+    // ============================================================
     // APIs
     // ============================================================
 
+    private static final String API_BASE_URL =
+            "https://ultra-ia-pro.onrender.com";
+
     private static final String API_URL =
-            "https://ultra-ia-pro.onrender.com/api/chat";
+            API_BASE_URL + "/api/chat";
+
+    private static final String IMAGEM_API_URL =
+            API_BASE_URL + "/api/imagem";
+
+    private static final String VIDEO_API_URL =
+            API_BASE_URL + "/api/video";
 
     private static final String PONTE_API_URL =
-            "https://ultra-ia-pro.onrender.com/api/ponte/processar";
+            API_BASE_URL + "/api/ponte/processar";
 
     // ============================================================
     // CICLO DA ACTIVITY
     // ============================================================
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(
+            Bundle savedInstanceState
+    ) {
 
-        super.onCreate(savedInstanceState);
-
-        // ========================================================
-        // CORREÇÃO DO TECLADO
-        // ========================================================
+        super.onCreate(
+                savedInstanceState
+        );
 
         getWindow().setSoftInputMode(
                 WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
@@ -107,10 +154,12 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // CONVERTER DP
+    // DP
     // ============================================================
 
-    private int dp(float valor) {
+    private int dp(
+            float valor
+    ) {
 
         return (int) (
                 valor
@@ -121,7 +170,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // CRIAR INTERFACE
+    // INTERFACE PRINCIPAL
     // ============================================================
 
     private void criarInterface() {
@@ -138,7 +187,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // FUNDO BASE DA ULTRA
+        // FUNDO ULTRA
         // ========================================================
 
         ImageView fundo =
@@ -161,11 +210,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // CIDADE DA ULTRA
-        // ========================================================
-        // A cidade fica em uma camada separada.
-        // O arquivo cidade_ultra.xml controla a aparência
-        // e utiliza cidade_ultra_imagem.png.
+        // CIDADE
         // ========================================================
 
         ImageView cidade =
@@ -192,7 +237,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // TELA PRINCIPAL
+        // TELA
         // ========================================================
 
         tela =
@@ -215,7 +260,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // ÁREA DO CHAT
+        // CHAT
         // ========================================================
 
         scrollChat =
@@ -259,11 +304,6 @@ public class MainActivity extends Activity {
                 )
         );
 
-        // ========================================================
-        // IMPORTANTE:
-        // A ÁREA DO CHAT OCUPA TODO O ESPAÇO DISPONÍVEL
-        // ========================================================
-
         tela.addView(
                 scrollChat,
                 new LinearLayout.LayoutParams(
@@ -274,7 +314,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // ÁREA DE DIGITAÇÃO
+        // ÁREA DE ENTRADA
         // ========================================================
 
         LinearLayout entrada =
@@ -376,7 +416,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // CAMPO DE MENSAGEM
+        // CAMPO
         // ========================================================
 
         campoMensagem =
@@ -478,7 +518,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // BALÃO DE ENTRADA
+        // ENTRADA
         // ========================================================
 
         LinearLayout.LayoutParams parametrosEntrada =
@@ -500,7 +540,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // FINALIZAR
+        // FINAL
         // ========================================================
 
         setContentView(
@@ -509,7 +549,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // MENU DE FERRAMENTAS TRANSLÚCIDO
+    // MENU
     // ============================================================
 
     private void mostrarMenuFerramentas() {
@@ -561,12 +601,19 @@ public class MainActivity extends Activity {
         String[] ferramentas = {
 
                 "🖼️  Imagem",
+
                 "🎬  Vídeo",
+
                 "🔊  Voz",
+
                 "💻  Código",
+
                 "📎  Arquivo",
+
                 "🎭  Personagem",
+
                 "🧠  Memória",
+
                 "🗑️  Limpar chat"
         };
 
@@ -665,10 +712,6 @@ public class MainActivity extends Activity {
                 android.R.style.Animation_Dialog
         );
 
-        // ========================================================
-        // COLOCAR O MENU ACIMA DO CAMPO DE DIGITAÇÃO
-        // ========================================================
-
         popup.showAtLocation(
                 raiz,
                 Gravity.BOTTOM | Gravity.START,
@@ -678,7 +721,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // EXECUTAR FERRAMENTA
+    // FERRAMENTAS
     // ============================================================
 
     private void executarFerramenta(
@@ -691,6 +734,9 @@ public class MainActivity extends Activity {
                 )
         ) {
 
+            modoAtual =
+                    Modo.IMAGEM;
+
             campoMensagem.setHint(
                     "Descreva a imagem que você quer criar..."
             );
@@ -700,6 +746,49 @@ public class MainActivity extends Activity {
             adicionarMensagem(
                     "🖼️ Modo Imagem ativado.\n\n"
                             + "Digite a descrição da imagem que você quer gerar."
+            );
+
+            return;
+        }
+
+        if (
+                ferramenta.equals(
+                        "🎬  Vídeo"
+                )
+        ) {
+
+            modoAtual =
+                    Modo.VIDEO;
+
+            campoMensagem.setHint(
+                    "Descreva o vídeo que você quer criar..."
+            );
+
+            mostrarSelecaoDuracaoVideo();
+
+            campoMensagem.requestFocus();
+
+            adicionarMensagem(
+                    "🎬 Modo Vídeo ativado.\n\n"
+                            + "Duração selecionada: "
+                            + duracaoVideo
+                            + " segundos.\n\n"
+                            + "Agora descreva o vídeo normalmente."
+            );
+
+            return;
+        }
+
+        if (
+                ferramenta.equals(
+                        "🔊  Voz"
+                )
+        ) {
+
+            adicionarMensagem(
+                    "🔊 O modo de voz está disponível "
+                            + "quando a função correspondente "
+                            + "estiver ligada ao servidor."
             );
 
             return;
@@ -735,6 +824,15 @@ public class MainActivity extends Activity {
 
             mensagens.removeAllViews();
 
+            historico.clear();
+
+            modoAtual =
+                    Modo.CHAT;
+
+            campoMensagem.setHint(
+                    "Digite sua mensagem..."
+            );
+
             adicionarMensagem(
                     "🗑️ Chat limpo."
             );
@@ -746,6 +844,90 @@ public class MainActivity extends Activity {
                 "🧰 Ferramenta selecionada: "
                         + ferramenta
         );
+    }
+
+    // ============================================================
+    // SELEÇÃO DE DURAÇÃO DO VÍDEO
+    // ============================================================
+
+    private void mostrarSelecaoDuracaoVideo() {
+
+        final String[] opcoes = {
+
+                "5 segundos",
+
+                "8 segundos",
+
+                "10 segundos",
+
+                "15 segundos",
+
+                "20 segundos"
+        };
+
+        final int[] valores = {
+
+                5,
+
+                8,
+
+                10,
+
+                15,
+
+                20
+        };
+
+        int selecionado =
+                0;
+
+        for (
+                int i = 0;
+                i < valores.length;
+                i++
+        ) {
+
+            if (
+                    valores[i]
+                            == duracaoVideo
+            ) {
+
+                selecionado =
+                        i;
+
+                break;
+            }
+        }
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                "🎬 Duração do vídeo"
+                        )
+                        .setSingleChoiceItems(
+                                opcoes,
+                                selecionado,
+                                (d, which) -> {
+
+                                    duracaoVideo =
+                                            valores[which];
+
+                                    d.dismiss();
+
+                                    adicionarMensagem(
+                                            "🎬 Duração definida para "
+                                                    + duracaoVideo
+                                                    + " segundos."
+                                    );
+                                }
+                        )
+                        .setNegativeButton(
+                                "Cancelar",
+                                null
+                        )
+                        .create();
+
+        dialog.show();
     }
 
     // ============================================================
@@ -840,10 +1022,6 @@ public class MainActivity extends Activity {
                         1
                 )
         );
-
-        // ========================================================
-        // INSTRUÇÃO
-        // ========================================================
 
         EditText campoInstrucao =
                 new EditText(this);
@@ -973,7 +1151,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ABRIR SELETOR DE ARQUIVO
+    // SELETOR DE ARQUIVO
     // ============================================================
 
     private void abrirSeletorDeArquivo() {
@@ -998,7 +1176,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // RESULTADO DO SELETOR
+    // RESULTADO DO ARQUIVO
     // ============================================================
 
     @Override
@@ -1156,10 +1334,6 @@ public class MainActivity extends Activity {
                                                     "\n\n📱 APK encontrado dentro do ZIP!"
                                             );
 
-                                            lista.append(
-                                                    "\n📱 Pronto para instalar."
-                                            );
-
                                         } else {
 
                                             lista.append(
@@ -1172,10 +1346,6 @@ public class MainActivity extends Activity {
                                         );
                                     }
                             );
-
-                            // ====================================================
-                            // INSTALAR APK
-                            // ====================================================
 
                             if (
                                     apkEncontrado
@@ -1289,7 +1459,9 @@ public class MainActivity extends Activity {
                             }
 
                             saidaApk.flush();
+
                             saidaApk.close();
+
                             entradaApk.close();
 
                             runOnUiThread(
@@ -1300,8 +1472,6 @@ public class MainActivity extends Activity {
                                                         + nomeFinal
                                                         + "\n\n"
                                                         + "O APK foi reconhecido corretamente."
-                                                        + "\n"
-                                                        + "Ele não será lido como texto."
                                         );
 
                                         Button botaoInstalar =
@@ -1325,7 +1495,7 @@ public class MainActivity extends Activity {
                         }
 
                         // ====================================================
-                        // ARQUIVO DE TEXTO
+                        // TEXTO
                         // ====================================================
 
                         String conteudo =
@@ -1376,7 +1546,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // LISTAR ARQUIVOS ZIP
+    // LISTAR ZIP
     // ============================================================
 
     private List<String> listarArquivosZip(
@@ -1429,13 +1599,14 @@ public class MainActivity extends Activity {
         }
 
         zip.close();
+
         entrada.close();
 
         return arquivos;
     }
 
     // ============================================================
-    // EXTRAIR E INSTALAR APK
+    // EXTRAIR APK
     // ============================================================
 
     private void extrairEInstalarApk(
@@ -1514,10 +1685,13 @@ public class MainActivity extends Activity {
                 }
 
                 saida.flush();
+
                 saida.close();
 
                 zip.closeEntry();
+
                 zip.close();
+
                 entrada.close();
 
                 abrirInstaladorApk(
@@ -1531,6 +1705,7 @@ public class MainActivity extends Activity {
         }
 
         zip.close();
+
         entrada.close();
 
         throw new Exception(
@@ -1539,7 +1714,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // INSTALADOR APK
+    // INSTALADOR
     // ============================================================
 
     private void abrirInstaladorApk(
@@ -1560,8 +1735,7 @@ public class MainActivity extends Activity {
 
                     Intent configuracao =
                             new Intent(
-                                    Settings
-                                            .ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                                     Uri.parse(
                                             "package:"
                                                     + getPackageName()
@@ -1630,7 +1804,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // NOME DO ARQUIVO
+    // NOME ARQUIVO
     // ============================================================
 
     private String obterNomeArquivo(
@@ -1685,7 +1859,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // LER ARQUIVO UTF-8
+    // LER UTF-8
     // ============================================================
 
     private String lerConteudoArquivo(
@@ -1738,6 +1912,7 @@ public class MainActivity extends Activity {
         }
 
         leitor.close();
+
         entrada.close();
 
         return resultado.toString();
@@ -1770,13 +1945,73 @@ public class MainActivity extends Activity {
                 ""
         );
 
-        campoMensagem.setHint(
-                "Digite sua mensagem..."
-        );
+        // ========================================================
+        // IMAGEM
+        // ========================================================
+
+        if (
+                modoAtual
+                        == Modo.IMAGEM
+        ) {
+
+            modoAtual =
+                    Modo.CHAT;
+
+            campoMensagem.setHint(
+                    "Digite sua mensagem..."
+            );
+
+            gerarImagem(
+                    texto
+            );
+
+            return;
+        }
+
+        // ========================================================
+        // VÍDEO
+        // ========================================================
+
+        if (
+                modoAtual
+                        == Modo.VIDEO
+        ) {
+
+            modoAtual =
+                    Modo.CHAT;
+
+            campoMensagem.setHint(
+                    "Digite sua mensagem..."
+            );
+
+            gerarVideo(
+                    texto,
+                    duracaoVideo
+            );
+
+            return;
+        }
+
+        // ========================================================
+        // CHAT NORMAL
+        // ========================================================
 
         adicionarMensagem(
                 "Alex: pensando..."
         );
+
+        consultarChat(
+                texto
+        );
+    }
+
+    // ============================================================
+    // CHAT GEMINI
+    // ============================================================
+
+    private void consultarChat(
+            String texto
+    ) {
 
         executor.execute(
                 () -> {
@@ -1797,14 +2032,19 @@ public class MainActivity extends Activity {
                         JSONArray arrayHistorico =
                                 new JSONArray();
 
-                        for (
-                                JSONObject item :
+                        synchronized (
                                 historico
                         ) {
 
-                            arrayHistorico.put(
-                                    item
-                            );
+                            for (
+                                    JSONObject item :
+                                    historico
+                            ) {
+
+                                arrayHistorico.put(
+                                        item
+                                );
+                            }
                         }
 
                         pedido.put(
@@ -1854,7 +2094,7 @@ public class MainActivity extends Activity {
                         );
 
                         connection.setReadTimeout(
-                                60000
+                                90000
                         );
 
                         byte[] dados =
@@ -1864,16 +2104,15 @@ public class MainActivity extends Activity {
                                                 StandardCharsets.UTF_8
                                         );
 
-                        OutputStream saida =
-                                connection
-                                        .getOutputStream();
+                        try (
+                                OutputStream saida =
+                                        connection.getOutputStream()
+                        ) {
 
-                        saida.write(
-                                dados
-                        );
-
-                        saida.flush();
-                        saida.close();
+                            saida.write(
+                                    dados
+                            );
+                        }
 
                         int responseCode =
                                 connection
@@ -1913,28 +2152,31 @@ public class MainActivity extends Activity {
                                         false
                                 );
 
-                        String tipo =
+                        String respostaAlex =
                                 resposta.optString(
-                                        "tipo",
-                                        ""
+                                        "resposta",
+                                        "Não consegui obter uma resposta."
                                 );
 
                         // ====================================================
-                        // IMAGEM
+                        // IMAGEM GERADA PELO CHAT
                         // ====================================================
+
+                        String imagem =
+                                resposta.optString(
+                                        "imagem",
+                                        ""
+                                );
 
                         if (
                                 sucesso
-                                        && tipo.equalsIgnoreCase(
-                                                "imagem"
-                                        )
+                                        && !imagem.isEmpty()
                         ) {
 
-                            String imagem =
-                                    resposta.optString(
-                                            "imagem",
-                                            ""
-                                    );
+                            adicionarHistorico(
+                                    texto,
+                                    respostaAlex
+                            );
 
                             runOnUiThread(
                                     () -> {
@@ -1942,17 +2184,13 @@ public class MainActivity extends Activity {
                                         removerMensagemPensando();
 
                                         adicionarMensagem(
-                                                "Imagem gerada com sucesso."
+                                                "Alex: "
+                                                        + respostaAlex
                                         );
 
-                                        if (
-                                                !imagem.isEmpty()
-                                        ) {
-
-                                            adicionarImagemNaTela(
-                                                    imagem
-                                            );
-                                        }
+                                        adicionarImagemNaTela(
+                                                imagem
+                                        );
                                     }
                             );
 
@@ -1960,41 +2198,16 @@ public class MainActivity extends Activity {
                         }
 
                         // ====================================================
-                        // RESPOSTA NORMAL
+                        // NORMAL
                         // ====================================================
-
-                        String respostaAlex =
-                                resposta.optString(
-                                        "resposta",
-                                        "Não consegui obter uma resposta."
-                                );
 
                         if (
                                 sucesso
                         ) {
 
-                            historico.add(
-                                    new JSONObject()
-                                            .put(
-                                                    "role",
-                                                    "user"
-                                            )
-                                            .put(
-                                                    "content",
-                                                    texto
-                                            )
-                            );
-
-                            historico.add(
-                                    new JSONObject()
-                                            .put(
-                                                    "role",
-                                                    "model"
-                                            )
-                                            .put(
-                                                    "content",
-                                                    respostaAlex
-                                            )
+                            adicionarHistorico(
+                                    texto,
+                                    respostaAlex
                             );
                         }
 
@@ -2022,6 +2235,11 @@ public class MainActivity extends Activity {
                                     adicionarMensagem(
                                             "Alex: Não consegui conectar ao servidor agora."
                                     );
+
+                                    adicionarMensagem(
+                                            "Detalhes: "
+                                                    + erro.getMessage()
+                                    );
                                 }
                         );
 
@@ -2039,50 +2257,626 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // LER RESPOSTA
+    // HISTÓRICO
     // ============================================================
 
-    private String lerResposta(
-            InputStream entrada
-    ) throws Exception {
+    private void adicionarHistorico(
+            String pergunta,
+            String resposta
+    ) {
 
-        if (
-                entrada == null
+        synchronized (
+                historico
         ) {
 
-            return "{\"success\":false,"
-                    + "\"resposta\":\"Resposta vazia do servidor.\"}";
-        }
+            try {
 
-        StringBuilder resultado =
-                new StringBuilder();
-
-        BufferedReader leitor =
-                new BufferedReader(
-                        new InputStreamReader(
-                                entrada,
-                                StandardCharsets.UTF_8
-                        )
+                historico.add(
+                        new JSONObject()
+                                .put(
+                                        "role",
+                                        "user"
+                                )
+                                .put(
+                                        "content",
+                                        pergunta
+                                )
                 );
 
-        String linha;
+                historico.add(
+                        new JSONObject()
+                                .put(
+                                        "role",
+                                        "model"
+                                )
+                                .put(
+                                        "content",
+                                        resposta
+                                )
+                );
 
-        while (
-                (
-                        linha =
-                                leitor.readLine()
-                )
-                        != null
+                while (
+                        historico.size()
+                                > 40
+                ) {
+
+                    historico.remove(
+                            0
+                    );
+                }
+
+            } catch (
+                    Exception ignored
+            ) {
+            }
+        }
+    }
+
+    // ============================================================
+    // GERAR IMAGEM
+    // ============================================================
+
+    private void gerarImagem(
+            String prompt
+    ) {
+
+        adicionarMensagem(
+                "Alex: 🎨 Gerando imagem..."
+        );
+
+        executor.execute(
+                () -> {
+
+                    HttpURLConnection conexao =
+                            null;
+
+                    try {
+
+                        JSONObject pedido =
+                                new JSONObject();
+
+                        pedido.put(
+                                "prompt",
+                                prompt
+                        );
+
+                        URL url =
+                                new URL(
+                                        IMAGEM_API_URL
+                                );
+
+                        conexao =
+                                (HttpURLConnection)
+                                        url.openConnection();
+
+                        conexao.setRequestMethod(
+                                "POST"
+                        );
+
+                        conexao.setRequestProperty(
+                                "Content-Type",
+                                "application/json; charset=UTF-8"
+                        );
+
+                        conexao.setRequestProperty(
+                                "Accept",
+                                "application/json"
+                        );
+
+                        conexao.setDoOutput(
+                                true
+                        );
+
+                        conexao.setConnectTimeout(
+                                30000
+                        );
+
+                        conexao.setReadTimeout(
+                                180000
+                        );
+
+                        byte[] dados =
+                                pedido
+                                        .toString()
+                                        .getBytes(
+                                                StandardCharsets.UTF_8
+                                        );
+
+                        try (
+                                OutputStream saida =
+                                        conexao.getOutputStream()
+                        ) {
+
+                            saida.write(
+                                    dados
+                            );
+                        }
+
+                        int codigo =
+                                conexao.getResponseCode();
+
+                        InputStream respostaStream;
+
+                        if (
+                                codigo >= 200
+                                        && codigo < 300
+                        ) {
+
+                            respostaStream =
+                                    conexao.getInputStream();
+
+                        } else {
+
+                            respostaStream =
+                                    conexao.getErrorStream();
+                        }
+
+                        String textoResposta =
+                                lerResposta(
+                                        respostaStream
+                                );
+
+                        JSONObject resposta =
+                                new JSONObject(
+                                        textoResposta
+                                );
+
+                        boolean sucesso =
+                                resposta.optBoolean(
+                                        "success",
+                                        false
+                                );
+
+                        if (
+                                !sucesso
+                        ) {
+
+                            String erro =
+                                    resposta.optString(
+                                            "error",
+                                            "Não foi possível gerar a imagem."
+                                    );
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        adicionarMensagem(
+                                                "🖼️ Erro: "
+                                                        + erro
+                                        );
+                                    }
+                            );
+
+                            return;
+                        }
+
+                        String imagem =
+                                resposta.optString(
+                                        "imagem",
+                                        ""
+                                );
+
+                        String motor =
+                                resposta.optString(
+                                        "motor",
+                                        ""
+                                );
+
+                        runOnUiThread(
+                                () -> {
+
+                                    adicionarMensagem(
+                                            "Alex: 🖼️ Imagem gerada com sucesso."
+                                                    + (
+                                                        motor.isEmpty()
+                                                                ? ""
+                                                                : "\n🎨 Motor: "
+                                                                + motor
+                                                    )
+                                    );
+
+                                    if (
+                                            !imagem.isEmpty()
+                                    ) {
+
+                                        adicionarImagemNaTela(
+                                                imagem
+                                        );
+                                    }
+                                }
+                        );
+
+                    } catch (
+                            Exception erro
+                    ) {
+
+                        runOnUiThread(
+                                () -> {
+
+                                    adicionarMensagem(
+                                            "🖼️ Não foi possível gerar a imagem: "
+                                                    + erro.getMessage()
+                                    );
+                                }
+                        );
+
+                    } finally {
+
+                        if (
+                                conexao != null
+                        ) {
+
+                            conexao.disconnect();
+                        }
+                    }
+                }
+        );
+    }
+
+    // ============================================================
+    // GERAR VÍDEO
+    // ============================================================
+
+    private void gerarVideo(
+            String prompt,
+            int duracao
+    ) {
+
+        adicionarMensagem(
+                "Alex: 🎬 Gerando vídeo..."
+                        + "\n⏱️ Duração: "
+                        + duracao
+                        + " segundos."
+        );
+
+        executor.execute(
+                () -> {
+
+                    HttpURLConnection conexao =
+                            null;
+
+                    try {
+
+                        JSONObject pedido =
+                                new JSONObject();
+
+                        pedido.put(
+                                "prompt",
+                                prompt
+                        );
+
+                        pedido.put(
+                                "imagem",
+                                JSONObject.NULL
+                        );
+
+                        pedido.put(
+                                "duracao",
+                                duracao
+                        );
+
+                        pedido.put(
+                                "motor",
+                                "automatico"
+                        );
+
+                        URL url =
+                                new URL(
+                                        VIDEO_API_URL
+                                );
+
+                        conexao =
+                                (HttpURLConnection)
+                                        url.openConnection();
+
+                        conexao.setRequestMethod(
+                                "POST"
+                        );
+
+                        conexao.setRequestProperty(
+                                "Content-Type",
+                                "application/json; charset=UTF-8"
+                        );
+
+                        conexao.setRequestProperty(
+                                "Accept",
+                                "application/json"
+                        );
+
+                        conexao.setDoOutput(
+                                true
+                        );
+
+                        conexao.setConnectTimeout(
+                                30000
+                        );
+
+                        conexao.setReadTimeout(
+                                300000
+                        );
+
+                        byte[] dados =
+                                pedido
+                                        .toString()
+                                        .getBytes(
+                                                StandardCharsets.UTF_8
+                                        );
+
+                        try (
+                                OutputStream saida =
+                                        conexao.getOutputStream()
+                        ) {
+
+                            saida.write(
+                                    dados
+                            );
+                        }
+
+                        int codigo =
+                                conexao.getResponseCode();
+
+                        InputStream respostaStream;
+
+                        if (
+                                codigo >= 200
+                                        && codigo < 300
+                        ) {
+
+                            respostaStream =
+                                    conexao.getInputStream();
+
+                        } else {
+
+                            respostaStream =
+                                    conexao.getErrorStream();
+                        }
+
+                        String textoResposta =
+                                lerResposta(
+                                        respostaStream
+                                );
+
+                        JSONObject resposta =
+                                new JSONObject(
+                                        textoResposta
+                                );
+
+                        boolean sucesso =
+                                resposta.optBoolean(
+                                        "success",
+                                        false
+                                );
+
+                        if (
+                                !sucesso
+                        ) {
+
+                            String erro =
+                                    resposta.optString(
+                                            "erro",
+                                            resposta.optString(
+                                                    "error",
+                                                    "Não foi possível gerar o vídeo."
+                                            )
+                                    );
+
+                            runOnUiThread(
+                                    () -> {
+
+                                        adicionarMensagem(
+                                                "🎬 Erro ao gerar vídeo: "
+                                                        + erro
+                                        );
+                                    }
+                            );
+
+                            return;
+                        }
+
+                        String video =
+                                resposta.optString(
+                                        "video",
+                                        ""
+                                );
+
+                        String motor =
+                                resposta.optString(
+                                        "motor",
+                                        ""
+                                );
+
+                        String arquivo =
+                                resposta.optString(
+                                        "arquivo",
+                                        ""
+                                );
+
+                        runOnUiThread(
+                                () -> {
+
+                                    StringBuilder mensagem =
+                                            new StringBuilder();
+
+                                    mensagem.append(
+                                            "Alex: 🎬 Vídeo gerado com sucesso."
+                                    );
+
+                                    mensagem.append(
+                                            "\n⏱️ Duração: "
+                                    );
+
+                                    mensagem.append(
+                                            duracao
+                                    );
+
+                                    mensagem.append(
+                                            " segundos."
+                                    );
+
+                                    if (
+                                            !motor.isEmpty()
+                                    ) {
+
+                                        mensagem.append(
+                                                "\n🎬 Motor: "
+                                        );
+
+                                        mensagem.append(
+                                                motor
+                                        );
+                                    }
+
+                                    if (
+                                            !arquivo.isEmpty()
+                                    ) {
+
+                                        mensagem.append(
+                                                "\n📄 Arquivo: "
+                                        );
+
+                                        mensagem.append(
+                                                arquivo
+                                        );
+                                    }
+
+                                    adicionarMensagem(
+                                            mensagem.toString()
+                                    );
+
+                                    if (
+                                            !video.isEmpty()
+                                    ) {
+
+                                        adicionarBotaoVideo(
+                                                video
+                                        );
+                                    }
+                                }
+                        );
+
+                    } catch (
+                            Exception erro
+                    ) {
+
+                        runOnUiThread(
+                                () -> {
+
+                                    adicionarMensagem(
+                                            "🎬 Não foi possível gerar o vídeo: "
+                                                    + erro.getMessage()
+                                    );
+                                }
+                        );
+
+                    } finally {
+
+                        if (
+                                conexao != null
+                        ) {
+
+                            conexao.disconnect();
+                        }
+                    }
+                }
+        );
+    }
+
+    // ============================================================
+    // BOTÃO DO VÍDEO
+    // ============================================================
+
+    private void adicionarBotaoVideo(
+            String video
+    ) {
+
+        String urlVideo =
+                normalizarUrl(
+                        video
+                );
+
+        Button botao =
+                criarBotaoAcao(
+                        "🎬 Abrir vídeo"
+                );
+
+        botao.setOnClickListener(
+                v -> {
+
+                    try {
+
+                        Intent navegador =
+                                new Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(
+                                                urlVideo
+                                        )
+                                );
+
+                        startActivity(
+                                navegador
+                        );
+
+                    } catch (
+                            Exception erro
+                    ) {
+
+                        adicionarMensagem(
+                                "🎬 Não foi possível abrir o vídeo: "
+                                        + erro.getMessage()
+                        );
+                    }
+                }
+        );
+
+        adicionarBotaoAoChat(
+                botao
+        );
+    }
+
+    // ============================================================
+    // NORMALIZAR URL
+    // ============================================================
+
+    private String normalizarUrl(
+            String caminho
+    ) {
+
+        if (
+                caminho == null
+                        || caminho.trim().isEmpty()
         ) {
 
-            resultado.append(
-                    linha
-            );
+            return "";
         }
 
-        leitor.close();
+        String valor =
+                caminho.trim();
 
-        return resultado.toString();
+        if (
+                valor.startsWith(
+                        "http://"
+                )
+                        ||
+                valor.startsWith(
+                        "https://"
+                )
+        ) {
+
+            return valor;
+        }
+
+        if (
+                !valor.startsWith(
+                        "/"
+                )
+        ) {
+
+            valor =
+                    "/" + valor;
+        }
+
+        return API_BASE_URL
+                + valor;
     }
 
     // ============================================================
@@ -2110,28 +2904,9 @@ public class MainActivity extends Activity {
                     try {
 
                         String urlImagem =
-                                imagem.trim();
-
-                        if (
-                                !urlImagem.startsWith(
-                                        "http://"
-                                )
-                                        &&
-                                !urlImagem.startsWith(
-                                        "https://"
-                                )
-                        ) {
-
-                            urlImagem =
-                                    "https://ultra-ia-pro.onrender.com"
-                                            + (
-                                                urlImagem.startsWith(
-                                                        "/"
-                                                )
-                                                        ? urlImagem
-                                                        : "/" + urlImagem
-                                            );
-                        }
+                                normalizarUrl(
+                                        imagem
+                                );
 
                         URL url =
                                 new URL(
@@ -2151,7 +2926,7 @@ public class MainActivity extends Activity {
                         );
 
                         conexaoImagem.setReadTimeout(
-                                60000
+                                120000
                         );
 
                         conexaoImagem.connect();
@@ -2283,7 +3058,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // PROCESSAR PELA PONTE
+    // PONTE
     // ============================================================
 
     private void processarPelaPonte(
@@ -2385,7 +3160,7 @@ public class MainActivity extends Activity {
 
                         conexao.setRequestProperty(
                                 "Content-Type",
-                                "application/json"
+                                "application/json; charset=UTF-8"
                         );
 
                         conexao.setRequestProperty(
@@ -2402,7 +3177,7 @@ public class MainActivity extends Activity {
                         );
 
                         conexao.setReadTimeout(
-                                90000
+                                120000
                         );
 
                         byte[] dados =
@@ -2516,31 +3291,9 @@ public class MainActivity extends Activity {
                                                         try {
 
                                                             String urlDownload =
-                                                                    download;
-
-                                                            if (
-                                                                    !urlDownload
-                                                                            .startsWith(
-                                                                                    "http://"
-                                                                            )
-                                                                            &&
-                                                                    !urlDownload
-                                                                            .startsWith(
-                                                                                    "https://"
-                                                                            )
-                                                            ) {
-
-                                                                urlDownload =
-                                                                        "https://ponte-alex-v2.onrender.com"
-                                                                                + (
-                                                                                    urlDownload
-                                                                                            .startsWith(
-                                                                                                    "/"
-                                                                                            )
-                                                                                            ? urlDownload
-                                                                                            : "/" + urlDownload
-                                                                                );
-                                                            }
+                                                                    normalizarUrl(
+                                                                            download
+                                                                    );
 
                                                             Intent navegador =
                                                                     new Intent(
@@ -2604,6 +3357,8 @@ public class MainActivity extends Activity {
 
                                     adicionarMensagem(
                                             "Ponte: não foi possível conectar ao servidor."
+                                                    + "\nDetalhes: "
+                                                    + erro.getMessage()
                                     );
                                 }
                         );
@@ -2622,7 +3377,54 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // REMOVER "PENSANDO..."
+    // LER RESPOSTA HTTP
+    // ============================================================
+
+    private String lerResposta(
+            InputStream entrada
+    ) throws Exception {
+
+        if (
+                entrada == null
+        ) {
+
+            return "{\"success\":false,"
+                    + "\"resposta\":\"Resposta vazia do servidor.\"}";
+        }
+
+        StringBuilder resultado =
+                new StringBuilder();
+
+        BufferedReader leitor =
+                new BufferedReader(
+                        new InputStreamReader(
+                                entrada,
+                                StandardCharsets.UTF_8
+                        )
+                );
+
+        String linha;
+
+        while (
+                (
+                        linha =
+                                leitor.readLine()
+                )
+                        != null
+        ) {
+
+            resultado.append(
+                    linha
+            );
+        }
+
+        leitor.close();
+
+        return resultado.toString();
+    }
+
+    // ============================================================
+    // REMOVER PENSANDO
     // ============================================================
 
     private void removerMensagemPensando() {
@@ -2703,7 +3505,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ADICIONAR MENSAGEM
+    // MENSAGEM
     // ============================================================
 
     private void adicionarMensagem(
@@ -2722,15 +3524,6 @@ public class MainActivity extends Activity {
                 texto.startsWith(
                         "Você:"
                 );
-
-        boolean mensagemAlex =
-                texto.startsWith(
-                        "Alex:"
-                );
-
-        // ========================================================
-        // CONTAINER DO BALÃO
-        // ========================================================
 
         LinearLayout linha =
                 new LinearLayout(this);
@@ -2752,10 +3545,6 @@ public class MainActivity extends Activity {
                 dp(4)
         );
 
-        // ========================================================
-        // BALÃO
-        // ========================================================
-
         TextView mensagem =
                 new TextView(this);
 
@@ -2763,7 +3552,9 @@ public class MainActivity extends Activity {
                 texto;
 
         if (
-                texto.startsWith("Você:")
+                texto.startsWith(
+                        "Você:"
+                )
         ) {
 
             textoExibido =
@@ -2772,7 +3563,9 @@ public class MainActivity extends Activity {
                     ).trim();
 
         } else if (
-                texto.startsWith("Alex:")
+                texto.startsWith(
+                        "Alex:"
+                )
         ) {
 
             textoExibido =
@@ -2850,10 +3643,6 @@ public class MainActivity extends Activity {
                 fundoMensagem
         );
 
-        // ========================================================
-        // LARGURA DO BALÃO
-        // ========================================================
-
         int larguraMaxima =
                 (int) (
                         getResources()
@@ -2873,10 +3662,6 @@ public class MainActivity extends Activity {
                 parametrosMensagem
         );
 
-        // ========================================================
-        // ADICIONAR AO CHAT
-        // ========================================================
-
         mensagens.addView(
                 linha,
                 new LinearLayout.LayoutParams(
@@ -2889,7 +3674,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // BOTÃO DE AÇÃO NO CHAT
+    // BOTÃO DE AÇÃO
     // ============================================================
 
     private Button criarBotaoAcao(
@@ -2952,7 +3737,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ADICIONAR BOTÃO AO CHAT
+    // ADICIONAR BOTÃO
     // ============================================================
 
     private void adicionarBotaoAoChat(
@@ -2981,7 +3766,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // ROLAR CHAT PARA BAIXO
+    // ROLAR
     // ============================================================
 
     private void rolarChatParaBaixo() {
@@ -3001,7 +3786,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // DESTRUIR ACTIVITY
+    // DESTRUIR
     // ============================================================
 
     @Override
@@ -3013,7 +3798,7 @@ public class MainActivity extends Activity {
     }
 
     // ============================================================
-    // BOTÃO VOLTAR
+    // VOLTAR
     // ============================================================
 
     @Override
@@ -3021,4 +3806,4 @@ public class MainActivity extends Activity {
 
         super.onBackPressed();
     }
-}
+    }
