@@ -138,7 +138,7 @@ public class MainActivity extends Activity {
         );
 
         // ========================================================
-        // FUNDO DA ULTRA
+        // FUNDO BASE DA ULTRA
         // ========================================================
 
         ImageView fundo =
@@ -154,6 +154,37 @@ public class MainActivity extends Activity {
 
         raiz.addView(
                 fundo,
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                )
+        );
+
+        // ========================================================
+        // CIDADE DA ULTRA
+        // ========================================================
+        // A cidade fica em uma camada separada.
+        // O arquivo cidade_ultra.xml controla a aparência
+        // e utiliza cidade_ultra_imagem.png.
+        // ========================================================
+
+        ImageView cidade =
+                new ImageView(this);
+
+        cidade.setScaleType(
+                ImageView.ScaleType.CENTER_CROP
+        );
+
+        cidade.setImageResource(
+                R.drawable.cidade_ultra
+        );
+
+        cidade.setAlpha(
+                1.0f
+        );
+
+        raiz.addView(
+                cidade,
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
