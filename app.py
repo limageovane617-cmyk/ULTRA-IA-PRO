@@ -2406,35 +2406,91 @@ if pergunta:
                     )
 
 
-                if (
+                # ====================================================
+                # 🔎 VALIDAR RESPOSTA DO GERENCIADOR
+                # ====================================================
 
-                    isinstance(
-                        resultado,
-                        dict
+                if resultado is None:
+
+                    st.error(
+                        "❌ O gerenciador de vídeo "
+                        "não retornou nenhuma resposta."
                     )
 
-                    and resultado.get(
-                        "sucesso"
-                    )
+                    st.stop()
 
-                    and resultado.get(
-                        "video"
-                    )
+
+                if not isinstance(
+                    resultado,
+                    dict
                 ):
 
-                    caminho = (
-                        resultado["video"]
+                    st.error(
+                        "❌ O gerenciador de vídeo "
+                        "retornou uma resposta inválida."
+                    )
+
+                    st.code(
+                        str(resultado)
+                    )
+
+                    st.stop()
+
+
+                # ====================================================
+                # 🎬 VÍDEO GERADO
+                # ====================================================
+
+                caminho = resultado.get(
+                    "video"
+                )
+
+                motor_video = resultado.get(
+                    "motor",
+                    "motor automático"
+                )
+
+                sucesso = resultado.get(
+                    "sucesso",
+                    False
+                )
+
+                erro = resultado.get(
+                    "erro"
+                )
+
+
+                if sucesso and caminho:
+
+                    caminho = str(
+                        caminho
                     )
 
 
-                    motor_video = resultado.get(
-                        "motor",
-                        "motor automatico"
-                    )
+                    # ================================================
+                    # 📁 CONFIRMAR QUE O ARQUIVO EXISTE
+                    # ================================================
+
+                    if not os.path.exists(
+                        caminho
+                    ):
+
+                        st.error(
+                            "❌ O motor informou que "
+                            "criou o vídeo, mas o "
+                            "arquivo não existe."
+                        )
+
+                        st.code(
+                            caminho
+                        )
+
+                        st.stop()
 
 
                     st.success(
-                        f"🎬 Video gerado com {motor_video}"
+                        "🎉 Vídeo gerado com sucesso!\n\n"
+                        f"🎬 Motor: {motor_video}"
                     )
 
 
@@ -2448,8 +2504,10 @@ if pergunta:
                         "role":
                             "assistant",
 
-                        "content":
-                            "🎬 Vídeo gerado com sucesso.",
+                        "content": (
+                            "🎬 Vídeo criado com "
+                            f"sucesso usando {motor_video}."
+                        ),
 
                         "tipo":
                             "video",
@@ -2461,46 +2519,52 @@ if pergunta:
 
                 else:
 
+                    # ================================================
+                    # ❌ NENHUM MOTOR CONSEGUIU GERAR
+                    # ================================================
+
                     st.error(
-                        "❌ Não foi possível gerar o vídeo."
+                        "❌ Nenhum vídeo foi gerado."
                     )
 
 
-                    if isinstance(
-                        resultado,
-                        dict
-                    ):
+                    if erro:
 
-                        st.code(
-                            str(
-                                resultado.get(
-                                    "erro",
-                                    resultado
-                                )
-                            )
+                        st.warning(
+                            "Detalhes do erro:"
                         )
 
-                    else:
-
                         st.code(
-                            str(resultado)
+                            str(erro)
                         )
 
 
-        except Exception as erro:
+                    # ================================================
+                    # 🔎 DIAGNÓSTICO COMPLETO
+                    # ================================================
+
+                    st.markdown(
+                        "### 🔎 Resposta do gerenciador"
+                    )
+
+                    st.json(
+                        resultado
+                    )
+
+
+        except Exception as erro_video:
 
             st.error(
-                "❌ Erro no gerador de vídeo."
+                "❌ O gerador de vídeo "
+                "encontrou um erro."
             )
 
             st.code(
-                str(erro)
+                str(erro_video)
             )
 
 
         st.stop()
-
-
     # ========================================================
     # 🧠 MEMORIZAR
     # ========================================================
