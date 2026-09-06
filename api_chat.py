@@ -22,7 +22,15 @@ from video import (
 
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
-app = FastAPI(title="Alex IA Ultra API")
+
+# ============================================================
+# ALEX IA ULTRA API
+# ============================================================
+
+app = FastAPI(
+    title="Alex IA Ultra API"
+)
+
 
 # ============================================================
 # CORS
@@ -36,6 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ============================================================
 # CONFIGURACAO DA PONTE
 # ============================================================
@@ -45,22 +54,38 @@ PONTE_API_URL = os.environ.get(
     "https://ponte-alex-v2.onrender.com/api/ponte/v2/processar",
 ).rstrip("/")
 
+
 PONTE_API_SECRET = (
     os.environ.get("PONTE_API_SECRET")
     or os.environ.get("PONTE_API_SECRETO")
     or os.environ.get("ALEX_BRIDGE_SECRET")
 )
 
+
 # ============================================================
 # CONFIGURACAO DOS ARQUIVOS GERADOS
 # ============================================================
 
-PASTA_IMAGENS = Path("/tmp/alex_ia_ultra_imagens")
+PASTA_IMAGENS = Path(
+    "/tmp/alex_ia_ultra_imagens"
+)
+
+PASTA_VIDEOS = Path(
+    "/tmp/alex_ia_ultra_videos"
+)
+
 
 PASTA_IMAGENS.mkdir(
     parents=True,
     exist_ok=True,
 )
+
+
+PASTA_VIDEOS.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
 
 # ============================================================
 # MODELOS
@@ -132,6 +157,21 @@ def criar_url_imagem(caminho_imagem):
 
 
 # ============================================================
+# URL PUBLICA DO VIDEO
+# ============================================================
+
+def criar_url_video(caminho_video):
+    if not caminho_video:
+        return None
+
+    nome = Path(
+        str(caminho_video)
+    ).name
+
+    return f"/api/videos/{nome}"
+
+
+# ============================================================
 # ROTAS BASICAS
 # ============================================================
 
@@ -193,6 +233,37 @@ def servir_imagem(filename: str):
 
 
 # ============================================================
+# SERVIR VIDEOS GERADOS
+# ============================================================
+
+@app.get("/api/videos/{filename}")
+def servir_video(filename: str):
+    nome = Path(
+        filename
+    ).name
+
+    caminho = PASTA_VIDEOS / nome
+
+    if not caminho.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Video nao encontrado.",
+        )
+
+    if not caminho.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Video invalido.",
+        )
+
+    return FileResponse(
+        caminho,
+        media_type="video/mp4",
+        filename=nome,
+    )
+
+
+# ============================================================
 # CHAT - GEMINI
 # ============================================================
 
@@ -209,7 +280,9 @@ def chat(pedido: PedidoChat):
             ),
         }
 
-    partes = [SYSTEM_PROMPT]
+    partes = [
+        SYSTEM_PROMPT
+    ]
 
     if pedido.historico:
         partes.append(
@@ -239,7 +312,9 @@ def chat(pedido: PedidoChat):
         pedido.pergunta
     )
 
-    instrucao = "\n".join(partes)
+    instrucao = "\n".join(
+        partes
+    )
 
     try:
         resultado = cliente.models.generate_content(
@@ -293,12 +368,16 @@ def chat(pedido: PedidoChat):
                 prompt_imagem = pedido.pergunta
 
             try:
-                caminho_imagem = gerar_imagem_pixazo(
-                    prompt_imagem
+                caminho_imagem = (
+                    gerar_imagem_pixazo(
+                        prompt_imagem
+                    )
                 )
 
-                url_imagem = criar_url_imagem(
-                    caminho_imagem
+                url_imagem = (
+                    criar_url_imagem(
+                        caminho_imagem
+                    )
                 )
 
                 return {
@@ -309,7 +388,9 @@ def chat(pedido: PedidoChat):
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
                     "arquivo_imagem": (
-                        Path(caminho_imagem).name
+                        Path(
+                            caminho_imagem
+                        ).name
                     ),
                     "prompt": prompt_imagem,
                     "motor": (
@@ -327,7 +408,9 @@ def chat(pedido: PedidoChat):
                         "uma imagem, mas ocorreu "
                         "um erro ao gerar."
                     ),
-                    "erro": str(erro_imagem),
+                    "erro": str(
+                        erro_imagem
+                    ),
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
                 }
@@ -397,29 +480,43 @@ def video(pedido: PedidoVideo):
     try:
         imagem_bytes = None
 
+        # ====================================================
+        # RECEBER IMAGEM BASE64
+        # ====================================================
+
         if pedido.imagem:
             dados_imagem = pedido.imagem
 
-            # Aceita tambem:
+            # Aceita:
             # data:image/png;base64,XXXXXX
 
             if "," in dados_imagem:
-                dados_imagem = dados_imagem.split(
-                    ",",
-                    1,
-                )[1]
+                dados_imagem = (
+                    dados_imagem.split(
+                        ",",
+                        1,
+                    )[1]
+                )
 
             try:
-                imagem_bytes = base64.b64decode(
-                    dados_imagem,
-                    validate=True,
+                imagem_bytes = (
+                    base64.b64decode(
+                        dados_imagem,
+                        validate=True,
+                    )
                 )
 
             except Exception:
                 raise HTTPException(
                     status_code=400,
-                    detail="Imagem em base64 invalida.",
+                    detail=(
+                        "Imagem em base64 invalida."
+                    ),
                 )
+
+        # ====================================================
+        # GERAR VIDEO A PARTIR DE IMAGEM
+        # ====================================================
 
         if imagem_bytes:
             resultado = gerar_video_imagem(
@@ -431,6 +528,10 @@ def video(pedido: PedidoVideo):
                 ),
             )
 
+        # ====================================================
+        # GERAR VIDEO A PARTIR DE TEXTO
+        # ====================================================
+
         else:
             resultado = gerar_video_texto(
                 prompt=pedido.prompt,
@@ -439,13 +540,25 @@ def video(pedido: PedidoVideo):
                 ),
             )
 
-        if not resultado.get("sucesso"):
+        # ====================================================
+        # VERIFICAR RESULTADO
+        # ====================================================
+
+        if not resultado.get(
+            "sucesso"
+        ):
             return {
                 "success": False,
                 "sucesso": False,
-                "motor": resultado.get("motor"),
-                "erro": resultado.get("erro"),
+                "motor": resultado.get(
+                    "motor"
+                ),
+                "erro": resultado.get(
+                    "erro"
+                ),
                 "video": None,
+                "video_url": None,
+                "arquivo": None,
             }
 
         caminho_video = (
@@ -457,26 +570,134 @@ def video(pedido: PedidoVideo):
             return {
                 "success": False,
                 "sucesso": False,
-                "motor": resultado.get("motor"),
+                "motor": resultado.get(
+                    "motor"
+                ),
                 "erro": (
                     "O video foi processado, "
-                    "mas nenhum arquivo foi retornado."
+                    "mas nenhum arquivo foi "
+                    "retornado."
                 ),
                 "video": None,
+                "video_url": None,
+                "arquivo": None,
             }
 
-        nome_video = Path(
-            caminho_video
-        ).name
+        # ====================================================
+        # NORMALIZAR CAMINHO
+        # ====================================================
+
+        caminho_video = Path(
+            str(caminho_video)
+        )
+
+        nome_video = (
+            caminho_video.name
+        )
+
+        # ====================================================
+        # GARANTIR QUE O VIDEO FIQUE NA
+        # PASTA PUBLICA DA API
+        # ====================================================
+
+        destino_video = (
+            PASTA_VIDEOS
+            / nome_video
+        )
+
+        if (
+            caminho_video.resolve()
+            != destino_video.resolve()
+        ):
+            try:
+                if caminho_video.exists():
+                    destino_video.write_bytes(
+                        caminho_video.read_bytes()
+                    )
+
+            except Exception as erro_copia:
+                return {
+                    "success": False,
+                    "sucesso": False,
+                    "motor": resultado.get(
+                        "motor"
+                    ),
+                    "erro": (
+                        "O video foi gerado, "
+                        "mas nao foi possivel "
+                        "prepara-lo para o APK."
+                    ),
+                    "detalhes": str(
+                        erro_copia
+                    ),
+                    "video": None,
+                    "video_url": None,
+                    "arquivo": None,
+                }
+
+        # ====================================================
+        # VERIFICAR ARQUIVO FINAL
+        # ====================================================
+
+        if not destino_video.exists():
+            return {
+                "success": False,
+                "sucesso": False,
+                "motor": resultado.get(
+                    "motor"
+                ),
+                "erro": (
+                    "O arquivo de video "
+                    "nao foi encontrado "
+                    "apos a geracao."
+                ),
+                "video": None,
+                "video_url": None,
+                "arquivo": nome_video,
+            }
+
+        if not destino_video.is_file():
+            return {
+                "success": False,
+                "sucesso": False,
+                "motor": resultado.get(
+                    "motor"
+                ),
+                "erro": (
+                    "O caminho do video "
+                    "nao corresponde a "
+                    "um arquivo valido."
+                ),
+                "video": None,
+                "video_url": None,
+                "arquivo": nome_video,
+            }
+
+        # ====================================================
+        # URL RELATIVA DA API
+        # ====================================================
+
+        url_video = criar_url_video(
+            destino_video
+        )
+
+        # ====================================================
+        # RESPOSTA COMPATIVEL COM O APK
+        # ====================================================
 
         return {
             "success": True,
             "sucesso": True,
-            "motor": resultado.get("motor"),
-            "video": (
-                f"/api/videos/{nome_video}"
+            "motor": resultado.get(
+                "motor"
             ),
+            "video": url_video,
+            "video_url": url_video,
             "arquivo": nome_video,
+            "arquivo_video": nome_video,
+            "duracao": (
+                pedido.duracao or 5
+            ),
             "erro": None,
         }
 
@@ -490,7 +711,48 @@ def video(pedido: PedidoVideo):
             "motor": None,
             "erro": str(erro),
             "video": None,
+            "video_url": None,
+            "arquivo": None,
         }
+
+
+# ============================================================
+# VIDEO - DOWNLOAD / ABRIR NO APK
+# ============================================================
+
+@app.get("/api/videos/{filename}")
+def download_video(filename: str):
+    nome = Path(
+        filename
+    ).name
+
+    caminho = PASTA_VIDEOS / nome
+
+    if not caminho.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Video nao encontrado."
+            ),
+        )
+
+    if not caminho.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Arquivo de video invalido."
+            ),
+        )
+
+    return FileResponse(
+        path=caminho,
+        media_type="video/mp4",
+        filename=nome,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600",
+        },
+    )
 
 
 # ============================================================
@@ -498,7 +760,9 @@ def video(pedido: PedidoVideo):
 # ============================================================
 
 @app.post("/api/ponte/processar")
-def processar_ponte(pedido: PedidoPonte):
+def processar_ponte(
+    pedido: PedidoPonte
+):
     if not PONTE_API_SECRET:
         return {
             "success": False,
@@ -541,8 +805,12 @@ def processar_ponte(pedido: PedidoPonte):
                     "A Ponte retornou uma "
                     "resposta invalida."
                 ),
-                "status_code": resposta.status_code,
-                "resposta": resposta.text[:2000],
+                "status_code": (
+                    resposta.status_code
+                ),
+                "resposta": (
+                    resposta.text[:2000]
+                ),
             }
 
         return dados
@@ -574,4 +842,9 @@ def processar_ponte(pedido: PedidoPonte):
                 "a Ponte Alex v2."
             ),
             "detalhes": str(erro),
-    }
+        }
+
+
+# ============================================================
+# FIM DA API
+# ============================================================
