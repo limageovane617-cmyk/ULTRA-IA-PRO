@@ -1909,13 +1909,11 @@ def gerar_video_texto(
     **kwargs
 ) -> dict:
 
-    return gerar_ltx_huggingface(
+    return gerar_video_automatico(
 
-        montar_prompt(
-            prompt
-        ),
+        prompt=prompt,
 
-        duration=duracao,
+        duracao=duracao,
 
         **kwargs
     )
