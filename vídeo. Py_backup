@@ -2,20 +2,25 @@
 Alex IA Ultra — Gerenciador de Vídeo
 
 Motores:
+
 1. Wan 2.2 14B FP8 — R3GM
 2. Wan 2.2 14B I2V — Upsampler
 3. LTX-2.3 — Hugging Face
 4. Magic Hour — LTX-2.3
 
 Sistema:
+
+- Text-to-Video
 - Image-to-Video
 - Fallback automático
 - Detecção de quota ZeroGPU
 - Pausa automática de motores indisponíveis
-- Compatível com app.py
-"""
+- Token Hugging Face
+- Token Magic Hour
+- Compatibilidade com app.py
+  """
 
-from __future__ import annotations
+from future import annotations
 
 import os
 import re
@@ -28,15 +33,16 @@ import requests
 import streamlit as st
 
 try:
-    from gradio_client import Client, handle_file
+from gradio_client import Client, handle_file
 except Exception:
-    Client = None
-    handle_file = None
+Client = None
+handle_file = None
 
+============================================================
 
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
+CONFIGURAÇÃO
+
+============================================================
 
 NOME_MODULO = "Alex IA Ultra — Gerenciador de Vídeo"
 
@@ -45,68 +51,60 @@ DURACAO_PADRAO = 5.0
 R3GM_SPACE = "r3gm/wan2-2-fp8da-aoti-preview"
 
 UPSAMPLER_SPACE = (
-    "Upsampler/wan-2-2-14b-image-to-video"
+"Upsampler/wan-2-2-14b-image-to-video"
 )
 
 LTX_HF_SPACE = (
-    "https://lightricks-ltx-2-3.hf.space"
+"https://lightricks-ltx-2-3.hf.space"
 )
 
 MAGIC_HOUR_BASE_URL = (
-    "https://api.magichour.ai/v1"
+"https://api.magichour.ai/v1"
 )
 
 MAGIC_HOUR_MODELO = "ltx-2.3"
 MAGIC_HOUR_RESOLUCAO = "480p"
 MAGIC_HOUR_DURACAO = 5
 
-
 CAMERAS = [
-    "Sony FX5",
-    "Sony FX6",
-    "Canon EOS C80",
-    "ARRI Alexa Mini LF",
+"Sony FX5",
+"Sony FX6",
+"Canon EOS C80",
+"ARRI Alexa Mini LF",
 ]
-
 
 PROPORCOES = [
-    "1:1",
-    "16:9",
-    "9:16",
+"1:1",
+"16:9",
+"9:16",
 ]
-
 
 MOTORES_VIDEO = [
-    "Wan 2.2 — R3GM",
-    "Wan 2.2 — Upsampler",
-    "LTX-2.3 — Hugging Face",
-    "Magic Hour — LTX-2.3",
+"Wan 2.2 — R3GM",
+"Wan 2.2 — Upsampler",
+"LTX-2.3 — Hugging Face",
+"Magic Hour — LTX-2.3",
 ]
 
+============================================================
 
-# ============================================================
-# PASTA DE SAÍDA
-# ============================================================
+PASTA DE SAÍDA
+
+============================================================
 
 PASTA = Path("videos_gerados")
 
 PASTA.mkdir(
-    parents=True,
-    exist_ok=True
+parents=True,
+exist_ok=True
 )
 
+============================================================
 
-# ============================================================
-# CONTROLE DE MOTORES
-# ============================================================
+CONTROLE DE MOTORES
 
-# Quando um motor dá erro de quota, ele fica pausado.
-#
-# Isso evita que a Ultra tente o mesmo motor novamente
-# em todas as solicitações.
-#
-# O tempo pode ser ajustado.
-#
+============================================================
+
 PAUSA_PADRAO_MINUTOS = 30
 
 PAUSA_QUOTA_MINUTOS = 30
@@ -115,244 +113,276 @@ PAUSA_AUTORIZACAO_MINUTOS = 60
 
 PAUSA_ERRO_TEMPORARIO_MINUTOS = 10
 
-
 def _estado_motores():
 
-    if "video_motores_bloqueados" not in st.session_state:
+if "video_motores_bloqueados" not in st.session_state:
 
-        st.session_state.video_motores_bloqueados = {}
+    st.session_state.video_motores_bloqueados = {}
 
-    return st.session_state.video_motores_bloqueados
-
+return st.session_state.video_motores_bloqueados
 
 def _pausar_motor(
-    nome: str,
-    minutos: int,
-    motivo: str
+nome: str,
+minutos: int,
+motivo: str
 ):
 
-    estado = _estado_motores()
+estado = _estado_motores()
 
-    estado[nome] = {
-        "ate": time.time() + (
-            minutos * 60
-        ),
-        "motivo": motivo,
-    }
-
+estado[nome] = {
+    "ate": time.time() + (
+        minutos * 60
+    ),
+    "motivo": str(motivo),
+}
 
 def _motor_pausado(nome: str) -> bool:
 
-    estado = _estado_motores()
+estado = _estado_motores()
 
-    dados = estado.get(nome)
+dados = estado.get(nome)
 
-    if not dados:
-        return False
+if not dados:
 
-    ate = dados.get("ate", 0)
+    return False
 
-    if time.time() >= ate:
+ate = dados.get(
+    "ate",
+    0
+)
 
-        estado.pop(
-            nome,
-            None
-        )
+if time.time() >= ate:
 
-        return False
+    estado.pop(
+        nome,
+        None
+    )
 
-    return True
+    return False
 
+return True
 
 def _motivo_pausa(nome: str) -> str:
 
-    estado = _estado_motores()
+estado = _estado_motores()
 
-    dados = estado.get(nome)
+dados = estado.get(nome)
 
-    if not dados:
-        return ""
+if not dados:
 
-    return str(
-        dados.get(
-            "motivo",
-            ""
-        )
+    return ""
+
+return str(
+    dados.get(
+        "motivo",
+        ""
     )
-
+)
 
 def _tempo_restante(nome: str) -> int:
 
-    estado = _estado_motores()
+estado = _estado_motores()
 
-    dados = estado.get(nome)
+dados = estado.get(nome)
 
-    if not dados:
-        return 0
+if not dados:
 
-    restante = (
-        dados.get("ate", 0)
-        - time.time()
+    return 0
+
+restante = (
+    dados.get(
+        "ate",
+        0
     )
+    -
+    time.time()
+)
 
-    return max(
-        0,
-        int(restante)
-    )
+return max(
+    0,
+    int(restante)
+)
 
+============================================================
 
-# ============================================================
-# SECRETS
-# ============================================================
+SECRETS
+
+============================================================
 
 def _secret(nome: str) -> str:
 
-    try:
+try:
 
-        valor = st.secrets.get(
-            nome,
-            ""
-        )
+    valor = st.secrets.get(
+        nome,
+        ""
+    )
 
-    except Exception:
+except Exception:
 
-        valor = ""
+    valor = ""
 
-    if not valor:
+if not valor:
 
-        valor = os.environ.get(
-            nome,
-            ""
-        )
+    valor = os.environ.get(
+        nome,
+        ""
+    )
 
-    return str(
-        valor or ""
-    ).strip()
-
+return str(
+    valor or ""
+).strip()
 
 def obter_api_key_magichour() -> str:
 
-    return _secret(
-        "MAGIC_HOUR_API_KEY"
-    )
-
+return _secret(
+    "MAGIC_HOUR_API_KEY"
+)
 
 def obter_token_huggingface() -> str:
 
-    return (
-        _secret("HF_TOKEN")
-        or _secret("HUGGINGFACE_TOKEN")
-    )
-
+return (
+    _secret("HF_TOKEN")
+    or
+    _secret("HUGGINGFACE_TOKEN")
+)
 
 def obter_token_replicate() -> str:
 
-    return _secret(
-        "REPLICATE_API_TOKEN"
-    )
-
+return _secret(
+    "REPLICATE_API_TOKEN"
+)
 
 def headers_magichour() -> dict:
 
-    chave = (
-        obter_api_key_magichour()
+chave = (
+    obter_api_key_magichour()
+)
+
+if not chave:
+
+    raise RuntimeError(
+        "MAGIC_HOUR_API_KEY não foi encontrada."
     )
 
-    if not chave:
+return {
+    "Authorization":
+        f"Bearer {chave}",
 
-        raise RuntimeError(
-            "MAGIC_HOUR_API_KEY não foi encontrada."
-        )
+    "Accept":
+        "application/json",
 
-    return {
-        "Authorization":
-            f"Bearer {chave}",
+    "Content-Type":
+        "application/json",
+}
 
-        "Accept":
-            "application/json",
+============================================================
 
-        "Content-Type":
-            "application/json",
-    }
+UTILIDADES
 
-
-# ============================================================
-# UTILIDADES
-# ============================================================
+============================================================
 
 def _nome_saida(
-    prefixo: str
+prefixo: str
 ) -> Path:
 
-    return PASTA / (
-        f"{prefixo}_"
-        f"{int(time.time() * 1000)}.mp4"
-    )
-
+return PASTA / (
+    f"{prefixo}_"
+    f"{int(time.time() * 1000)}.mp4"
+)
 
 def _extensao_imagem(
-    nome: str
+nome: str
 ) -> str:
 
-    ext = (
-        Path(nome)
-        .suffix
-        .lower()
-    )
+extensao = (
+    Path(nome)
+    .suffix
+    .lower()
+)
 
-    if ext not in [
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".webp"
-    ]:
+if extensao not in (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp"
+):
 
-        return ".jpg"
+    return ".png"
 
-    return ext
-
+return extensao
 
 def _salvar_imagem_temp(
-    imagem_bytes: bytes,
-    nome: str,
-    prefixo: str
+imagem_bytes: bytes,
+nome: str,
+prefixo: str
 ) -> Path:
 
-    extensao = _extensao_imagem(
-        nome
+if not imagem_bytes:
+
+    raise ValueError(
+        "Imagem vazia."
     )
 
-    caminho = (
-        PASTA
-        /
-        (
-            f"{prefixo}_"
-            f"{int(time.time() * 1000)}"
-            f"{extensao}"
-        )
+extensao = _extensao_imagem(
+    nome
+)
+
+caminho = (
+    PASTA
+    /
+    (
+        f"{prefixo}_"
+        f"{int(time.time() * 1000)}"
+        f"{extensao}"
+    )
+)
+
+caminho.write_bytes(
+    imagem_bytes
+)
+
+return caminho
+
+def _duracao_segura(
+valor: float
+) -> float:
+
+try:
+
+    valor = float(
+        valor
     )
 
-    caminho.write_bytes(
-        imagem_bytes
+except Exception:
+
+    valor = DURACAO_PADRAO
+
+return max(
+    1.0,
+    min(
+        valor,
+        5.0
     )
+)
 
-    return caminho
+============================================================
 
+PROMPT
 
-# ============================================================
-# PROMPT
-# ============================================================
+============================================================
 
 def montar_prompt(
-    movimento: str,
-    camera: str = "Sony FX6"
+movimento: str,
+camera: str = "Sony FX6"
 ) -> str:
 
-    movimento = (
-        movimento or ""
-    ).strip()
+movimento = (
+    movimento or ""
+).strip()
 
-    return f"""
+return f"""
+
 Animate the provided reference image into a realistic
 cinematic image-to-video sequence.
 
@@ -364,9 +394,10 @@ CAMERA:
 
 CHARACTER CONSISTENCY IS EXTREMELY IMPORTANT.
 
-Keep exactly the same person/character from the input image.
+Keep exactly the same person or character from the input image.
 
 Preserve:
+
 - exact face
 - facial identity
 - hairstyle
@@ -379,9 +410,20 @@ Preserve:
 - character identity
 - environment whenever possible
 
-The character must remain the same throughout the entire clip.
+The character must remain consistent throughout the clip.
+
+Only animate the requested movement.
+
+The movement must be smooth, natural and physically plausible.
+
+Maintain temporal consistency from the first frame to the last frame.
+
+Use realistic cinematic lighting and natural motion.
+
+Camera movement should be subtle and cinematic.
 
 Do NOT:
+
 - create another person
 - change the face
 - change the hairstyle
@@ -392,697 +434,693 @@ Do NOT:
 - change the character identity
 - add another person
 
-Only animate the requested movement.
-
-The movement should be smooth, natural and physically plausible.
-
-Maintain temporal consistency from the first frame to the last frame.
-
-Use realistic cinematic lighting and natural motion.
-
-Camera movement:
-subtle and cinematic.
-
 Do not add subtitles.
 Do not add text.
 Do not add logos.
 Do not add watermarks.
 """.strip()
 
-
 def montar_negative_prompt() -> str:
 
-    return (
-        "static image, frozen character, "
-        "blurry, low quality, distorted face, "
-        "different person, different face, "
-        "different clothes, changed hairstyle, "
-        "duplicate person, duplicate body, "
-        "extra person, extra arms, extra legs, "
-        "extra fingers, deformed hands, "
-        "bad anatomy, warped face, "
-        "flickering, morphing, identity change, "
-        "text, subtitles, watermark, logo"
-    )
+return (
+    "static image, frozen character, "
+    "blurry, low quality, distorted face, "
+    "different person, different face, "
+    "different clothes, changed hairstyle, "
+    "duplicate person, duplicate body, "
+    "extra person, extra arms, extra legs, "
+    "extra fingers, deformed hands, "
+    "bad anatomy, warped face, "
+    "flickering, morphing, identity change, "
+    "text, subtitles, watermark, logo"
+)
 
+============================================================
 
-# ============================================================
-# EXTRAIR VÍDEO
-# ============================================================
+EXTRAIR VÍDEO
+
+============================================================
 
 def _extrair_video_gradio(
-    resultado: Any
+resultado: Any
 ) -> Optional[str]:
 
-    if resultado is None:
-
-        return None
-
-    if isinstance(
-        resultado,
-        str
-    ):
-
-        valor = resultado.strip()
-
-        if not valor:
-
-            return None
-
-        if (
-            valor.startswith(
-                "http://"
-            )
-            or
-            valor.startswith(
-                "https://"
-            )
-            or
-            valor.lower().endswith(
-                ".mp4"
-            )
-        ):
-
-            return valor
-
-        return None
-
-    if isinstance(
-        resultado,
-        dict
-    ):
-
-        for chave in [
-            "video",
-            "output",
-            "path",
-            "url",
-            "video_path",
-            "file",
-            "file_path"
-        ]:
-
-            valor = resultado.get(
-                chave
-            )
-
-            encontrado = (
-                _extrair_video_gradio(
-                    valor
-                )
-            )
-
-            if encontrado:
-
-                return encontrado
-
-        return None
-
-    if isinstance(
-        resultado,
-        (list, tuple)
-    ):
-
-        for item in resultado:
-
-            encontrado = (
-                _extrair_video_gradio(
-                    item
-                )
-            )
-
-            if encontrado:
-
-                return encontrado
+if resultado is None:
 
     return None
 
+if isinstance(
+    resultado,
+    str
+):
 
-# ============================================================
-# SALVAR VÍDEO
-# ============================================================
+    valor = resultado.strip()
 
-def _salvar_video_gradio(
-    origem: str,
-    destino: Path
-) -> str:
-
-    if not origem:
-
-        raise RuntimeError(
-            "Origem do vídeo está vazia."
-        )
-
-    origem = str(
-        origem
-    )
-
-    if Path(origem).exists():
-
-        destino.write_bytes(
-            Path(origem).read_bytes()
-        )
-
-    elif origem.startswith(
-        (
-            "http://",
-            "https://"
-        )
-    ):
-
-        resposta = requests.get(
-            origem,
-            timeout=300
-        )
-
-        resposta.raise_for_status()
-
-        destino.write_bytes(
-            resposta.content
-        )
-
-    else:
-
-        raise RuntimeError(
-            f"Vídeo não acessível: {origem}"
-        )
-
-    if (
-        not destino.exists()
-        or destino.stat().st_size <= 0
-    ):
-
-        raise RuntimeError(
-            "O vídeo retornado está vazio."
-        )
-
-    return str(
-        destino
-    )
-
-
-# ============================================================
-# DETECTAR QUOTA
-# ============================================================
-
-def _erro_e_quota(
-    erro: Exception | str
-) -> bool:
-
-    texto = str(
-        erro
-    ).lower()
-
-    palavras = [
-        "zerogpu",
-        "quota",
-        "exceeded",
-        "rate limit",
-        "too many requests",
-        "try again in",
-        "requested vs.",
-        "daily limit",
-    ]
-
-    return any(
-        palavra in texto
-        for palavra in palavras
-    )
-
-
-def _extrair_horas_quota(
-    texto: str
-) -> Optional[int]:
-
-    texto = str(
-        texto
-    )
-
-    encontrados = re.findall(
-        r"try again in\s+(\d+):(\d+):(\d+)",
-        texto,
-        flags=re.IGNORECASE
-    )
-
-    if not encontrados:
+    if not valor:
 
         return None
 
-    horas, minutos, segundos = (
-        encontrados[0]
-    )
-
-    total_segundos = (
-        int(horas) * 3600
-        +
-        int(minutos) * 60
-        +
-        int(segundos)
-    )
-
-    return max(
-        1,
-        int(
-            total_segundos / 60
+    if (
+        valor.startswith(
+            "http://"
         )
-        + 1
-    )
+        or
+        valor.startswith(
+            "https://"
+        )
+        or
+        valor.lower().endswith(
+            ".mp4"
+        )
+    ):
 
+        return valor
 
-def _registrar_erro_motor(
-    nome: str,
-    erro: Exception | str
+    return None
+
+if isinstance(
+    resultado,
+    dict
 ):
 
-    texto = str(
+    for chave in (
+        "video",
+        "output",
+        "path",
+        "url",
+        "video_path",
+        "file",
+        "file_path",
+        "value"
+    ):
+
+        if chave not in resultado:
+
+            continue
+
+        encontrado = (
+            _extrair_video_gradio(
+                resultado.get(
+                    chave
+                )
+            )
+        )
+
+        if encontrado:
+
+            return encontrado
+
+    return None
+
+if isinstance(
+    resultado,
+    (list, tuple)
+):
+
+    for item in resultado:
+
+        encontrado = (
+            _extrair_video_gradio(
+                item
+            )
+        )
+
+        if encontrado:
+
+            return encontrado
+
+return None
+
+============================================================
+
+SALVAR VÍDEO
+
+============================================================
+
+def _salvar_video_gradio(
+origem: str,
+destino: Path
+) -> str:
+
+if not origem:
+
+    raise RuntimeError(
+        "Origem do vídeo está vazia."
+    )
+
+origem = str(
+    origem
+)
+
+if Path(origem).exists():
+
+    destino.write_bytes(
+        Path(origem).read_bytes()
+    )
+
+elif origem.startswith(
+    (
+        "http://",
+        "https://"
+    )
+):
+
+    resposta = requests.get(
+        origem,
+        timeout=300
+    )
+
+    resposta.raise_for_status()
+
+    destino.write_bytes(
+        resposta.content
+    )
+
+else:
+
+    raise RuntimeError(
+        f"Vídeo não acessível: {origem}"
+    )
+
+if (
+    not destino.exists()
+    or
+    destino.stat().st_size <= 0
+):
+
+    raise RuntimeError(
+        "O vídeo retornado está vazio."
+    )
+
+return str(
+    destino
+)
+
+============================================================
+
+DETECÇÃO DE QUOTA
+
+============================================================
+
+def _erro_e_quota(
+erro: Exception | str
+) -> bool:
+
+texto = str(
+    erro
+).lower()
+
+palavras = (
+    "zerogpu",
+    "quota",
+    "exceeded",
+    "rate limit",
+    "too many requests",
+    "try again in",
+    "requested vs.",
+    "daily limit",
+    "zero gpu"
+)
+
+return any(
+    palavra in texto
+    for palavra in palavras
+)
+
+def _extrair_tempo_quota(
+texto: str
+) -> Optional[int]:
+
+encontrados = re.findall(
+    r"try again in\s+(\d+):(\d+):(\d+)",
+    str(texto),
+    flags=re.IGNORECASE
+)
+
+if not encontrados:
+
+    return None
+
+horas, minutos, segundos = (
+    encontrados[0]
+)
+
+total = (
+    int(horas) * 3600
+    +
+    int(minutos) * 60
+    +
+    int(segundos)
+)
+
+return max(
+    1,
+    (total // 60) + 1
+)
+
+def _registrar_erro_motor(
+nome: str,
+erro: Exception | str
+):
+
+texto = str(
+    erro
+)
+
+texto_lower = texto.lower()
+
+if _erro_e_quota(
+    texto
+):
+
+    minutos = (
+        _extrair_tempo_quota(
+            texto
+        )
+    )
+
+    if minutos is None:
+
+        minutos = (
+            PAUSA_QUOTA_MINUTOS
+        )
+
+    _pausar_motor(
+        nome,
+        minutos,
+        texto
+    )
+
+    return
+
+if (
+    "401" in texto_lower
+    or
+    "unauthorized" in texto_lower
+    or
+    "authentication" in texto_lower
+    or
+    "api key" in texto_lower
+    or
+    "token" in texto_lower
+    and
+    "invalid" in texto_lower
+):
+
+    _pausar_motor(
+        nome,
+        PAUSA_AUTORIZACAO_MINUTOS,
+        texto
+    )
+
+    return
+
+if (
+    "timeout" in texto_lower
+    or
+    "temporarily" in texto_lower
+    or
+    "503" in texto_lower
+    or
+    "502" in texto_lower
+    or
+    "500" in texto_lower
+    or
+    "connection" in texto_lower
+):
+
+    _pausar_motor(
+        nome,
+        PAUSA_ERRO_TEMPORARIO_MINUTOS,
+        texto
+    )
+
+============================================================
+
+MOTOR 1
+
+WAN 2.2 — R3GM
+
+============================================================
+
+def gerar_r3gm(
+imagem_bytes: bytes,
+nome_imagem: str,
+movimento: str,
+camera: str = "Sony FX6",
+duracao: float = 5.0
+) -> dict:
+
+nome_motor = (
+    "Wan 2.2 — R3GM"
+)
+
+if _motor_pausado(
+    nome_motor
+):
+
+    raise RuntimeError(
+        "Motor pausado temporariamente: "
+        +
+        _motivo_pausa(
+            nome_motor
+        )
+    )
+
+if Client is None:
+
+    raise RuntimeError(
+        "gradio_client não está instalado."
+    )
+
+if handle_file is None:
+
+    raise RuntimeError(
+        "handle_file não está disponível."
+    )
+
+if not imagem_bytes:
+
+    raise ValueError(
+        "O R3GM precisa de uma imagem."
+    )
+
+entrada = _salvar_imagem_temp(
+    imagem_bytes,
+    nome_imagem,
+    "entrada_r3gm"
+)
+
+prompt = montar_prompt(
+    movimento,
+    camera
+)
+
+seed = random.randint(
+    0,
+    2147483647
+)
+
+duracao_segundos = (
+    _duracao_segura(
+        duracao
+    )
+)
+
+client = Client(
+    R3GM_SPACE
+)
+
+try:
+
+    resultado = client.predict(
+
+        input_image=handle_file(
+            str(entrada)
+        ),
+
+        last_image=None,
+
+        prompt=prompt,
+
+        steps=4,
+
+        negative_prompt=(
+            montar_negative_prompt()
+        ),
+
+        duration_seconds=(
+            duracao_segundos
+        ),
+
+        guidance_scale=1.0,
+
+        guidance_scale_2=1.0,
+
+        seed=seed,
+
+        randomize_seed=True,
+
+        quality=5,
+
+        scheduler="UniPCMultistep",
+
+        flow_shift=3.0,
+
+        frame_multiplier=16,
+
+        video_component=True,
+
+        api_name="/generate_video"
+    )
+
+except Exception as erro:
+
+    _registrar_erro_motor(
+        nome_motor,
         erro
     )
 
-    if _erro_e_quota(
-        texto
-    ):
+    raise
 
-        minutos = (
-            _extrair_horas_quota(
-                texto
-            )
-        )
+video = (
+    _extrair_video_gradio(
+        resultado
+    )
+)
 
-        if minutos is None:
+if not video:
 
-            minutos = (
-                PAUSA_QUOTA_MINUTOS
-            )
-
-        _pausar_motor(
-            nome,
-            minutos,
-            texto
-        )
-
-        return
-
-    texto_lower = texto.lower()
-
-    if (
-        "401" in texto_lower
-        or
-        "unauthorized" in texto_lower
-        or
-        "api key" in texto_lower
-        or
-        "authentication" in texto_lower
-    ):
-
-        _pausar_motor(
-            nome,
-            PAUSA_AUTORIZACAO_MINUTOS,
-            texto
-        )
-
-        return
-
-    if (
-        "timeout" in texto_lower
-        or
-        "temporarily" in texto_lower
-        or
-        "503" in texto_lower
-        or
-        "502" in texto_lower
-        or
-        "500" in texto_lower
-    ):
-
-        _pausar_motor(
-            nome,
-            PAUSA_ERRO_TEMPORARIO_MINUTOS,
-            texto
-        )
-
-
-# ============================================================
-# MOTOR 1
-# WAN 2.2 — R3GM
-# ============================================================
-
-def gerar_r3gm(
-    imagem_bytes: bytes,
-    nome_imagem: str,
-    movimento: str,
-    camera: str = "Sony FX6",
-    duracao: float = 5.0
-) -> dict:
-
-    nome_motor = (
-        "Wan 2.2 — R3GM"
+    raise RuntimeError(
+        "R3GM não retornou vídeo."
     )
 
-    if _motor_pausado(
-        nome_motor
-    ):
+destino = _nome_saida(
+    "video_r3gm"
+)
 
-        raise RuntimeError(
-            "Motor pausado temporariamente: "
-            +
-            _motivo_pausa(
-                nome_motor
-            )
-        )
-
-    if Client is None:
-
-        raise RuntimeError(
-            "gradio_client não está instalado."
-        )
-
-    if handle_file is None:
-
-        raise RuntimeError(
-            "handle_file não está disponível."
-        )
-
-    if not imagem_bytes:
-
-        raise ValueError(
-            "O R3GM precisa de uma imagem."
-        )
-
-    entrada = _salvar_imagem_temp(
-        imagem_bytes,
-        nome_imagem,
-        "entrada_r3gm"
+caminho = (
+    _salvar_video_gradio(
+        video,
+        destino
     )
+)
 
-    prompt = montar_prompt(
-        movimento,
-        camera
-    )
+return {
+    "sucesso": True,
+    "success": True,
+    "motor": nome_motor,
+    "video": caminho,
+    "video_url": caminho,
+    "arquivo": caminho,
+    "arquivo_video": caminho,
+    "duracao": duracao_segundos,
+    "fallback": False,
+    "erro": None,
+}
 
-    seed = random.randint(
-        0,
-        2147483647
-    )
+============================================================
 
-    duracao_segundos = max(
-        0.5,
-        min(
-            float(duracao),
-            5.0
-        )
-    )
+MOTOR 2
 
-    client = Client(
-        R3GM_SPACE
-    )
+WAN 2.2 — UPSAMPLER
 
-    try:
-
-        resultado = client.predict(
-
-            input_image=handle_file(
-                str(entrada)
-            ),
-
-            last_image=None,
-
-            prompt=prompt,
-
-            steps=4,
-
-            negative_prompt=(
-                montar_negative_prompt()
-            ),
-
-            duration_seconds=(
-                duracao_segundos
-            ),
-
-            guidance_scale=1.0,
-
-            guidance_scale_2=1.0,
-
-            seed=seed,
-
-            randomize_seed=True,
-
-            quality=5,
-
-            scheduler=(
-                "UniPCMultistep"
-            ),
-
-            flow_shift=3.0,
-
-            # SOMENTE valores aceitos
-            # pelo Space atual.
-            frame_multiplier=16,
-
-            video_component=True,
-
-            api_name="/generate_video"
-        )
-
-    except Exception as erro:
-
-        _registrar_erro_motor(
-            nome_motor,
-            erro
-        )
-
-        raise
-
-    video = (
-        _extrair_video_gradio(
-            resultado
-        )
-    )
-
-    if not video:
-
-        raise RuntimeError(
-            "R3GM não retornou vídeo."
-        )
-
-    destino = _nome_saida(
-        "video_r3gm"
-    )
-
-    caminho = (
-        _salvar_video_gradio(
-            video,
-            destino
-        )
-    )
-
-    return {
-        "sucesso": True,
-        "motor": nome_motor,
-        "video": caminho,
-        "arquivo": caminho,
-        "fallback": False,
-        "erro": None,
-    }
-
-
-# ============================================================
-# MOTOR 2
-# WAN 2.2 — UPSAMPLER
-# ============================================================
+============================================================
 
 def gerar_upsampler(
-    imagem_bytes: bytes,
-    nome_imagem: str,
-    movimento: str,
-    camera: str = "Sony FX6",
-    duracao: float = 5.0
+imagem_bytes: bytes,
+nome_imagem: str,
+movimento: str,
+camera: str = "Sony FX6",
+duracao: float = 5.0
 ) -> dict:
 
-    nome_motor = (
-        "Wan 2.2 — Upsampler"
-    )
+nome_motor = (
+    "Wan 2.2 — Upsampler"
+)
 
-    if _motor_pausado(
-        nome_motor
-    ):
+if _motor_pausado(
+    nome_motor
+):
 
-        raise RuntimeError(
-            "Motor pausado temporariamente: "
-            +
-            _motivo_pausa(
-                nome_motor
-            )
-        )
-
-    if Client is None:
-
-        raise RuntimeError(
-            "gradio_client não está instalado."
-        )
-
-    if handle_file is None:
-
-        raise RuntimeError(
-            "handle_file não está disponível."
-        )
-
-    if not imagem_bytes:
-
-        raise ValueError(
-            "O Upsampler precisa de uma imagem."
-        )
-
-    entrada = _salvar_imagem_temp(
-        imagem_bytes,
-        nome_imagem,
-        "entrada_upsampler"
-    )
-
-    prompt = montar_prompt(
-        movimento,
-        camera
-    )
-
-    duracao_segundos = max(
-        0.5,
-        min(
-            float(duracao),
-            5.0
+    raise RuntimeError(
+        "Motor pausado temporariamente: "
+        +
+        _motivo_pausa(
+            nome_motor
         )
     )
 
-    client = Client(
-        UPSAMPLER_SPACE
+if Client is None:
+
+    raise RuntimeError(
+        "gradio_client não está instalado."
     )
 
-    try:
+if handle_file is None:
 
-        # IMPORTANTE:
-        #
-        # O Upsampler da versão que você
-        # estava usando rejeitou "last_image".
-        #
-        # Portanto não enviamos esse argumento.
-        #
-        resultado = client.predict(
-
-            input_image=handle_file(
-                str(entrada)
-            ),
-
-            prompt=prompt,
-
-            steps=4,
-
-            negative_prompt=(
-                montar_negative_prompt()
-            ),
-
-            duration_seconds=(
-                duracao_segundos
-            ),
-
-            guidance_scale=1.0,
-
-            seed=random.randint(
-                0,
-                2147483647
-            ),
-
-            randomize_seed=True,
-
-            api_name="/generate_video"
-        )
-
-    except Exception as erro:
-
-        _registrar_erro_motor(
-            nome_motor,
-            erro
-        )
-
-        raise
-
-    video = (
-        _extrair_video_gradio(
-            resultado
-        )
+    raise RuntimeError(
+        "handle_file não está disponível."
     )
 
-    if not video:
+if not imagem_bytes:
 
-        raise RuntimeError(
-            "Upsampler não retornou vídeo."
-        )
-
-    destino = _nome_saida(
-        "video_upsampler"
+    raise ValueError(
+        "O Upsampler precisa de uma imagem."
     )
 
-    caminho = (
-        _salvar_video_gradio(
-            video,
-            destino
-        )
+entrada = _salvar_imagem_temp(
+    imagem_bytes,
+    nome_imagem,
+    "entrada_upsampler"
+)
+
+prompt = montar_prompt(
+    movimento,
+    camera
+)
+
+duracao_segundos = (
+    _duracao_segura(
+        duracao
+    )
+)
+
+client = Client(
+    UPSAMPLER_SPACE
+)
+
+try:
+
+    resultado = client.predict(
+
+        input_image=handle_file(
+            str(entrada)
+        ),
+
+        prompt=prompt,
+
+        steps=4,
+
+        negative_prompt=(
+            montar_negative_prompt()
+        ),
+
+        duration_seconds=(
+            duracao_segundos
+        ),
+
+        guidance_scale=1.0,
+
+        seed=random.randint(
+            0,
+            2147483647
+        ),
+
+        randomize_seed=True,
+
+        api_name="/generate_video"
     )
 
-    return {
-        "sucesso": True,
-        "motor": nome_motor,
-        "video": caminho,
-        "arquivo": caminho,
-        "fallback": True,
-        "erro": None,
-    }
+except Exception as erro:
 
+    _registrar_erro_motor(
+        nome_motor,
+        erro
+    )
 
-# ============================================================
-# MOTOR 3
-# LTX 2.3 — HUGGING FACE
-# ============================================================
+    raise
+
+video = (
+    _extrair_video_gradio(
+        resultado
+    )
+)
+
+if not video:
+
+    raise RuntimeError(
+        "Upsampler não retornou vídeo."
+    )
+
+destino = _nome_saida(
+    "video_upsampler"
+)
+
+caminho = (
+    _salvar_video_gradio(
+        video,
+        destino
+    )
+)
+
+return {
+    "sucesso": True,
+    "success": True,
+    "motor": nome_motor,
+    "video": caminho,
+    "video_url": caminho,
+    "arquivo": caminho,
+    "arquivo_video": caminho,
+    "duracao": duracao_segundos,
+    "fallback": True,
+    "erro": None,
+}
+
+============================================================
+
+MOTOR 3
+
+LTX-2.3 — HUGGING FACE
+
+============================================================
 
 def gerar_ltx_huggingface(
-    prompt: str,
-    duration: float = 5.0,
-    height: int = 512,
-    width: int = 512,
-    imagem_bytes: Optional[bytes] = None,
-    nome_imagem: str = "imagem.png"
+prompt: str,
+duration: float = 5.0,
+height: int = 512,
+width: int = 512,
+imagem_bytes: Optional[bytes] = None,
+nome_imagem: str = "imagem.png"
 ) -> dict:
 
-    nome_motor = (
-        "LTX-2.3 — Hugging Face"
+nome_motor = (
+    "LTX-2.3 — Hugging Face"
+)
+
+if _motor_pausado(
+    nome_motor
+):
+
+    raise RuntimeError(
+        "Motor pausado temporariamente: "
+        +
+        _motivo_pausa(
+            nome_motor
+        )
     )
 
-    if _motor_pausado(
-        nome_motor
-    ):
+if Client is None:
 
-        raise RuntimeError(
-            "Motor pausado temporariamente: "
-            +
-            _motivo_pausa(
-                nome_motor
-            )
-        )
+    raise RuntimeError(
+        "gradio_client não está instalado."
+    )
 
-    if Client is None:
+prompt = (
+    prompt or ""
+).strip()
 
-        raise RuntimeError(
-            "gradio_client não está instalado."
-        )
+if not prompt:
 
-    if not prompt:
+    raise ValueError(
+        "O prompt está vazio."
+    )
 
-        raise ValueError(
-            "O prompt está vazio."
-        )
+caminho_imagem = None
 
-    caminho_imagem = None
+if imagem_bytes:
 
-    if imagem_bytes:
-
-        caminho_imagem = (
+    caminho_imagem = (
         _salvar_imagem_temp(
             imagem_bytes,
             nome_imagem,
@@ -1090,12 +1128,20 @@ def gerar_ltx_huggingface(
         )
     )
 
-    token_hf = obter_token_huggingface()
+token_hf = (
+    obter_token_huggingface()
+)
 
-    print(
-        "[DIAGNÓSTICO HF] Token Hugging Face encontrado:",
-        bool(token_hf)
-    )
+print(
+    "[LTX] Token Hugging Face:",
+    bool(token_hf)
+)
+
+# ========================================================
+# CONEXÃO COM HUGGING FACE
+# ========================================================
+
+try:
 
     if token_hf:
 
@@ -1119,131 +1165,413 @@ def gerar_ltx_huggingface(
             LTX_HF_SPACE
         )
 
-    print(
-        "[DIAGNÓSTICO HF] Token Hugging Face encontrado:",
-        bool(token_hf)
+except Exception as erro:
+
+    _registrar_erro_motor(
+        nome_motor,
+        erro
     )
 
-    duracao_segundos = max(
-        0.5,
-        min(
-            float(duration),
-            5.0
+    raise
+
+duracao_segundos = (
+    _duracao_segura(
+        duration
+    )
+)
+
+# ========================================================
+# PREPARAR INPUT
+# ========================================================
+
+if caminho_imagem:
+
+    imagem_input = (
+        handle_file(
+            str(caminho_imagem)
         )
+        if handle_file
+        else
+        str(caminho_imagem)
     )
 
-    try:
+else:
 
-        resultado = client.predict(
+    imagem_input = None
 
-            input_image=(
-                str(caminho_imagem)
-                if caminho_imagem
-                else None
-            ),
+# ========================================================
+# GERAR
+# ========================================================
 
-            prompt=prompt.strip(),
+try:
 
-            duration=(
-                duracao_segundos
-            ),
+    resultado = client.predict(
 
-            enhance_prompt=True,
+        input_image=imagem_input,
 
-            seed=0,
+        prompt=prompt,
 
-            randomize_seed=True,
+        duration=duracao_segundos,
 
-            height=int(height),
+        enhance_prompt=True,
 
-            width=int(width),
+        seed=random.randint(
+            0,
+            2147483647
+        ),
 
-            api_name="/generate_video"
-        )
+        randomize_seed=True,
 
-    except Exception as erro:
+        height=int(height),
 
-        _registrar_erro_motor(
-            nome_motor,
-            erro
-        )
+        width=int(width),
 
-        raise
-
-    video = (
-        _extrair_video_gradio(
-            resultado
-        )
+        api_name="/generate_video"
     )
 
-    if not video:
+except Exception as erro:
 
-        raise RuntimeError(
-            "LTX não retornou vídeo."
-        )
-
-    # O LTX pode devolver um arquivo
-    # temporário do Gradio.
-    destino = _nome_saida(
-        "video_ltx"
+    _registrar_erro_motor(
+        nome_motor,
+        erro
     )
 
-    caminho = (
-        _salvar_video_gradio(
-            video,
-            destino
-        )
+    raise
+
+# ========================================================
+# EXTRAIR RESULTADO
+# ========================================================
+
+video = (
+    _extrair_video_gradio(
+        resultado
+    )
+)
+
+if not video:
+
+    raise RuntimeError(
+        "LTX-2.3 não retornou vídeo."
     )
 
-    return {
-        "sucesso": True,
-        "motor": nome_motor,
-        "video": caminho,
-        "arquivo": caminho,
-        "fallback": True,
-        "erro": None,
-    }
+destino = _nome_saida(
+    "video_ltx"
+)
 
+caminho = (
+    _salvar_video_gradio(
+        video,
+        destino
+    )
+)
 
-# ============================================================
-# MAGIC HOUR
-# ============================================================
+return {
+    "sucesso": True,
+    "success": True,
+    "motor": nome_motor,
+    "video": caminho,
+    "video_url": caminho,
+    "arquivo": caminho,
+    "arquivo_video": caminho,
+    "duracao": duracao_segundos,
+    "fallback": True,
+    "erro": None,
+}
+
+============================================================
+
+MAGIC HOUR
+
+============================================================
 
 def obter_url_upload(
-    extensao: str
+extensao: str
 ):
 
-    ext = (
-        str(extensao)
-        .lower()
-        .replace(
-            ".",
-            ""
+ext = (
+    str(extensao)
+    .lower()
+    .replace(
+        ".",
+        ""
+    )
+)
+
+resposta = requests.post(
+
+    (
+        f"{MAGIC_HOUR_BASE_URL}"
+        "/files/upload-urls"
+    ),
+
+    headers=headers_magichour(),
+
+    json={
+        "items": [
+            {
+                "type": "image",
+                "extension": ext,
+            }
+        ]
+    },
+
+    timeout=60
+)
+
+if resposta.status_code != 200:
+
+    raise RuntimeError(
+        "Magic Hour HTTP "
+        f"{resposta.status_code}: "
+        f"{resposta.text}"
+    )
+
+dados = resposta.json()
+
+itens = (
+    dados.get(
+        "items"
+    )
+    or []
+)
+
+if not itens:
+
+    raise RuntimeError(
+        "Magic Hour não retornou URL de upload."
+    )
+
+item = itens[0]
+
+upload_url = item.get(
+    "upload_url"
+)
+
+file_path = item.get(
+    "file_path"
+)
+
+if not upload_url or not file_path:
+
+    raise RuntimeError(
+        "Magic Hour retornou upload incompleto."
+    )
+
+return (
+    upload_url,
+    file_path
+)
+
+def enviar_imagem_magichour(
+imagem_bytes: bytes,
+nome: str
+) -> str:
+
+if not imagem_bytes:
+
+    raise ValueError(
+        "Imagem vazia."
+    )
+
+ext = (
+    Path(nome)
+    .suffix
+    .lower()
+    .replace(
+        ".",
+        ""
+    )
+    or
+    "png"
+)
+
+upload_url, file_path = (
+    obter_url_upload(
+        ext
+    )
+)
+
+resposta = requests.put(
+    upload_url,
+    data=imagem_bytes,
+    timeout=120
+)
+
+if resposta.status_code not in (
+    200,
+    201,
+    204
+):
+
+    raise RuntimeError(
+        "Falha no upload Magic Hour: "
+        f"HTTP {resposta.status_code}"
+    )
+
+return file_path
+
+def encontrar_url_video(
+dados: Any
+) -> Optional[str]:
+
+if isinstance(
+    dados,
+    str
+):
+
+    if dados.startswith(
+        (
+            "http://",
+            "https://"
+        )
+    ):
+
+        return dados
+
+    return None
+
+if isinstance(
+    dados,
+    dict
+):
+
+    for chave in (
+        "video_url",
+        "download_url",
+        "output_url",
+        "url",
+        "video"
+    ):
+
+        valor = dados.get(
+            chave
+        )
+
+        encontrado = (
+            encontrar_url_video(
+                valor
+            )
+        )
+
+        if encontrado:
+
+            return encontrado
+
+    for valor in dados.values():
+
+        encontrado = (
+            encontrar_url_video(
+                valor
+            )
+        )
+
+        if encontrado:
+
+            return encontrado
+
+elif isinstance(
+    dados,
+    (list, tuple)
+):
+
+    for item in dados:
+
+        encontrado = (
+            encontrar_url_video(
+                item
+            )
+        )
+
+        if encontrado:
+
+            return encontrado
+
+return None
+
+def gerar_magichour(
+imagem_bytes: bytes,
+nome_arquivo: str,
+prompt: str
+) -> dict:
+
+nome_motor = (
+    "Magic Hour — LTX-2.3"
+)
+
+if _motor_pausado(
+    nome_motor
+):
+
+    raise RuntimeError(
+        "Motor pausado temporariamente: "
+        +
+        _motivo_pausa(
+            nome_motor
         )
     )
+
+if not imagem_bytes:
+
+    raise ValueError(
+        "Magic Hour precisa de imagem."
+    )
+
+file_path = (
+    enviar_imagem_magichour(
+        imagem_bytes,
+        nome_arquivo
+    )
+)
+
+dados = {
+
+    "name":
+        "Alex IA Ultra",
+
+    "end_seconds":
+        MAGIC_HOUR_DURACAO,
+
+    "model":
+        MAGIC_HOUR_MODELO,
+
+    "resolution":
+        MAGIC_HOUR_RESOLUCAO,
+
+    "audio":
+        False,
+
+    "style": {
+        "prompt":
+            prompt
+    },
+
+    "assets": {
+        "image_file_path":
+            file_path
+    }
+}
+
+try:
 
     resposta = requests.post(
 
         (
             f"{MAGIC_HOUR_BASE_URL}"
-            "/files/upload-urls"
+            "/image-to-video"
         ),
 
         headers=headers_magichour(),
 
-        json={
-            "items": [
-                {
-                    "type": "image",
-                    "extension": ext,
-                }
-            ]
-        },
+        json=dados,
 
-        timeout=60
+        timeout=120
     )
 
-    if resposta.status_code != 200:
+    if resposta.status_code not in (
+        200,
+        201,
+        202
+    ):
 
         raise RuntimeError(
             "Magic Hour HTTP "
@@ -1251,387 +1579,236 @@ def obter_url_upload(
             f"{resposta.text}"
         )
 
-    dados = resposta.json()
-
-    itens = (
-        dados.get(
-            "items"
-        )
-        or []
+    resultado = (
+        resposta.json()
     )
 
-    if not itens:
+    projeto = (
+        resultado.get(
+            "id"
+        )
+    )
+
+    if not projeto:
 
         raise RuntimeError(
-            "Magic Hour não retornou upload."
+            "Magic Hour não retornou ID."
         )
 
-    item = itens[0]
+    inicio = time.time()
 
-    return (
-        item["upload_url"],
-        item["file_path"]
-    )
+    while (
+        time.time() - inicio
+        < 300
+    ):
 
+        resposta = requests.get(
 
-def enviar_imagem_magichour(
-    imagem_bytes: bytes,
-    nome: str
-) -> str:
+            (
+                f"{MAGIC_HOUR_BASE_URL}"
+                f"/video-projects/{projeto}"
+            ),
 
-    ext = (
-        Path(nome)
-        .suffix
-        .lower()
-        .replace(
-            ".",
-            ""
-        )
-        or "png"
-    )
+            headers=headers_magichour(),
 
-    upload_url, file_path = (
-        obter_url_upload(
-            ext
-        )
-    )
-
-    resposta = requests.put(
-        upload_url,
-        data=imagem_bytes,
-        timeout=120
-    )
-
-    if resposta.status_code not in [
-        200,
-        201,
-        204
-    ]:
-
-        raise RuntimeError(
-            "Falha no upload Magic Hour."
+            timeout=60
         )
 
-    return file_path
+        if resposta.status_code == 200:
 
+            dados_status = (
+                resposta.json()
+            )
 
-def gerar_magichour(
-    imagem_bytes: bytes,
-    nome_arquivo: str,
-    prompt: str
+            url = (
+                encontrar_url_video(
+                    dados_status
+                )
+            )
+
+            if url:
+
+                video = requests.get(
+                    url,
+                    timeout=180
+                )
+
+                video.raise_for_status()
+
+                if not video.content:
+
+                    raise RuntimeError(
+                        "Magic Hour retornou vídeo vazio."
+                    )
+
+                caminho = (
+                    _nome_saida(
+                        "video_magichour"
+                    )
+                )
+
+                caminho.write_bytes(
+                    video.content
+                )
+
+                return {
+                    "sucesso": True,
+                    "success": True,
+                    "motor": nome_motor,
+                    "video": str(caminho),
+                    "video_url": str(caminho),
+                    "arquivo": str(caminho),
+                    "arquivo_video": str(caminho),
+                    "duracao":
+                        MAGIC_HOUR_DURACAO,
+                    "fallback": True,
+                    "erro": None,
+                }
+
+        time.sleep(5)
+
+except Exception as erro:
+
+    _registrar_erro_motor(
+        nome_motor,
+        erro
+    )
+
+    raise
+
+raise RuntimeError(
+    "Magic Hour demorou mais de 300 segundos."
+)
+
+============================================================
+
+FALLBACK PRINCIPAL
+
+============================================================
+
+def gerar_video_automatico(
+prompt: Optional[str] = None,
+imagem_bytes: Optional[bytes] = None,
+nome_imagem: str = "imagem.png",
+duracao: float = 5.0,
+width: int = 512,
+height: int = 512,
+descricao: Optional[str] = None,
+camera: str = "Sony FX6",
+proporcao: str = "16:9",
+**kwargs
 ) -> dict:
 
+texto = (
+    prompt
+    or descricao
+    or ""
+).strip()
+
+if not texto:
+
+    return {
+        "sucesso": False,
+        "success": False,
+        "video": None,
+        "video_url": None,
+        "arquivo": None,
+        "arquivo_video": None,
+        "motor": None,
+        "duracao":
+            _duracao_segura(
+                duracao
+            ),
+        "erro":
+            "O movimento está vazio.",
+        "erros": [],
+    }
+
+erros = []
+
+duracao_segura = (
+    _duracao_segura(
+        duracao
+    )
+)
+
+# ========================================================
+# 1 — R3GM
+# ========================================================
+
+if imagem_bytes:
+
     nome_motor = (
-        "Magic Hour — LTX-2.3"
+        "Wan 2.2 — R3GM"
     )
 
-    if _motor_pausado(
+    if not _motor_pausado(
         nome_motor
     ):
 
-        raise RuntimeError(
-            "Motor pausado temporariamente: "
+        try:
+
+            resultado = gerar_r3gm(
+
+                imagem_bytes,
+
+                nome_imagem,
+
+                texto,
+
+                camera,
+
+                duracao_segura
+
+            )
+
+            resultado[
+                "erros_anteriores"
+            ] = erros
+
+            return resultado
+
+        except Exception as erro:
+
+            erros.append(
+                "R3GM: "
+                + str(erro)
+            )
+
+    else:
+
+        erros.append(
+            "R3GM: motor pausado — "
             +
             _motivo_pausa(
                 nome_motor
             )
         )
 
-    if not imagem_bytes:
+else:
 
-        raise ValueError(
-            "Magic Hour precisa de imagem."
-        )
-
-    file_path = (
-        enviar_imagem_magichour(
-            imagem_bytes,
-            nome_arquivo
-        )
+    erros.append(
+        "R3GM: precisa de imagem."
     )
 
-    dados = {
+# ========================================================
+# 2 — UPSAMPLER
+# ========================================================
 
-        "name":
-            "Alex IA Ultra",
+if imagem_bytes:
 
-        "end_seconds":
-            MAGIC_HOUR_DURACAO,
-
-        "model":
-            MAGIC_HOUR_MODELO,
-
-        "resolution":
-            MAGIC_HOUR_RESOLUCAO,
-
-        "audio":
-            False,
-
-        "style": {
-            "prompt":
-                prompt
-        },
-
-        "assets": {
-            "image_file_path":
-                file_path
-        }
-    }
-
-    try:
-
-        resposta = requests.post(
-
-            (
-                f"{MAGIC_HOUR_BASE_URL}"
-                "/image-to-video"
-            ),
-
-            headers=headers_magichour(),
-
-            json=dados,
-
-            timeout=120
-        )
-
-        if resposta.status_code not in [
-            200,
-            201,
-            202
-        ]:
-
-            raise RuntimeError(
-                "Magic Hour HTTP "
-                f"{resposta.status_code}: "
-                f"{resposta.text}"
-            )
-
-        resultado = (
-            resposta.json()
-        )
-
-        projeto = resultado.get(
-            "id"
-        )
-
-        if not projeto:
-
-            raise RuntimeError(
-                "Magic Hour não retornou ID."
-            )
-
-        inicio = time.time()
-
-        while (
-            time.time() - inicio
-            < 300
-        ):
-
-            resposta = requests.get(
-
-                (
-                    f"{MAGIC_HOUR_BASE_URL}"
-                    f"/video-projects/{projeto}"
-                ),
-
-                headers=headers_magichour(),
-
-                timeout=60
-            )
-
-            if resposta.status_code == 200:
-
-                dados_status = (
-                    resposta.json()
-                )
-
-                url = (
-                    encontrar_url_video(
-                        dados_status
-                    )
-                )
-
-                if url:
-
-                    video = requests.get(
-                        url,
-                        timeout=180
-                    )
-
-                    video.raise_for_status()
-
-                    caminho = (
-                        _nome_saida(
-                            "video_magichour"
-                        )
-                    )
-
-                    caminho.write_bytes(
-                        video.content
-                    )
-
-                    return {
-                        "sucesso": True,
-                        "motor":
-                            nome_motor,
-                        "video":
-                            str(caminho),
-                        "arquivo":
-                            str(caminho),
-                        "fallback":
-                            True,
-                        "erro":
-                            None,
-                    }
-
-            time.sleep(5)
-
-    except Exception as erro:
-
-        _registrar_erro_motor(
-            nome_motor,
-            erro
-        )
-
-        raise
-
-    raise RuntimeError(
-        "Magic Hour demorou demais."
+    nome_motor = (
+        "Wan 2.2 — Upsampler"
     )
 
-
-def encontrar_url_video(
-    dados: Any
-) -> Optional[str]:
-
-    if not isinstance(
-        dados,
-        dict
+    if not _motor_pausado(
+        nome_motor
     ):
 
-        return None
+        try:
 
-    for chave in [
-        "video_url",
-        "download_url",
-        "output_url",
-        "url"
-    ]:
-
-        valor = dados.get(
-            chave
-        )
-
-        if (
-            isinstance(
-                valor,
-                str
-            )
-            and
-            valor.startswith(
-                "http"
-            )
-        ):
-
-            return valor
-
-    # Procurar recursivamente
-    # em respostas mais complexas.
-
-    for valor in dados.values():
-
-        if isinstance(
-            valor,
-            dict
-        ):
-
-            encontrado = (
-                encontrar_url_video(
-                    valor
-                )
-            )
-
-            if encontrado:
-
-                return encontrado
-
-        elif isinstance(
-            valor,
-            list
-        ):
-
-            for item in valor:
-
-                encontrado = (
-                    encontrar_url_video(
-                        item
-                    )
-                )
-
-                if encontrado:
-
-                    return encontrado
-
-    return None
-
-
-# ============================================================
-# FALLBACK PRINCIPAL
-# ============================================================
-
-def gerar_video_automatico(
-    prompt: Optional[str] = None,
-    imagem_bytes: Optional[bytes] = None,
-    nome_imagem: str = "imagem.png",
-    duracao: float = 5.0,
-    width: int = 512,
-    height: int = 512,
-    descricao: Optional[str] = None,
-    camera: str = "Sony FX6",
-    proporcao: str = "16:9",
-    **kwargs
-) -> dict:
-
-    texto = (
-        prompt
-        or descricao
-        or ""
-    ).strip()
-
-    if not texto:
-
-        return {
-            "sucesso":
-                False,
-
-            "video":
-                None,
-
-            "motor":
-                None,
-
-            "erro":
-                "O movimento está vazio.",
-
-            "erros":
-                [],
-        }
-
-    erros = []
-
-    # ========================================================
-    # R3GM
-    # ========================================================
-
-    if imagem_bytes:
-
-        if not _motor_pausado(
-            "Wan 2.2 — R3GM"
-        ):
-
-            try:
-
-                return gerar_r3gm(
+            resultado = (
+                gerar_upsampler(
 
                     imagem_bytes,
 
@@ -1641,114 +1818,7 @@ def gerar_video_automatico(
 
                     camera,
 
-                    duracao
-
-                )
-
-            except Exception as erro:
-
-                erros.append(
-                    "R3GM: "
-                    + str(erro)
-                )
-
-        else:
-
-            erros.append(
-                "R3GM: motor pausado — "
-                +
-                _motivo_pausa(
-                    "Wan 2.2 — R3GM"
-                )
-            )
-
-    else:
-
-        erros.append(
-            "R3GM: precisa de imagem."
-        )
-
-    # ========================================================
-    # UPSAMPLER
-    # ========================================================
-
-    if imagem_bytes:
-
-        if not _motor_pausado(
-            "Wan 2.2 — Upsampler"
-        ):
-
-            try:
-
-                resultado = (
-                    gerar_upsampler(
-
-                        imagem_bytes,
-
-                        nome_imagem,
-
-                        texto,
-
-                        camera,
-
-                        duracao
-
-                    )
-                )
-
-                resultado[
-                    "erros_anteriores"
-                ] = erros
-
-                return resultado
-
-            except Exception as erro:
-
-                erros.append(
-                    "Upsampler: "
-                    + str(erro)
-                )
-
-        else:
-
-            erros.append(
-                "Upsampler: motor pausado — "
-                +
-                _motivo_pausa(
-                    "Wan 2.2 — Upsampler"
-                )
-            )
-
-    # ========================================================
-    # LTX
-    # ========================================================
-
-    if not _motor_pausado(
-        "LTX-2.3 — Hugging Face"
-    ):
-
-        try:
-
-            resultado = (
-                gerar_ltx_huggingface(
-
-                    montar_prompt(
-                        texto,
-                        camera
-                    ),
-
-                    duration=min(
-                        float(duracao),
-                        5.0
-                    ),
-
-                    height=height,
-
-                    width=width,
-
-                    imagem_bytes=imagem_bytes,
-
-                    nome_imagem=nome_imagem
+                    duracao_segura
 
                 )
             )
@@ -1762,441 +1832,551 @@ def gerar_video_automatico(
         except Exception as erro:
 
             erros.append(
-                "LTX-2.3: "
+                "Upsampler: "
                 + str(erro)
             )
 
     else:
 
         erros.append(
-            "LTX-2.3: motor pausado — "
+            "Upsampler: motor pausado — "
             +
             _motivo_pausa(
-                "LTX-2.3 — Hugging Face"
+                nome_motor
             )
         )
 
-    # ========================================================
-    # MAGIC HOUR
-    # ========================================================
+else:
 
-    if imagem_bytes:
+    erros.append(
+        "Upsampler: precisa de imagem."
+    )
 
-        if not _motor_pausado(
-            "Magic Hour — LTX-2.3"
-        ):
+# ========================================================
+# 3 — LTX 2.3
+# ========================================================
 
-            chave = (
-                obter_api_key_magichour()
+nome_motor = (
+    "LTX-2.3 — Hugging Face"
+)
+
+if not _motor_pausado(
+    nome_motor
+):
+
+    try:
+
+        prompt_ltx = (
+            montar_prompt(
+                texto,
+                camera
             )
+            if imagem_bytes
+            else
+            texto
+        )
 
-            if chave:
+        resultado = (
+            gerar_ltx_huggingface(
 
-                try:
+                prompt=prompt_ltx,
 
-                    resultado = (
-                        gerar_magichour(
+                duration=duracao_segura,
 
-                            imagem_bytes,
+                height=int(height),
 
-                            nome_imagem,
+                width=int(width),
 
-                            montar_prompt(
-                                texto,
-                                camera
-                            )
+                imagem_bytes=imagem_bytes,
 
+                nome_imagem=nome_imagem
+
+            )
+        )
+
+        resultado[
+            "erros_anteriores"
+        ] = erros
+
+        return resultado
+
+    except Exception as erro:
+
+        erros.append(
+            "LTX-2.3: "
+            + str(erro)
+        )
+
+else:
+
+    erros.append(
+        "LTX-2.3: motor pausado — "
+        +
+        _motivo_pausa(
+            nome_motor
+        )
+    )
+
+# ========================================================
+# 4 — MAGIC HOUR
+# ========================================================
+
+nome_motor = (
+    "Magic Hour — LTX-2.3"
+)
+
+if imagem_bytes:
+
+    if not _motor_pausado(
+        nome_motor
+    ):
+
+        if obter_api_key_magichour():
+
+            try:
+
+                resultado = (
+                    gerar_magichour(
+
+                        imagem_bytes,
+
+                        nome_imagem,
+
+                        montar_prompt(
+                            texto,
+                            camera
                         )
+
                     )
+                )
 
-                    resultado[
-                        "erros_anteriores"
-                    ] = erros
+                resultado[
+                    "erros_anteriores"
+                ] = erros
 
-                    return resultado
+                return resultado
 
-                except Exception as erro:
-
-                    erros.append(
-                        "Magic Hour: "
-                        + str(erro)
-                    )
-
-            else:
+            except Exception as erro:
 
                 erros.append(
                     "Magic Hour: "
-                    "MAGIC_HOUR_API_KEY não configurada."
+                    + str(erro)
                 )
 
         else:
 
             erros.append(
-                "Magic Hour: motor pausado — "
-                +
-                _motivo_pausa(
-                    "Magic Hour — LTX-2.3"
-                )
+                "Magic Hour: "
+                "MAGIC_HOUR_API_KEY não configurada."
             )
-    # ========================================================
-    # NENHUM MOTOR
-    # ========================================================
 
-    return {
+    else:
 
-        "sucesso":
-            False,
+        erros.append(
+            "Magic Hour: motor pausado — "
+            +
+            _motivo_pausa(
+                nome_motor
+            )
+        )
 
-        "video":
-            None,
+else:
 
-        "motor":
-            None,
+    erros.append(
+        "Magic Hour: precisa de imagem."
+    )
 
-        "erro":
-            (
-                "❌ NENHUM MOTOR DE VÍDEO "
-                "CONSEGUIU GERAR O VÍDEO.\n\n"
-                +
-                "\n\n".join(
-                    erros
-                )
-            ),
+# ========================================================
+# NENHUM MOTOR
+# ========================================================
 
-        "erros":
-            erros,
-    }
+mensagem = (
+    "❌ NENHUM MOTOR DE VÍDEO "
+    "CONSEGUIU GERAR O VÍDEO.\n\n"
+    +
+    "\n\n".join(
+        erros
+    )
+)
 
+return {
 
-# ============================================================
-# COMPATIBILIDADE COM APP.PY
-# ============================================================
+    "sucesso":
+        False,
+
+    "success":
+        False,
+
+    "video":
+        None,
+
+    "video_url":
+        None,
+
+    "arquivo":
+        None,
+
+    "arquivo_video":
+        None,
+
+    "motor":
+        None,
+
+    "duracao":
+        duracao_segura,
+
+    "erro":
+        mensagem,
+
+    "erros":
+        erros,
+}
+
+============================================================
+
+COMPATIBILIDADE COM APP.PY
+
+============================================================
 
 def gerar_video(
-    prompt: Optional[str] = None,
-    imagem_bytes: Optional[bytes] = None,
-    nome_imagem: str = "imagem.png",
-    duracao: float = 5.0,
-    width: int = 512,
-    height: int = 512,
-    descricao: Optional[str] = None,
-    **kwargs
+prompt: Optional[str] = None,
+imagem_bytes: Optional[bytes] = None,
+nome_imagem: str = "imagem.png",
+duracao: float = 5.0,
+width: int = 512,
+height: int = 512,
+descricao: Optional[str] = None,
+**kwargs
 ) -> dict:
 
-    return gerar_video_automatico(
+return gerar_video_automatico(
 
-        prompt=prompt,
+    prompt=prompt,
 
-        imagem_bytes=imagem_bytes,
+    imagem_bytes=imagem_bytes,
 
-        nome_imagem=nome_imagem,
+    nome_imagem=nome_imagem,
 
-        duracao=duracao,
+    duracao=duracao,
 
-        width=width,
+    width=width,
 
-        height=height,
+    height=height,
 
-        descricao=descricao,
+    descricao=descricao,
 
-        **kwargs
-    )
-
+    **kwargs
+)
 
 def gerar_video_texto(
-    prompt: str,
-    duracao: float = 5.0,
-    **kwargs
+prompt: str,
+duracao: float = 5.0,
+**kwargs
 ) -> dict:
 
-    return gerar_video_automatico(
+return gerar_video_automatico(
 
-        prompt=prompt,
+    prompt=prompt,
 
-        duracao=duracao,
+    duracao=duracao,
 
-        **kwargs
-    )
-
+    **kwargs
+)
 
 def gerar_video_imagem(
-    imagem_bytes: bytes,
-    nome_imagem: str,
-    prompt: str,
-    duracao: float = 5.0,
-    **kwargs
+imagem_bytes: bytes,
+nome_imagem: str,
+prompt: str,
+duracao: float = 5.0,
+**kwargs
 ) -> dict:
 
-    return gerar_video(
+return gerar_video(
 
-        prompt,
+    prompt,
 
-        imagem_bytes=imagem_bytes,
+    imagem_bytes=imagem_bytes,
 
-        nome_imagem=nome_imagem,
+    nome_imagem=nome_imagem,
 
-        duracao=duracao,
+    duracao=duracao,
 
-        **kwargs
-    )
-
+    **kwargs
+)
 
 def gerar(
-    prompt: str,
-    **kwargs
+prompt: str,
+**kwargs
 ) -> dict:
 
-    return gerar_video(
-        prompt,
-        **kwargs
-    )
-
+return gerar_video(
+    prompt,
+    **kwargs
+)
 
 def gerar_video_fallback(
-    prompt: str,
-    **kwargs
+prompt: str,
+**kwargs
 ) -> Optional[str]:
 
-    resultado = gerar_video(
-        prompt,
-        **kwargs
+resultado = gerar_video(
+    prompt,
+    **kwargs
+)
+
+return (
+    resultado.get(
+        "video"
     )
-
-    return (
-        resultado.get(
-            "video"
-        )
-        or
-        resultado.get(
-            "arquivo"
-        )
+    or
+    resultado.get(
+        "arquivo"
     )
+)
 
+============================================================
 
-# ============================================================
-# CONFIGURAÇÃO DO APP.PY
-# ============================================================
+CONFIGURAÇÃO DO APP.PY
+
+============================================================
 
 def mostrar_configuracao_video():
 
-    st.subheader(
-        "🎬 Configuração de Vídeo"
-    )
+st.subheader(
+    "🎬 Configuração de Vídeo"
+)
 
-    camera_video = st.selectbox(
+camera_video = st.selectbox(
 
-        "📷 Câmera",
+    "📷 Câmera",
 
-        CAMERAS,
+    CAMERAS,
 
-        index=1,
+    index=1,
 
-        key="video_camera"
+    key="video_camera"
 
-    )
+)
 
-    proporcao_video = st.selectbox(
+proporcao_video = st.selectbox(
 
-        "📐 Proporção",
+    "📐 Proporção",
 
-        PROPORCOES,
+    PROPORCOES,
 
-        index=1,
+    index=1,
 
-        key="video_proporcao"
+    key="video_proporcao"
 
-    )
+)
 
-    duracao_video = st.number_input(
+duracao_video = st.number_input(
 
-        "⏱️ Duração do vídeo",
+    "⏱️ Duração do vídeo",
 
-        min_value=0.5,
+    min_value=1.0,
 
-        max_value=5.0,
+    max_value=5.0,
 
-        value=5.0,
+    value=5.0,
 
-        step=0.5,
+    step=0.5,
 
-        key="video_duracao"
+    key="video_duracao"
 
-    )
+)
 
-    st.write(
-        "**🎥 Motores disponíveis:**"
-    )
+st.write(
+    "**🎥 Motores disponíveis:**"
+)
 
-    for motor in MOTORES_VIDEO:
+for motor in MOTORES_VIDEO:
 
-        if _motor_pausado(
-            motor
-        ):
+    if _motor_pausado(
+        motor
+    ):
 
-            restante = (
-                _tempo_restante(
-                    motor
-                )
+        restante = (
+            _tempo_restante(
+                motor
             )
+        )
 
-            minutos = (
-                restante // 60
-            )
+        minutos = (
+            restante // 60
+        )
 
-            st.write(
-                f"• {motor} "
-                f"⏸️ ({minutos} min)"
-            )
+        segundos = (
+            restante % 60
+        )
 
-        else:
+        st.write(
+            f"• {motor} "
+            f"⏸️ "
+            f"({minutos}m {segundos}s)"
+        )
 
-            st.write(
-                f"• {motor} ✅"
-            )
+    else:
 
-    return (
-        camera_video,
-        proporcao_video,
-        duracao_video
-    )
+        st.write(
+            f"• {motor} ✅"
+        )
 
+return (
+    camera_video,
+    proporcao_video,
+    duracao_video
+)
 
-# ============================================================
-# STATUS
-# ============================================================
+============================================================
+
+STATUS
+
+============================================================
 
 def verificar_magic_hour():
 
-    try:
+try:
 
-        chave = (
-            obter_api_key_magichour()
-        )
-
-        if chave:
-
-            return (
-                True,
-                "✅ MAGIC_HOUR_API_KEY encontrada."
-            )
-
-        return (
-            False,
-            "❌ MAGIC_HOUR_API_KEY não encontrada."
-        )
-
-    except Exception as erro:
-
-        return (
-            False,
-            f"❌ Erro: {erro}"
-        )
-
-
-def status_video() -> dict:
-
-    status = {}
-
-    for motor in MOTORES_VIDEO:
-
-        status[motor] = {
-            "disponivel":
-                not _motor_pausado(
-                    motor
-                ),
-
-            "tempo_restante":
-                _tempo_restante(
-                    motor
-                ),
-
-            "motivo":
-                _motivo_pausa(
-                    motor
-                )
-        }
-
-    status[
-        "gradio_client"
-    ] = (
-        Client is not None
-    )
-
-    status[
-        "magic_hour"
-    ] = bool(
+    chave = (
         obter_api_key_magichour()
     )
 
-    status[
-        "replicate"
-    ] = bool(
-        obter_token_replicate()
+    if chave:
+
+        return (
+            True,
+            "✅ MAGIC_HOUR_API_KEY encontrada."
+        )
+
+    return (
+        False,
+        "❌ MAGIC_HOUR_API_KEY não encontrada."
     )
 
-    status[
-        "ltx"
-    ] = LTX_HF_SPACE
+except Exception as erro:
 
-    return status
+    return (
+        False,
+        f"❌ Erro: {erro}"
+    )
 
+def status_video() -> dict:
 
-# ============================================================
-# LIMPAR PAUSAS
-# ============================================================
+status = {}
+
+for motor in MOTORES_VIDEO:
+
+    status[motor] = {
+
+        "disponivel":
+            not _motor_pausado(
+                motor
+            ),
+
+        "tempo_restante":
+            _tempo_restante(
+                motor
+            ),
+
+        "motivo":
+            _motivo_pausa(
+                motor
+            )
+    }
+
+status[
+    "gradio_client"
+] = (
+    Client is not None
+)
+
+status[
+    "magic_hour"
+] = bool(
+    obter_api_key_magichour()
+)
+
+status[
+    "huggingface"
+] = bool(
+    obter_token_huggingface()
+)
+
+status[
+    "replicate"
+] = bool(
+    obter_token_replicate()
+)
+
+status[
+    "ltx"
+] = LTX_HF_SPACE
+
+return status
+
+============================================================
+
+LIMPAR PAUSAS
+
+============================================================
 
 def limpar_bloqueios_video():
 
-    st.session_state[
-        "video_motores_bloqueados"
-    ] = {}
+st.session_state[
+    "video_motores_bloqueados"
+] = {}
 
+============================================================
 
-# ============================================================
-# EXPORTAÇÕES
-# ============================================================
+EXPORTAÇÕES
 
-__all__ = [
+============================================================
 
-    "NOME_MODULO",
+all = [
 
-    "MOTORES_VIDEO",
+"NOME_MODULO",
 
-    "CAMERAS",
+"MOTORES_VIDEO",
 
-    "PROPORCOES",
+"CAMERAS",
 
-    "DURACAO_PADRAO",
+"PROPORCOES",
 
-    "gerar_video",
+"DURACAO_PADRAO",
 
-    "gerar_video_automatico",
+"gerar_video",
 
-    "gerar_video_fallback",
+"gerar_video_automatico",
 
-    "gerar",
+"gerar_video_fallback",
 
-    "gerar_video_texto",
+"gerar",
 
-    "gerar_video_imagem",
+"gerar_video_texto",
 
-    "gerar_r3gm",
+"gerar_video_imagem",
 
-    "gerar_upsampler",
+"gerar_r3gm",
 
-    "gerar_ltx_huggingface",
+"gerar_upsampler",
 
-    "gerar_magichour",
+"gerar_ltx_huggingface",
 
-    "mostrar_configuracao_video",
+"gerar_magichour",
 
-    "verificar_magic_hour",
+"mostrar_configuracao_video",
 
-    "obter_api_key_magichour",
+"verificar_magic_hour",
 
-    "obter_token_replicate",
+"obter_api_key_magichour",
 
-    "status_video",
+"obter_token_huggingface",
 
-    "limpar_bloqueios_video",
-    ]
+"obter_token_replicate",
+
+"status_video",
+
+"limpar_bloqueios_video",
+
+]
