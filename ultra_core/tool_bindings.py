@@ -21,15 +21,14 @@ def pesquisar_internet(
     """
     Prepara uma pesquisa para a ferramenta de Internet.
 
-    O Ultra Core pode adicionar automaticamente o argumento
-    'prompt' contendo o pedido original do usuário.
+    O Ultra Core pode enviar automaticamente o argumento
+    'prompt' junto com os demais argumentos.
 
     A pergunta explícita possui prioridade.
     Caso 'pergunta' esteja vazia, utiliza 'prompt'.
 
-    O binding permanece desacoplado do cliente Gemini.
-    A execução real da pesquisa será feita pela camada
-    de IA que possuir o cliente Gemini configurado.
+    Argumentos extras são aceitos para manter compatibilidade
+    com o Ultra Core.
     """
 
     consulta_usuario = (
