@@ -6,10 +6,7 @@
 from typing import Any, Dict
 
 from .tools import ToolRegistry, tool_registry
-
-# O arquivo real está na raiz do projeto.
-# No Linux/Kaggle o nome precisa respeitar maiúsculas/minúsculas.
-from Internet import preparar_pesquisa
+from .internet import preparar_pesquisa
 
 
 # ============================================================
@@ -17,24 +14,36 @@ from Internet import preparar_pesquisa
 # ============================================================
 
 def pesquisar_internet(
-    pergunta: str,
+    pergunta: str = "",
+    prompt: str = "",
+    **kwargs: Any,
 ) -> Dict[str, Any]:
     """
     Prepara uma pesquisa para a ferramenta de Internet.
 
-    A execução real da chamada ao Gemini continua
-    pertencendo à camada de IA que possui o cliente Gemini.
+    O Ultra Core pode adicionar automaticamente o argumento
+    'prompt' contendo o pedido original do usuário.
 
-    Este binding apenas conecta a ferramenta ao Ultra Core.
+    A pergunta explícita possui prioridade.
+    Caso 'pergunta' esteja vazia, utiliza 'prompt'.
+
+    O binding permanece desacoplado do cliente Gemini.
+    A execução real da pesquisa será feita pela camada
+    de IA que possuir o cliente Gemini configurado.
     """
 
-    if not pergunta or not pergunta.strip():
+    consulta_usuario = (
+        str(pergunta or "").strip()
+        or str(prompt or "").strip()
+    )
+
+    if not consulta_usuario:
         raise ValueError(
             "A pergunta para pesquisa não pode estar vazia."
         )
 
     pesquisa = preparar_pesquisa(
-        pergunta.strip()
+        consulta_usuario
     )
 
     if pesquisa is None:
@@ -45,13 +54,13 @@ def pesquisar_internet(
     return {
         "success": True,
         "tool": "pesquisa_internet",
-        "pergunta": pergunta.strip(),
+        "pergunta": consulta_usuario,
         "consulta": pesquisa,
     }
 
 
 # ============================================================
-# REGISTRO DAS FERRAMENTAS
+# 🛠️ REGISTRO DAS FERRAMENTAS
 # ============================================================
 
 def registrar_ferramentas(
@@ -59,6 +68,10 @@ def registrar_ferramentas(
 ) -> ToolRegistry:
     """
     Registra as ferramentas disponíveis no Ultra Core.
+
+    A função é idempotente:
+    se a ferramenta já estiver registrada,
+    ela não será registrada novamente.
     """
 
     if not registry.has(
@@ -72,7 +85,7 @@ def registrar_ferramentas(
             ),
             function=pesquisar_internet,
             metadata={
-                "category": "internet",
+                "categoria": "internet",
                 "provider": "google_search",
                 "language": "pt-BR",
             },
@@ -82,11 +95,15 @@ def registrar_ferramentas(
 
 
 # ============================================================
-# INICIALIZAÇÃO PADRÃO
+# 🚀 INICIALIZAÇÃO PADRÃO
 # ============================================================
 
 registrar_ferramentas()
 
+
+# ============================================================
+# 📦 EXPORTAÇÕES
+# ============================================================
 
 __all__ = [
     "pesquisar_internet",
