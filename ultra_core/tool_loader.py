@@ -99,7 +99,7 @@ def _registrar_video(
     """
 
     try:
-        from video import (
+        from gerenciador_video import (
             gerar_video,
             gerar_video_texto,
             gerar_video_imagem,
