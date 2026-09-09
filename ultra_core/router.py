@@ -11,13 +11,37 @@ from .tools import Tool, ToolRegistry, tool_registry
 class ToolRouter:
     """
     Decide qual ferramenta deve atender uma determinada tarefa.
+
+    O Router utiliza explicitamente o tool_registry global
+    do Ultra Core quando nenhuma instância personalizada
+    é fornecida.
+
+    Isso garante que Brain, Router e ToolRegistry utilizem
+    a mesma fonte de ferramentas.
     """
 
     def __init__(
         self,
-        registry: ToolRegistry = tool_registry,
+        registry: Optional[ToolRegistry] = None,
     ) -> None:
-        self.registry = registry
+
+        # ----------------------------------------------------
+        # Usa SEMPRE o registry global quando nenhum registry
+        # personalizado for informado.
+        #
+        # Isso evita que o Router fique ligado a uma instância
+        # diferente do ToolRegistry usado pelo Tool Loader.
+        # ----------------------------------------------------
+
+        self.registry = (
+            registry
+            if registry is not None
+            else tool_registry
+        )
+
+    # ========================================================
+    # 🔎 LOCALIZAR FERRAMENTA
+    # ========================================================
 
     def find_tool(
         self,
@@ -27,26 +51,46 @@ class ToolRouter:
         """
         Procura uma ferramenta disponível.
 
-        Primeiro tenta encontrar pelo nome exato.
-        Se não encontrar, tenta localizar por palavras-chave.
+        Ordem de busca:
+
+        1. Nome exato da ferramenta.
+        2. Palavras-chave.
         """
 
+        # ----------------------------------------------------
+        # Busca direta pelo nome.
+        # ----------------------------------------------------
+
         if requested_tool:
-            tool = self.registry.get(requested_tool)
+
+            tool = self.registry.get(
+                requested_tool
+            )
 
             if tool and tool.enabled:
                 return tool
+
+        # ----------------------------------------------------
+        # Sem palavras-chave não há segunda tentativa.
+        # ----------------------------------------------------
 
         if not keywords:
             return None
 
         normalized_keywords = [
-            keyword.lower().strip()
+            str(keyword)
+            .lower()
+            .strip()
             for keyword in keywords
             if keyword
         ]
 
+        # ----------------------------------------------------
+        # Busca por nome + descrição.
+        # ----------------------------------------------------
+
         for tool_info in self.registry.list_tools():
+
             if not tool_info["enabled"]:
                 continue
 
@@ -59,9 +103,16 @@ class ToolRouter:
                 keyword in searchable_text
                 for keyword in normalized_keywords
             ):
-                return self.registry.get(tool_info["name"])
+
+                return self.registry.get(
+                    tool_info["name"]
+                )
 
         return None
+
+    # ========================================================
+    # 🧭 ROTEAR ETAPA
+    # ========================================================
 
     def route(
         self,
@@ -71,26 +122,38 @@ class ToolRouter:
         Escolhe a ferramenta para uma etapa do plano.
         """
 
-        requested_tool = step.get("tool")
+        requested_tool = step.get(
+            "tool"
+        )
 
-        keywords = step.get("keywords", [])
+        keywords = step.get(
+            "keywords",
+            [],
+        )
 
         return self.find_tool(
             requested_tool=requested_tool,
             keywords=keywords,
         )
 
+    # ========================================================
+    # 📝 EXPLICAR ROTA
+    # ========================================================
+
     def explain_route(
         self,
         step: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Explica qual ferramenta foi escolhida para a etapa.
+        Explica qual ferramenta foi escolhida.
         """
 
-        tool = self.route(step)
+        tool = self.route(
+            step
+        )
 
         if tool is None:
+
             return {
                 "success": False,
                 "tool": None,
@@ -110,7 +173,13 @@ class ToolRouter:
             ),
         }
 
-    def available_tools(self) -> List[Dict[str, Any]]:
+    # ========================================================
+    # 🛠️ FERRAMENTAS DISPONÍVEIS
+    # ========================================================
+
+    def available_tools(
+        self,
+    ) -> List[Dict[str, Any]]:
         """
         Retorna as ferramentas atualmente disponíveis.
         """
@@ -119,11 +188,23 @@ class ToolRouter:
 
 
 # ============================================================
-# INSTÂNCIA PADRÃO
+# 🧠 INSTÂNCIA PRINCIPAL
 # ============================================================
 
-router = ToolRouter()
+# Importante:
+# Não criar outro ToolRegistry aqui.
+#
+# O Router deve compartilhar exatamente o mesmo
+# tool_registry utilizado pelo restante do Ultra Core.
 
+router = ToolRouter(
+    registry=tool_registry
+)
+
+
+# ============================================================
+# 📦 EXPORTAÇÕES
+# ============================================================
 
 __all__ = [
     "ToolRouter",
