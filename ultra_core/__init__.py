@@ -25,4 +25,7 @@ existentes da Alex IA Ultra.
 """
 
 __version__ = "1.0.0"
-__name__ = "Alex IA Ultra Core"
+
+__all__ = [
+    "__version__",
+]
