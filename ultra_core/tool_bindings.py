@@ -6,7 +6,10 @@
 from typing import Any, Dict
 
 from .tools import ToolRegistry, tool_registry
-from .internet import preparar_pesquisa
+
+# O arquivo real está na raiz do projeto.
+# No Linux/Kaggle o nome precisa respeitar maiúsculas/minúsculas.
+from Internet import preparar_pesquisa
 
 
 # ============================================================
@@ -19,10 +22,10 @@ def pesquisar_internet(
     """
     Prepara uma pesquisa para a ferramenta de Internet.
 
-    A execução real da chamada ao Gemini deve ser feita
-    pela camada de IA que possuir o cliente Gemini configurado.
+    A execução real da chamada ao Gemini continua
+    pertencendo à camada de IA que possui o cliente Gemini.
 
-    Este binding mantém o Ultra Core desacoplado do provedor.
+    Este binding apenas conecta a ferramenta ao Ultra Core.
     """
 
     if not pergunta or not pergunta.strip():
@@ -55,10 +58,7 @@ def registrar_ferramentas(
     registry: ToolRegistry = tool_registry,
 ) -> ToolRegistry:
     """
-    Registra todas as ferramentas disponíveis no Ultra Core.
-
-    A função é idempotente: se a ferramenta já estiver
-    registrada, ela não será registrada novamente.
+    Registra as ferramentas disponíveis no Ultra Core.
     """
 
     if not registry.has(
