@@ -6,7 +6,9 @@
 from typing import Any, Dict
 
 from .tools import ToolRegistry, tool_registry
-from .internet import preparar_pesquisa
+
+# Internet.py está na raiz do projeto ULTRA-IA-PRO.
+from Internet import preparar_pesquisa
 
 
 # ============================================================
@@ -21,14 +23,8 @@ def pesquisar_internet(
     """
     Prepara uma pesquisa para a ferramenta de Internet.
 
-    O Ultra Core pode enviar automaticamente o argumento
-    'prompt' junto com os demais argumentos.
-
-    A pergunta explícita possui prioridade.
-    Caso 'pergunta' esteja vazia, utiliza 'prompt'.
-
-    Argumentos extras são aceitos para manter compatibilidade
-    com o Ultra Core.
+    Aceita tanto 'pergunta' quanto 'prompt' para manter
+    compatibilidade com o Ultra Core.
     """
 
     consulta_usuario = (
@@ -67,10 +63,6 @@ def registrar_ferramentas(
 ) -> ToolRegistry:
     """
     Registra as ferramentas disponíveis no Ultra Core.
-
-    A função é idempotente:
-    se a ferramenta já estiver registrada,
-    ela não será registrada novamente.
     """
 
     if not registry.has(
