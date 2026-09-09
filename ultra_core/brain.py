@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from .context import TaskContext
+from .interpreter import TaskInterpreter, interpreter
 from .planner import TaskPlanner, planner
 from .router import ToolRouter, router
 from .executor import TaskExecutor, executor
@@ -17,36 +18,67 @@ class UltraBrain:
     """
     Coordenador central da Alex IA Ultra.
 
-    O Brain conecta:
+    Fluxo principal:
 
-    - Contexto
-    - Interpretação básica
-    - Planejamento
-    - Roteamento
-    - Execução
-    - Verificação
+        Pedido do usuário
+              ↓
+        Interpreter
+              ↓
+        Contexto
+              ↓
+        Planner
+              ↓
+        Router
+              ↓
+        Executor
+              ↓
+        Verifier
 
-    O Brain não executa diretamente as ferramentas.
-
-    Ele entende a solicitação, cria um plano e entrega
-    a execução para o restante do Ultra Core.
+    O Brain coordena os componentes.
+    Ele não executa diretamente as ferramentas.
     """
 
     def __init__(
         self,
+        task_interpreter: TaskInterpreter = interpreter,
         task_planner: TaskPlanner = planner,
         task_router: ToolRouter = router,
         task_executor: TaskExecutor = executor,
         result_verifier: ResultVerifier = verifier,
     ) -> None:
 
+        self.interpreter = task_interpreter
         self.planner = task_planner
         self.router = task_router
         self.executor = task_executor
         self.verifier = result_verifier
 
     # ========================================================
-    # CRIAÇÃO DE TAREFA
+    # 🧠 INTERPRETAÇÃO
+    # ========================================================
+
+    def interpret(
+        self,
+        user_request: str,
+    ) -> Dict[str, Any]:
+        """
+        Interpreta o pedido do usuário.
+
+        O Interpreter identifica:
+
+        - intenção;
+        - palavras-chave;
+        - confiança;
+        - prompt;
+        - ferramentas sugeridas.
+        """
+
+        return self.interpreter.interpret(
+            user_request
+        )
+
+    # ========================================================
+    # 📝 CRIAÇÃO DE TAREFA
     # ========================================================
 
     def create_task(
@@ -72,454 +104,81 @@ class UltraBrain:
         return context
 
     # ========================================================
-    # NORMALIZAÇÃO
+    # 🧠 PREPARAÇÃO DA TAREFA
     # ========================================================
 
-    @staticmethod
-    def _normalize_text(
-        text: str,
-    ) -> str:
-        """
-        Normaliza texto para facilitar a interpretação.
-        """
-
-        return " ".join(
-            str(text or "")
-            .lower()
-            .strip()
-            .split()
-        )
-
-    # ========================================================
-    # IDENTIFICAÇÃO DE INTENÇÃO
-    # ========================================================
-
-    def detect_intent(
-        self,
-        user_request: str,
-    ) -> Dict[str, Any]:
-        """
-        Detecta a intenção básica do usuário.
-
-        Esta camada não utiliza IA externa.
-        Ela funciona como primeira camada determinística
-        do Ultra Core.
-
-        Futuramente pode ser substituída ou complementada
-        por um modelo de linguagem.
-        """
-
-        texto = self._normalize_text(
-            user_request
-        )
-
-        if not texto:
-            return {
-                "intent": "unknown",
-                "keywords": [],
-                "confidence": 0.0,
-            }
-
-        palavras_imagem = [
-            "imagem",
-            "imagens",
-            "foto",
-            "fotografia",
-            "desenho",
-            "ilustração",
-            "ilustracao",
-            "picture",
-            "image",
-            "gerar imagem",
-            "criar imagem",
-            "fazer imagem",
-        ]
-
-        palavras_video = [
-            "vídeo",
-            "video",
-            "vídeos",
-            "videos",
-            "filme",
-            "animação",
-            "animacao",
-            "clipe",
-            "clip",
-            "gerar vídeo",
-            "gerar video",
-            "criar vídeo",
-            "criar video",
-            "animar",
-        ]
-
-        palavras_texto = [
-            "texto",
-            "escrever",
-            "escreva",
-            "redigir",
-            "resumo",
-            "resumir",
-            "explicar",
-            "explicação",
-            "explicacao",
-            "traduzir",
-            "tradução",
-            "traducao",
-        ]
-
-        imagem_encontrada = any(
-            palavra in texto
-            for palavra in palavras_imagem
-        )
-
-        video_encontrado = any(
-            palavra in texto
-            for palavra in palavras_video
-        )
-
-        texto_encontrado = any(
-            palavra in texto
-            for palavra in palavras_texto
-        )
-
-        if video_encontrado:
-            intent = "video"
-            confidence = 0.90
-
-        elif imagem_encontrada:
-            intent = "imagem"
-            confidence = 0.90
-
-        elif texto_encontrado:
-            intent = "texto"
-            confidence = 0.75
-
-        else:
-            intent = "geral"
-            confidence = 0.40
-
-        keywords = []
-
-        if imagem_encontrada:
-            keywords.extend(
-                [
-                    "imagem",
-                    "image",
-                    "foto",
-                    "gerar",
-                ]
-            )
-
-        if video_encontrado:
-            keywords.extend(
-                [
-                    "video",
-                    "vídeo",
-                    "gerar",
-                    "animar",
-                ]
-            )
-
-        if texto_encontrado:
-            keywords.extend(
-                [
-                    "texto",
-                    "escrever",
-                    "gerar",
-                ]
-            )
-
-        if not keywords:
-            keywords = [
-                palavra
-                for palavra in texto.split()
-                if len(palavra) >= 4
-            ][:8]
-
-        return {
-            "intent": intent,
-            "keywords": keywords,
-            "confidence": confidence,
-        }
-
-    # ========================================================
-    # EXTRAÇÃO DO PEDIDO PRINCIPAL
-    # ========================================================
-
-    @staticmethod
-    def extract_prompt(
-        user_request: str,
-    ) -> str:
-        """
-        Extrai o conteúdo principal do pedido.
-
-        Não tenta reescrever o pedido.
-        Apenas remove comandos muito comuns do início.
-        """
-
-        texto = str(
-            user_request or ""
-        ).strip()
-
-        if not texto:
-            return ""
-
-        prefixos = [
-            "gerar uma imagem de ",
-            "gerar uma imagem ",
-            "criar uma imagem de ",
-            "criar uma imagem ",
-            "fazer uma imagem de ",
-            "fazer uma imagem ",
-            "gere uma imagem de ",
-            "gere uma imagem ",
-            "crie uma imagem de ",
-            "crie uma imagem ",
-            "gerar um vídeo de ",
-            "gerar um vídeo ",
-            "gerar um video de ",
-            "gerar um video ",
-            "criar um vídeo de ",
-            "criar um vídeo ",
-            "criar um video de ",
-            "criar um video ",
-            "animar ",
-        ]
-
-        texto_lower = texto.lower()
-
-        for prefixo in prefixos:
-
-            if texto_lower.startswith(prefixo):
-
-                return texto[
-                    len(prefixo):
-                ].strip()
-
-        return texto
-
-    # ========================================================
-    # LOCALIZAÇÃO DE FERRAMENTA
-    # ========================================================
-
-    def _find_tool_for_intent(
-        self,
-        intent: str,
-        keywords: List[str],
-    ) -> Any:
-        """
-        Procura uma ferramenta compatível com a intenção.
-        """
-
-        tool_names = []
-
-        if intent == "imagem":
-            tool_names = [
-                "imagem.gerar",
-                "gerar_imagem",
-                "image.generate",
-                "image_generator",
-            ]
-
-        elif intent == "video":
-            tool_names = [
-                "video.gerar",
-                "video.texto",
-                "video.imagem",
-                "video.fallback",
-                "gerar_video",
-            ]
-
-        elif intent == "texto":
-            tool_names = [
-                "texto.gerar",
-                "text.gerar",
-                "gerar_texto",
-            ]
-
-        for nome in tool_names:
-
-            try:
-
-                tool = self.router.find_tool(
-                    requested_tool=nome,
-                )
-
-                if tool is not None:
-                    return tool
-
-            except Exception:
-                continue
-
-        try:
-
-            return self.router.find_tool(
-                keywords=keywords,
-            )
-
-        except Exception:
-
-            return None
-
-    # ========================================================
-    # ARGUMENTOS AUTOMÁTICOS
-    # ========================================================
-
-    def _build_tool_arguments(
-        self,
-        tool: Any,
-        user_request: str,
-        intent: str,
-        prompt: str,
-    ) -> Dict[str, Any]:
-        """
-        Monta argumentos compatíveis com as ferramentas
-        conhecidas pelo Ultra Core.
-
-        O método mantém argumentos simples para evitar
-        acoplamento excessivo entre Brain e ferramentas.
-        """
-
-        nome = str(
-            getattr(
-                tool,
-                "name",
-                "",
-            )
-        ).lower()
-
-        argumentos: Dict[str, Any] = {}
-
-        # ----------------------------------------------------
-        # IMAGEM
-        # ----------------------------------------------------
-
-        if (
-            intent == "imagem"
-            or "imagem" in nome
-            or "image" in nome
-        ):
-
-            argumentos["prompt"] = prompt
-
-            return argumentos
-
-        # ----------------------------------------------------
-        # VÍDEO
-        # ----------------------------------------------------
-
-        if (
-            intent == "video"
-            or "video" in nome
-        ):
-
-            argumentos["prompt"] = prompt
-
-            return argumentos
-
-        # ----------------------------------------------------
-        # TEXTO
-        # ----------------------------------------------------
-
-        if (
-            intent == "texto"
-            or "texto" in nome
-            or "text" in nome
-        ):
-
-            argumentos["prompt"] = prompt
-
-            return argumentos
-
-        # ----------------------------------------------------
-        # FERRAMENTA GENÉRICA
-        # ----------------------------------------------------
-
-        argumentos["prompt"] = prompt
-
-        return argumentos
-
-    # ========================================================
-    # PLANEJAMENTO INTELIGENTE
-    # ========================================================
-
-    def create_intelligent_plan(
+    def prepare_task(
         self,
         context: TaskContext,
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
-        Interpreta a solicitação e cria automaticamente
-        um plano inicial.
-
-        Esta é a primeira camada de inteligência autônoma
-        do Ultra Core.
+        Interpreta o pedido e grava as informações
+        importantes dentro do contexto.
         """
 
-        user_request = context.user_request
-
-        detected = self.detect_intent(
-            user_request
+        interpretation = self.interpret(
+            context.user_request
         )
 
-        intent = detected["intent"]
-        keywords = detected["keywords"]
-
-        prompt = self.extract_prompt(
-            user_request
-        )
-
-        tool = self._find_tool_for_intent(
-            intent,
-            keywords,
-        )
-
-        if tool is None:
-
+        if not interpretation.get("success"):
             context.add_error(
-                source="brain",
-                message=(
-                    "Não foi encontrada uma ferramenta "
-                    f"compatível com a intenção '{intent}'."
+                source="interpreter",
+                message=interpretation.get(
+                    "message",
+                    "Não foi possível interpretar o pedido.",
                 ),
             )
 
             context.update_status(
-                "planning_failed"
+                "interpretation_failed"
             )
 
-            return []
+            return interpretation
 
-        arguments = self._build_tool_arguments(
-            tool=tool,
-            user_request=user_request,
-            intent=intent,
-            prompt=prompt,
+        context.set_metadata(
+            "intent",
+            interpretation.get("intent"),
         )
 
-        step = {
-            "name": (
-                f"Executar tarefa de {intent}"
-            ),
-            "description": (
-                f"Executar a solicitação do usuário "
-                f"usando a ferramenta {tool.name}."
-            ),
-            "tool": tool.name,
-            "keywords": keywords,
-            "arguments": arguments,
-        }
-
-        plano = self.plan_task(
-            context,
-            [step],
+        context.set_metadata(
+            "keywords",
+            interpretation.get("keywords", []),
         )
 
-        context.touch()
+        context.set_metadata(
+            "confidence",
+            interpretation.get("confidence", 0.0),
+        )
 
-        return plano
+        context.set_metadata(
+            "prompt",
+            interpretation.get("prompt", ""),
+        )
+
+        context.set_metadata(
+            "suggested_tools",
+            interpretation.get(
+                "suggested_tools",
+                [],
+            ),
+        )
+
+        context.set_metadata(
+            "original_request",
+            interpretation.get(
+                "original_request",
+                context.user_request,
+            ),
+        )
+
+        context.update_status(
+            "interpreted"
+        )
+
+        return interpretation
 
     # ========================================================
-    # PLANEJAMENTO MANUAL
+    # 📝 PLANEJAMENTO
     # ========================================================
 
     def plan_task(
@@ -531,19 +190,131 @@ class UltraBrain:
         Cria o plano de execução da tarefa.
         """
 
-        if not steps:
-
-            raise ValueError(
-                "O plano precisa possuir pelo menos uma etapa."
-            )
-
-        return self.planner.create_plan(
+        plan = self.planner.create_plan(
             context,
             steps,
         )
 
+        # ----------------------------------------------------
+        # O Planner original normaliza as etapas.
+        # Aqui recuperamos as informações da interpretação
+        # para que o Router também possa utilizá-las.
+        # ----------------------------------------------------
+
+        keywords = context.get_metadata(
+            "keywords",
+            [],
+        )
+
+        prompt = context.get_metadata(
+            "prompt",
+            "",
+        )
+
+        for step in plan:
+
+            if "keywords" not in step:
+                step["keywords"] = list(
+                    keywords
+                )
+
+            arguments = step.setdefault(
+                "arguments",
+                {},
+            )
+
+            # Não sobrescreve argumentos fornecidos
+            # manualmente pelo plano.
+            if (
+                prompt
+                and "prompt" not in arguments
+            ):
+                arguments["prompt"] = prompt
+
+        context.touch()
+
+        return plan
+
     # ========================================================
-    # INSPEÇÃO DAS FERRAMENTAS
+    # 🤖 CRIAÇÃO AUTOMÁTICA DE PLANO
+    # ========================================================
+
+    def create_intelligent_plan(
+        self,
+        context: TaskContext,
+    ) -> List[Dict[str, Any]]:
+        """
+        Cria uma etapa automaticamente a partir
+        da interpretação do pedido.
+
+        Esta é a primeira camada de planejamento
+        inteligente da Ultra.
+        """
+
+        interpretation = self.prepare_task(
+            context
+        )
+
+        if not interpretation.get("success"):
+            return []
+
+        intent = interpretation.get(
+            "intent",
+            "geral",
+        )
+
+        keywords = interpretation.get(
+            "keywords",
+            [],
+        )
+
+        suggested_tools = interpretation.get(
+            "suggested_tools",
+            [],
+        )
+
+        prompt = interpretation.get(
+            "prompt",
+            "",
+        )
+
+        # ----------------------------------------------------
+        # Procura primeiro uma ferramenta sugerida
+        # que realmente esteja registrada.
+        # ----------------------------------------------------
+
+        selected_tool = None
+
+        for tool_name in suggested_tools:
+
+            tool = self.router.registry.get(
+                tool_name
+            )
+
+            if tool and tool.enabled:
+                selected_tool = tool.name
+                break
+
+        step = {
+            "name": f"Executar tarefa: {intent}",
+            "description": (
+                "Etapa criada automaticamente "
+                "pelo cérebro da Ultra."
+            ),
+            "tool": selected_tool,
+            "keywords": keywords,
+            "arguments": {
+                "prompt": prompt,
+            },
+        }
+
+        return self.plan_task(
+            context,
+            [step],
+        )
+
+    # ========================================================
+    # 🔧 FERRAMENTAS
     # ========================================================
 
     def available_tools(
@@ -556,26 +327,33 @@ class UltraBrain:
         return self.router.available_tools()
 
     # ========================================================
-    # EXPLICAÇÃO DO PLANO
+    # 🧭 EXPLICAR ROTA
     # ========================================================
 
-    def explain_plan(
+    def explain_route(
         self,
         context: TaskContext,
     ) -> Dict[str, Any]:
         """
-        Retorna uma visão resumida do plano atual.
+        Explica qual ferramenta será utilizada.
         """
 
-        return {
-            "task_id": context.task_id,
-            "user_request": context.user_request,
-            "status": context.status,
-            "steps": context.plan,
-        }
+        if not context.plan:
+            return {
+                "success": False,
+                "tool": None,
+                "reason": (
+                    "A tarefa ainda não possui "
+                    "um plano."
+                ),
+            }
+
+        return self.router.explain_route(
+            context.plan[0]
+        )
 
     # ========================================================
-    # EXECUÇÃO
+    # ⚙️ EXECUÇÃO
     # ========================================================
 
     def execute(
@@ -589,12 +367,12 @@ class UltraBrain:
         """
 
         if not context.plan:
-
             return {
                 "success": False,
                 "status": "no_plan",
                 "message": (
-                    "A tarefa ainda não possui um plano."
+                    "A tarefa ainda não possui "
+                    "um plano de execução."
                 ),
             }
 
@@ -604,7 +382,7 @@ class UltraBrain:
         )
 
     # ========================================================
-    # VERIFICAÇÃO
+    # 🔍 VERIFICAÇÃO
     # ========================================================
 
     def verify(
@@ -616,11 +394,11 @@ class UltraBrain:
         """
 
         return self.verifier.verify_context(
-            context,
+            context
         )
 
     # ========================================================
-    # CICLO INTELIGENTE
+    # 🚀 CICLO COMPLETO
     # ========================================================
 
     def run(
@@ -629,129 +407,74 @@ class UltraBrain:
         steps: Optional[List[Dict[str, Any]]] = None,
         *,
         stop_on_error: bool = True,
-        auto_plan: bool = True,
     ) -> Dict[str, Any]:
         """
-        Executa o ciclo completo do Ultra Core.
+        Executa o ciclo completo da Ultra.
 
-        Fluxo:
+        Se steps forem fornecidos:
 
-        Pedido
-          ↓
-        Contexto
-          ↓
-        Interpretação
-          ↓
-        Plano automático
-          ↓
-        Router
-          ↓
-        Executor
-          ↓
-        Verifier
-          ↓
-        Resultado
+            Pedido
+              ↓
+            Interpretação
+              ↓
+            Plano fornecido
+              ↓
+            Execução
+              ↓
+            Verificação
+
+        Se steps não forem fornecidos:
+
+            Pedido
+              ↓
+            Interpretação
+              ↓
+            Plano automático
+              ↓
+            Execução
+              ↓
+            Verificação
         """
 
-        try:
+        context = self.create_task(
+            user_request
+        )
 
-            context = self.create_task(
-                user_request
-            )
+        # ----------------------------------------------------
+        # INTERPRETAÇÃO
+        # ----------------------------------------------------
 
-        except Exception as exc:
+        interpretation = self.prepare_task(
+            context
+        )
 
+        if not interpretation.get("success"):
             return {
                 "success": False,
-                "status": "invalid_request",
-                "task_id": None,
-                "error": str(exc),
+                "status": context.status,
+                "task_id": context.task_id,
+                "interpretation": interpretation,
+                "context": context.summary(),
             }
 
-        # ====================================================
-        # PLANO MANUAL
-        # ====================================================
+        # ----------------------------------------------------
+        # PLANEJAMENTO
+        # ----------------------------------------------------
 
         if steps:
 
-            try:
-
-                self.plan_task(
-                    context,
-                    steps,
-                )
-
-            except Exception as exc:
-
-                context.add_error(
-                    source="brain",
-                    message=str(exc),
-                )
-
-                return {
-                    "success": False,
-                    "status": "planning_failed",
-                    "task_id": context.task_id,
-                    "context": context.summary(),
-                    "error": str(exc),
-                }
-
-        # ====================================================
-        # PLANO AUTOMÁTICO
-        # ====================================================
-
-        elif auto_plan:
-
-            try:
-
-                plano = (
-                    self.create_intelligent_plan(
-                        context
-                    )
-                )
-
-            except Exception as exc:
-
-                context.add_error(
-                    source="brain",
-                    message=str(exc),
-                )
-
-                context.update_status(
-                    "planning_failed"
-                )
-
-                return {
-                    "success": False,
-                    "status": "planning_failed",
-                    "task_id": context.task_id,
-                    "context": context.summary(),
-                    "error": str(exc),
-                }
-
-            if not plano:
-
-                return {
-                    "success": False,
-                    "status": "planning_failed",
-                    "task_id": context.task_id,
-                    "intent": self.detect_intent(
-                        user_request
-                    ),
-                    "context": context.summary(),
-                    "message": (
-                        "A Ultra entendeu a solicitação, "
-                        "mas não encontrou uma ferramenta "
-                        "compatível."
-                    ),
-                }
-
-        # ====================================================
-        # SEM PLANO
-        # ====================================================
+            self.plan_task(
+                context,
+                steps,
+            )
 
         else:
 
+            self.create_intelligent_plan(
+                context
+            )
+
+        if not context.plan:
             context.update_status(
                 "waiting_for_plan"
             )
@@ -760,73 +483,56 @@ class UltraBrain:
                 "success": False,
                 "status": "waiting_for_plan",
                 "task_id": context.task_id,
+                "interpretation": interpretation,
                 "context": context.summary(),
                 "message": (
-                    "A tarefa foi criada, mas nenhum "
-                    "plano foi fornecido."
+                    "Não foi possível criar "
+                    "um plano para esta tarefa."
                 ),
             }
 
-        # ====================================================
-        # EXECUTAR
-        # ====================================================
+        # ----------------------------------------------------
+        # EXECUÇÃO
+        # ----------------------------------------------------
 
         execution = self.execute(
             context,
             stop_on_error=stop_on_error,
         )
 
-        # ====================================================
-        # VERIFICAR
-        # ====================================================
+        # ----------------------------------------------------
+        # VERIFICAÇÃO
+        # ----------------------------------------------------
 
         verification = self.verify(
-            context,
+            context
         )
 
-        sucesso_execucao = bool(
+        # ----------------------------------------------------
+        # RESULTADO FINAL
+        # ----------------------------------------------------
+
+        success = (
             execution.get(
                 "success",
                 False,
             )
-        )
-
-        sucesso_verificacao = bool(
-            verification.get(
+            and verification.get(
                 "success",
                 False,
             )
         )
 
-        sucesso = (
-            sucesso_execucao
-            and
-            sucesso_verificacao
-        )
-
-        # ====================================================
-        # STATUS FINAL
-        # ====================================================
-
-        if sucesso:
-
+        if success:
             context.update_status(
                 "completed"
             )
 
-        elif context.has_errors():
-
-            context.update_status(
-                "failed"
-            )
-
         return {
-            "success": sucesso,
+            "success": success,
             "task_id": context.task_id,
             "status": context.status,
-            "intent": self.detect_intent(
-                user_request
-            ),
+            "interpretation": interpretation,
             "plan": context.plan,
             "execution": execution,
             "verification": verification,
@@ -835,7 +541,7 @@ class UltraBrain:
 
 
 # ============================================================
-# INSTÂNCIA PRINCIPAL
+# 🧠 INSTÂNCIA PRINCIPAL
 # ============================================================
 
 brain = UltraBrain()
