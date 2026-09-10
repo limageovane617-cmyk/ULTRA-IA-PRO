@@ -84,6 +84,421 @@ MOTORES_VIDEO = [
 PASTA = Path("videos_gerados")
 PASTA.mkdir(parents=True, exist_ok=True)
 
+# ============================================================
+# WAN 2.2 — COMFYUI
+# Integração isolada para teste seguro
+# ============================================================
+
+COMFYUI_URL = os.environ.get(
+    "COMFYUI_URL",
+    "http://127.0.0.1:8188"
+).rstrip("/")
+
+WAN_WORKFLOW_PATH = os.environ.get(
+    "WAN_WORKFLOW_PATH",
+    "wan22_i2v_workflow_49frames.json"
+)
+
+WAN_NODE_LOAD_IMAGE = "6"
+WAN_NODE_POSITIVE = "3"
+WAN_NODE_NEGATIVE = "4"
+WAN_NODE_KSAMPLER = "8"
+WAN_NODE_I2V = "7"
+
+
+def _arredondar_wan(valor: int) -> int:
+    """Garante dimensões compatíveis com o workflow do Wan."""
+    try:
+        valor = int(valor)
+    except (TypeError, ValueError):
+        valor = 704
+
+    valor = max(256, valor)
+    return max(16, (valor // 16) * 16)
+
+
+def _carregar_workflow_wan() -> dict:
+    caminho = Path(WAN_WORKFLOW_PATH)
+
+    if not caminho.exists():
+        raise FileNotFoundError(
+            f"Workflow do Wan 2.2 não encontrado: {caminho}"
+        )
+
+    import json
+
+    with caminho.open("r", encoding="utf-8") as arquivo:
+        workflow = json.load(arquivo)
+
+    if not isinstance(workflow, dict):
+        raise RuntimeError(
+            "O workflow do Wan 2.2 não possui formato JSON válido."
+        )
+
+    return workflow
+
+
+def _upload_imagem_comfyui(
+    imagem_bytes: bytes,
+    nome_arquivo: str,
+) -> str:
+    """Envia a imagem de referência para o ComfyUI."""
+
+    if not imagem_bytes:
+        raise ValueError("Imagem de referência vazia.")
+
+    nome = Path(nome_arquivo or "wan_input.png").name
+
+    resposta = requests.post(
+        f"{COMFYUI_URL}/upload/image",
+        files={
+            "image": (
+                nome,
+                imagem_bytes,
+                "application/octet-stream",
+            )
+        },
+        data={
+            "overwrite": "true",
+        },
+        timeout=120,
+    )
+
+    resposta.raise_for_status()
+
+    dados = resposta.json()
+
+    nome_retornado = str(dados.get("name") or "").strip()
+    subpasta = str(dados.get("subfolder") or "").strip()
+
+    if not nome_retornado:
+        raise RuntimeError(
+            f"ComfyUI não retornou o nome da imagem: {dados}"
+        )
+
+    if subpasta:
+        return f"{subpasta}/{nome_retornado}"
+
+    return nome_retornado
+
+
+def _extrair_saida_comfyui(
+    historico: dict,
+) -> Optional[str]:
+    """
+    Procura o vídeo gerado pelo SaveVideo dentro
+    do histórico retornado pelo ComfyUI.
+    """
+
+    if not isinstance(historico, dict):
+        return None
+
+    outputs = historico.get("outputs", {})
+
+    if not isinstance(outputs, dict):
+        return None
+
+    for dados_node in outputs.values():
+
+        if not isinstance(dados_node, dict):
+            continue
+
+        for chave in (
+            "videos",
+            "gifs",
+            "images",
+        ):
+            arquivos = dados_node.get(chave)
+
+            if not isinstance(arquivos, list):
+                continue
+
+            for arquivo in arquivos:
+
+                if not isinstance(arquivo, dict):
+                    continue
+
+                filename = str(
+                    arquivo.get("filename") or ""
+                ).strip()
+
+                if not filename:
+                    continue
+
+                if not filename.lower().endswith(".mp4"):
+                    continue
+
+                subfolder = str(
+                    arquivo.get("subfolder") or ""
+                ).strip()
+
+                tipo = str(
+                    arquivo.get("type") or "output"
+                ).strip()
+
+                params = {
+                    "filename": filename,
+                    "type": tipo,
+                }
+
+                if subfolder:
+                    params["subfolder"] = subfolder
+
+                from urllib.parse import urlencode
+
+                return (
+                    f"{COMFYUI_URL}/view?"
+                    f"{urlencode(params)}"
+                )
+
+    return None
+
+
+def gerar_wan_comfyui(
+    imagem_bytes: bytes,
+    imagem_nome: str,
+    prompt: str,
+    negative_prompt: Optional[str] = None,
+    width: int = 704,
+    height: int = 1248,
+    seed: Optional[int] = None,
+    timeout: int = 900,
+) -> dict[str, Any]:
+    """
+    Gera vídeo usando o workflow validado do Wan 2.2
+    através de uma instância ComfyUI.
+
+    IMPORTANTE:
+    Esta função é isolada inicialmente.
+    Ela NÃO altera o fallback existente.
+    """
+
+    import copy
+    import json
+    import uuid
+
+    inicio = time.time()
+
+    try:
+        # ----------------------------------------------------
+        # 1. Carregar workflow validado
+        # ----------------------------------------------------
+
+        workflow = _carregar_workflow_wan()
+
+        # Trabalhamos em uma cópia para nunca alterar
+        # o arquivo JSON original.
+        workflow = copy.deepcopy(workflow)
+
+        # ----------------------------------------------------
+        # 2. Enviar imagem para o ComfyUI
+        # ----------------------------------------------------
+
+        imagem_comfy = _upload_imagem_comfyui(
+            imagem_bytes,
+            imagem_nome,
+        )
+
+        # ----------------------------------------------------
+        # 3. Atualizar somente os parâmetros necessários
+        # ----------------------------------------------------
+
+        if WAN_NODE_LOAD_IMAGE not in workflow:
+            raise RuntimeError(
+                f"Nó {WAN_NODE_LOAD_IMAGE} (LoadImage) "
+                "não encontrado no workflow."
+            )
+
+        if WAN_NODE_POSITIVE not in workflow:
+            raise RuntimeError(
+                f"Nó {WAN_NODE_POSITIVE} (positive) "
+                "não encontrado no workflow."
+            )
+
+        if WAN_NODE_NEGATIVE not in workflow:
+            raise RuntimeError(
+                f"Nó {WAN_NODE_NEGATIVE} (negative) "
+                "não encontrado no workflow."
+            )
+
+        if WAN_NODE_KSAMPLER not in workflow:
+            raise RuntimeError(
+                f"Nó {WAN_NODE_KSAMPLER} (KSampler) "
+                "não encontrado no workflow."
+            )
+
+        if WAN_NODE_I2V not in workflow:
+            raise RuntimeError(
+                f"Nó {WAN_NODE_I2V} (Wan I2V) "
+                "não encontrado no workflow."
+            )
+
+        # Imagem de referência
+        workflow[WAN_NODE_LOAD_IMAGE]["inputs"]["image"] = imagem_comfy
+
+        # Prompt
+        workflow[WAN_NODE_POSITIVE]["inputs"]["text"] = (
+            prompt or ""
+        )
+
+        # Negative prompt
+        workflow[WAN_NODE_NEGATIVE]["inputs"]["text"] = (
+            negative_prompt
+            or montar_negative_prompt()
+        )
+
+        # Seed
+        if seed is None:
+            seed = random.randint(1, 2_147_483_647)
+
+        workflow[WAN_NODE_KSAMPLER]["inputs"]["seed"] = int(seed)
+
+        # ----------------------------------------------------
+        # 4. Dimensões
+        # ----------------------------------------------------
+
+        width = _arredondar_wan(width)
+        height = _arredondar_wan(height)
+
+        workflow[WAN_NODE_I2V]["inputs"]["width"] = width
+        workflow[WAN_NODE_I2V]["inputs"]["height"] = height
+
+        # ----------------------------------------------------
+        # 5. Enviar workflow para ComfyUI
+        # ----------------------------------------------------
+
+        client_id = str(uuid.uuid4())
+
+        resposta = requests.post(
+            f"{COMFYUI_URL}/prompt",
+            json={
+                "prompt": workflow,
+                "client_id": client_id,
+            },
+            timeout=120,
+        )
+
+        resposta.raise_for_status()
+
+        dados_prompt = resposta.json()
+
+        prompt_id = str(
+            dados_prompt.get("prompt_id") or ""
+        ).strip()
+
+        if not prompt_id:
+            raise RuntimeError(
+                "ComfyUI não retornou prompt_id: "
+                + json.dumps(dados_prompt, ensure_ascii=False)
+            )
+
+        # ----------------------------------------------------
+        # 6. Esperar geração
+        # ----------------------------------------------------
+
+        limite = time.time() + timeout
+
+        while time.time() < limite:
+
+            time.sleep(2)
+
+            resposta_historico = requests.get(
+                f"{COMFYUI_URL}/history/{prompt_id}",
+                timeout=60,
+            )
+
+            resposta_historico.raise_for_status()
+
+            historico_total = resposta_historico.json()
+
+            historico = historico_total.get(prompt_id)
+
+            if not historico:
+                continue
+
+            # Se o ComfyUI registrou erro
+            status = historico.get("status", {})
+
+            if isinstance(status, dict):
+                mensagens = status.get("messages", [])
+
+                texto_status = str(mensagens)
+
+                if (
+                    "error" in texto_status.lower()
+                    or "failed" in texto_status.lower()
+                ):
+                    raise RuntimeError(
+                        f"ComfyUI informou erro: {texto_status}"
+                    )
+
+            # Procurar MP4
+            video_url = _extrair_saida_comfyui(
+                historico
+            )
+
+            if not video_url:
+                continue
+
+            # ------------------------------------------------
+            # 7. Baixar MP4 para videos_gerados
+            # ------------------------------------------------
+
+            destino = _nome_saida("wan22_comfyui")
+
+            resposta_video = requests.get(
+                video_url,
+                timeout=300,
+            )
+
+            resposta_video.raise_for_status()
+
+            destino.write_bytes(
+                resposta_video.content
+            )
+
+            if (
+                not destino.exists()
+                or destino.stat().st_size <= 0
+            ):
+                raise RuntimeError(
+                    "O vídeo gerado pelo ComfyUI está vazio."
+                )
+
+            return {
+                "sucesso": True,
+                "video": str(destino),
+                "motor": "Wan 2.2 — ComfyUI",
+                "erro": "",
+                "prompt_id": prompt_id,
+                "seed": seed,
+                "width": width,
+                "height": height,
+                "tempo": round(
+                    time.time() - inicio,
+                    2,
+                ),
+            }
+
+        raise TimeoutError(
+            "O Wan 2.2 via ComfyUI não terminou "
+            f"dentro de {timeout} segundos."
+        )
+
+    except Exception as erro:
+
+        _registrar_erro_motor(
+            "Wan 2.2 — ComfyUI",
+            erro,
+        )
+
+        return {
+            "sucesso": False,
+            "video": None,
+            "motor": "Wan 2.2 — ComfyUI",
+            "erro": str(erro),
+            }
+
 
 # ============================================================
 # CONTROLE DE MOTORES
