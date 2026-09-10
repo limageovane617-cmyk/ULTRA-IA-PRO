@@ -13,7 +13,7 @@ from google import genai
 
 from gerenciador_imagem import gerar_imagem_pixazo
 
-from video import (
+from gerenciador_video import (
     gerar_video,
     gerar_video_texto,
     gerar_video_imagem,
