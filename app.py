@@ -2732,25 +2732,48 @@ if pergunta:
             "✨ Alex IA está pensando..."
         ):
 
-            resposta = (
-                cliente.models.generate_content(
+            # ====================================================
+            # 🧠 ULTRA CORE
+            # ====================================================
 
-                    model=GEMINI_MODEL,
+            resultado_ultra = (
+                ultra_brain.run(pergunta)
+            )
 
-                    contents=conteudo_gemini
+
+            # ====================================================
+            # ✨ RESPOSTA FINAL
+            # ====================================================
+
+            if isinstance(
+                resultado_ultra,
+                dict
+            ):
+
+                texto = (
+                    resultado_ultra.get(
+                        "final_response",
+                        ""
+                    )
                 )
-            )
+
+            else:
+
+                texto = (
+                    resultado_ultra
+                    if isinstance(
+                        resultado_ultra,
+                        str
+                    )
+                    else ""
+                )
 
 
-            texto = (
+            if not texto:
 
-                resposta.text
-
-                if resposta.text
-
-                else
-                "Não consegui gerar uma resposta."
-            )
+                texto = (
+                    "Não consegui gerar uma resposta."
+                )
 
 
         # ====================================================
@@ -2868,7 +2891,6 @@ if pergunta:
     except Exception as erro:
 
         st.error(
-            "❌ Erro ao conversar com o Gemini: "
+            "❌ Erro ao conversar com o Ultra Core: "
             f"{erro}"
         )
-```
