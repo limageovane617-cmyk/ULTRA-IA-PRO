@@ -22,6 +22,15 @@ from gerenciador_video import (
 
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
+# ============================================================
+# ULTRA CORE
+# ============================================================
+
+from ultra_core.tool_loader import carregar_ferramentas
+from ultra_core.brain import UltraBrain
+from ultra_core.intelligence import intelligence
+from gemini_bridge import criar_gemini_bridge
+
 
 # ============================================================
 # ALEX IA ULTRA API
