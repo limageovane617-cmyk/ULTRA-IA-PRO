@@ -438,9 +438,7 @@ class TaskInterpreter:
 
         ferramentas = {
             "internet": [
-                "internet.pesquisar",
-                "google.search",
-                "web.search",
+               "pesquisa_internet",
             ],
 
             "imagem": [
