@@ -40,6 +40,38 @@ app = FastAPI(
     title="Alex IA Ultra API"
 )
 
+# ============================================================
+# 🧠 ULTRA CORE
+# ============================================================
+
+# Carregar ferramentas disponíveis
+status_ultra = carregar_ferramentas()
+
+
+# ============================================================
+# 🔐 GEMINI BRIDGE
+# ============================================================
+
+gemini_api_key = (
+    os.environ.get("GEMINI_API_KEY")
+    or os.environ.get("GOOGLE_API_KEY")
+)
+
+gemini_bridge = criar_gemini_bridge(
+    api_key=gemini_api_key,
+    model=GEMINI_MODEL,
+)
+
+
+# ============================================================
+# 🧠 ULTRA BRAIN
+# ============================================================
+
+ultra_brain = UltraBrain(
+    task_intelligence=intelligence,
+    gemini_bridge=gemini_bridge,
+)
+
 
 # ============================================================
 # CORS
