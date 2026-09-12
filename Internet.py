@@ -1,10 +1,14 @@
 # ============================================================
 # 🌐 ALEX IA ULTRA — INTERNET
-# Pesquisa na internet usando Google Search + Gemini
+# Pesquisa na internet usando Google Search + DuckDuckGo
 # Criada por Geovani
 # ============================================================
 
 from google.genai import types
+
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs, unquote
 
 
 def configurar_pesquisa_google():
@@ -102,12 +106,138 @@ def extrair_fontes(resposta):
     return fontes
 
 
+def pesquisar_web(pergunta, limite=5, timeout=15):
+    """
+    Realiza uma pesquisa web real usando DuckDuckGo Lite.
+
+    Esta função não depende do Google Search/Gemini
+    para realizar a busca.
+
+    Args:
+        pergunta: pergunta ou termo de pesquisa.
+        limite: quantidade máxima de resultados.
+        timeout: tempo máximo da requisição.
+
+    Returns:
+        Dicionário com os resultados encontrados.
+    """
+
+    if not pergunta or not pergunta.strip():
+        return {
+            "success": False,
+            "provider": "duckduckgo_lite",
+            "erro": "Pergunta vazia.",
+            "resultados": [],
+            "fontes": [],
+            "quantidade": 0,
+        }
+
+    try:
+
+        resposta = requests.get(
+            "https://lite.duckduckgo.com/lite/",
+            params={
+                "q": pergunta.strip()
+            },
+            headers={
+                "User-Agent": "Mozilla/5.0"
+            },
+            timeout=timeout,
+        )
+
+        resposta.raise_for_status()
+
+        soup = BeautifulSoup(
+            resposta.text,
+            "html.parser"
+        )
+
+        resultados = []
+        fontes = []
+
+        for link in soup.find_all("a"):
+
+            href = link.get("href")
+            titulo = link.get_text(
+                " ",
+                strip=True
+            )
+
+            if not href:
+                continue
+
+            if "uddg=" not in href:
+                continue
+
+            if not titulo:
+                continue
+
+            if href.startswith("//"):
+                href = "https:" + href
+
+            dados = parse_qs(
+                urlparse(href).query
+            )
+
+            original = next(
+                iter(
+                    dados.get(
+                        "uddg",
+                        []
+                    )
+                ),
+                None
+            )
+
+            if not original:
+                continue
+
+            url_original = unquote(original)
+
+            if url_original in fontes:
+                continue
+
+            resultados.append({
+                "titulo": titulo,
+                "url": url_original,
+            })
+
+            fontes.append(url_original)
+
+            if len(resultados) >= limite:
+                break
+
+        return {
+            "success": True,
+            "provider": "duckduckgo_lite",
+            "pergunta": pergunta.strip(),
+            "resultados": resultados,
+            "fontes": fontes,
+            "quantidade": len(resultados),
+        }
+
+    except Exception as erro:
+
+        return {
+            "success": False,
+            "provider": "duckduckgo_lite",
+            "pergunta": pergunta.strip(),
+            "resultados": [],
+            "fontes": [],
+            "quantidade": 0,
+            "erro": str(erro),
+        }
+
+
 def pesquisa_disponivel():
     """
     Informa se o módulo de pesquisa está disponível.
 
-    O Google Search é fornecido pelo Gemini,
-    portanto não exige uma API separada neste módulo.
+    A pesquisa web possui um mecanismo independente
+    usando DuckDuckGo Lite.
+
+    O Google Search/Gemini continua disponível
+    como mecanismo adicional quando houver acesso.
     """
 
     return True
