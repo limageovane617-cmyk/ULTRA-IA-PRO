@@ -12,6 +12,8 @@ from .planner import TaskPlanner, planner
 from .router import ToolRouter, router
 from .executor import TaskExecutor, executor
 from .verifier import ResultVerifier, verifier
+from .intelligence import UltraIntelligence, intelligence
+from gemini_bridge import GeminiBridge
 
 
 class UltraBrain:
@@ -33,6 +35,12 @@ class UltraBrain:
         Executor
               ↓
         Verifier
+              ↓
+        UltraIntelligence
+              ↓
+        GeminiBridge
+              ↓
+        Resposta final
 
     O Brain coordena os componentes.
     Ele não executa diretamente as ferramentas.
@@ -45,6 +53,8 @@ class UltraBrain:
         task_router: ToolRouter = router,
         task_executor: TaskExecutor = executor,
         result_verifier: ResultVerifier = verifier,
+        task_intelligence: UltraIntelligence = intelligence,
+        gemini_bridge: Optional[GeminiBridge] = None,
     ) -> None:
 
         self.interpreter = task_interpreter
@@ -52,6 +62,8 @@ class UltraBrain:
         self.router = task_router
         self.executor = task_executor
         self.verifier = result_verifier
+        self.intelligence = task_intelligence
+        self.gemini_bridge = gemini_bridge
 
     # ========================================================
     # 🧠 INTERPRETAÇÃO
@@ -398,6 +410,32 @@ class UltraBrain:
         )
 
     # ========================================================
+    # 🧠 RESPOSTA FINAL
+    # ========================================================
+
+    def generate_response(
+        self,
+        context: TaskContext,
+    ) -> str:
+        """
+        Gera a resposta final usando a
+        UltraIntelligence e o GeminiBridge.
+
+        O Gemini é opcional.
+        Se não estiver disponível, retorna
+        uma resposta vazia sem interromper
+        o funcionamento do Ultra Core.
+        """
+
+        if self.gemini_bridge is None:
+            return ""
+
+        return self.intelligence.generate_response(
+            context=context,
+            gemini_bridge=self.gemini_bridge,
+        )
+
+    # ========================================================
     # 🚀 CICLO COMPLETO
     # ========================================================
 
@@ -422,6 +460,8 @@ class UltraBrain:
             Execução
               ↓
             Verificação
+              ↓
+            Resposta final
 
         Se steps não forem fornecidos:
 
@@ -434,6 +474,8 @@ class UltraBrain:
             Execução
               ↓
             Verificação
+              ↓
+            Resposta final
         """
 
         context = self.create_task(
@@ -528,6 +570,14 @@ class UltraBrain:
                 "completed"
             )
 
+        # ----------------------------------------------------
+        # RESPOSTA FINAL
+        # ----------------------------------------------------
+
+        final_response = self.generate_response(
+            context
+        )
+
         return {
             "success": success,
             "task_id": context.task_id,
@@ -536,6 +586,7 @@ class UltraBrain:
             "plan": context.plan,
             "execution": execution,
             "verification": verification,
+            "final_response": final_response,
             "context": context.summary(),
         }
 
