@@ -1,4 +1,3 @@
-```python
 # ============================================================
 # 🤖 ALEX IA ULTRA
 # APP PRINCIPAL
@@ -90,6 +89,58 @@ from arquivos import ler_arquivo
 from codigo import (
     preparar_pedido_codigo,
     listar_linguagens
+)
+
+
+# ============================================================
+# 🧠 ULTRA CORE
+# ============================================================
+
+from kaggle_secrets import UserSecretsClient
+
+from ultra_core.tool_loader import carregar_ferramentas
+from ultra_core.brain import UltraBrain
+from ultra_core.intelligence import intelligence
+from gemini_bridge import criar_gemini_bridge
+
+
+# ------------------------------------------------------------
+# 🔧 CARREGAR FERRAMENTAS
+# ------------------------------------------------------------
+
+status_ultra = carregar_ferramentas()
+
+
+# ------------------------------------------------------------
+# 🔐 GEMINI BRIDGE
+# ------------------------------------------------------------
+
+try:
+
+    secrets = UserSecretsClient()
+
+    gemini_api_key = secrets.get_secret(
+        "GEMINI_API_KEY"
+    )
+
+except Exception:
+
+    gemini_api_key = None
+
+
+gemini_bridge = criar_gemini_bridge(
+    api_key=gemini_api_key,
+    model="gemini-3.1-flash-lite"
+)
+
+
+# ------------------------------------------------------------
+# 🧠 ULTRA BRAIN
+# ------------------------------------------------------------
+
+ultra_brain = UltraBrain(
+    task_intelligence=intelligence,
+    gemini_bridge=gemini_bridge
 )
 
 
