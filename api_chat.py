@@ -303,16 +303,14 @@ def servir_video(filename: str):
         filename=nome,
     )
 
-
 # ============================================================
-# CHAT - GEMINI
+# CHAT - ULTRA CORE
 # ============================================================
 
 @app.post("/api/chat")
 def chat(pedido: PedidoChat):
-    cliente = obter_cliente_gemini()
 
-    if cliente is None:
+    if gemini_bridge is None:
         return {
             "success": False,
             "resposta": (
@@ -321,70 +319,112 @@ def chat(pedido: PedidoChat):
             ),
         }
 
-    partes = [
-        SYSTEM_PROMPT
-    ]
+    # ========================================================
+    # 🧠 PREPARAR SOLICITACAO
+    # ========================================================
 
-    if pedido.historico:
-        partes.append(
-            "\nHISTORICO DA CONVERSA:\n"
+    pergunta_ultra = pedido.pergunta
+
+    # ========================================================
+    # 📄 CONTEXTO DO ARQUIVO
+    # ========================================================
+
+    if pedido.contexto_arquivo:
+        pergunta_ultra += (
+            "\n\nCONTEXTO DO ARQUIVO:\n"
+            + pedido.contexto_arquivo
         )
 
+    if pedido.nome_arquivo:
+        pergunta_ultra += (
+            "\n\nNOME DO ARQUIVO:\n"
+            + pedido.nome_arquivo
+        )
+
+    # ========================================================
+    # 💬 HISTORICO DA CONVERSA
+    # ========================================================
+
+    if pedido.historico:
+
+        historico_texto = []
+
         for mensagem in pedido.historico[-20:]:
-            partes.append(
+            historico_texto.append(
                 f"{mensagem.role}: "
                 f"{mensagem.content}"
             )
 
-    if pedido.contexto_arquivo:
-        partes.append(
-            "\nCONTEXTO DO ARQUIVO:\n"
+        pergunta_ultra += (
+            "\n\nHISTORICO DA CONVERSA:\n"
+            + "\n".join(historico_texto)
         )
 
-        partes.append(
-            pedido.contexto_arquivo
-        )
-
-    partes.append(
-        "\nNOVA PERGUNTA:\n"
-    )
-
-    partes.append(
-        pedido.pergunta
-    )
-
-    instrucao = "\n".join(
-        partes
-    )
+    # ========================================================
+    # 🧠 EXECUTAR ULTRA CORE
+    # ========================================================
 
     try:
-        resultado = cliente.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=instrucao,
-        )
 
-        resposta = getattr(
-            resultado,
-            "text",
-            None,
+        resultado_ultra = ultra_brain.run(
+            pergunta_ultra
         )
-
-        if not resposta:
-            resposta = (
-                "Nao consegui gerar uma resposta."
-            )
 
         # ====================================================
-        # DETECTAR ACAO DE GERACAO DE IMAGEM
+        # ✨ OBTER RESPOSTA FINAL
+        # ====================================================
+
+        if isinstance(
+            resultado_ultra,
+            dict
+        ):
+            resposta = (
+                resultado_ultra.get(
+                    "final_response",
+                    ""
+                )
+                or resultado_ultra.get(
+                    "resposta",
+                    ""
+                )
+            )
+
+        elif isinstance(
+            resultado_ultra,
+            str
+        ):
+            resposta = resultado_ultra
+
+        else:
+            resposta = ""
+
+        # ====================================================
+        # ❌ NENHUMA RESPOSTA
+        # ====================================================
+
+        if not resposta:
+            return {
+                "success": False,
+                "resposta": (
+                    "Nao consegui gerar "
+                    "uma resposta."
+                ),
+            }
+
+        # ====================================================
+        # 🖼️ DETECTAR ACAO DE GERACAO DE IMAGEM
         # ====================================================
 
         texto_resposta = resposta.strip()
 
         if (
             "dalle.text2im" in texto_resposta
-            or '"action": "dalle.text2im"' in texto_resposta
-            or "'action': 'dalle.text2im'" in texto_resposta
+            or '"action": "dalle.text2im"'
+            in texto_resposta
+            or "'action': 'dalle.text2im'"
+            in texto_resposta
         ):
+
             prompt_imagem = None
 
             padroes_prompt = [
@@ -393,6 +433,7 @@ def chat(pedido: PedidoChat):
             ]
 
             for padrao in padroes_prompt:
+
                 correspondencia = re.search(
                     padrao,
                     texto_resposta,
@@ -409,6 +450,7 @@ def chat(pedido: PedidoChat):
                 prompt_imagem = pedido.pergunta
 
             try:
+
                 caminho_imagem = (
                     gerar_imagem_pixazo(
                         prompt_imagem
@@ -424,7 +466,8 @@ def chat(pedido: PedidoChat):
                 return {
                     "success": True,
                     "resposta": (
-                        "Pronto! A imagem foi gerada."
+                        "Pronto! A imagem "
+                        "foi gerada."
                     ),
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
@@ -435,43 +478,52 @@ def chat(pedido: PedidoChat):
                     ),
                     "prompt": prompt_imagem,
                     "motor": (
-                        "Pixazo / Flux 1 Schnell"
+                        "Pixazo / "
+                        "Flux 1 Schnell"
                     ),
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
+                    "ultra_core": True,
                 }
 
             except Exception as erro_imagem:
+
                 return {
                     "success": False,
                     "resposta": (
-                        "Entendi que voce pediu "
-                        "uma imagem, mas ocorreu "
-                        "um erro ao gerar."
+                        "Entendi que voce "
+                        "pediu uma imagem, "
+                        "mas ocorreu um erro "
+                        "ao gerar."
                     ),
                     "erro": str(
                         erro_imagem
                     ),
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
+                    "ultra_core": True,
                 }
 
         # ====================================================
-        # RESPOSTA NORMAL
+        # ✨ RESPOSTA NORMAL
         # ====================================================
 
         return {
             "success": True,
             "resposta": resposta,
             "modelo": GEMINI_MODEL,
+            "ultra_core": True,
         }
 
     except Exception as erro:
+
         return {
             "success": False,
             "resposta": (
-                f"Erro ao consultar a Gemini: {erro}"
+                "Erro ao executar "
+                "o Ultra Core."
             ),
+            "erro": str(erro),
         }
 
 
