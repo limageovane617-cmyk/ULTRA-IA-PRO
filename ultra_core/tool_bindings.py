@@ -8,7 +8,7 @@ from typing import Any, Dict
 from .tools import ToolRegistry, tool_registry
 
 # Internet.py está na raiz do projeto ULTRA-IA-PRO.
-from Internet import preparar_pesquisa
+from Internet import preparar_pesquisa, pesquisar_web
 
 
 # ============================================================
@@ -21,7 +21,7 @@ def pesquisar_internet(
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """
-    Prepara uma pesquisa para a ferramenta de Internet.
+    Executa uma pesquisa real na internet.
 
     Aceita tanto 'pergunta' quanto 'prompt' para manter
     compatibilidade com o Ultra Core.
@@ -46,11 +46,37 @@ def pesquisar_internet(
             "Não foi possível preparar a pesquisa."
         )
 
+    resultado_web = pesquisar_web(
+        consulta_usuario
+    )
+
     return {
-        "success": True,
+        "success": resultado_web.get(
+            "success",
+            False
+        ),
         "tool": "pesquisa_internet",
         "pergunta": consulta_usuario,
         "consulta": pesquisa,
+        "provider": resultado_web.get(
+            "provider",
+            "duckduckgo_lite"
+        ),
+        "resultados": resultado_web.get(
+            "resultados",
+            []
+        ),
+        "fontes": resultado_web.get(
+            "fontes",
+            []
+        ),
+        "quantidade": resultado_web.get(
+            "quantidade",
+            0
+        ),
+        "erro": resultado_web.get(
+            "erro"
+        ),
     }
 
 
@@ -72,12 +98,12 @@ def registrar_ferramentas(
             name="pesquisa_internet",
             description=(
                 "Pesquisa informações atuais na internet "
-                "usando a infraestrutura de pesquisa do Gemini."
+                "usando DuckDuckGo Lite."
             ),
             function=pesquisar_internet,
             metadata={
                 "categoria": "internet",
-                "provider": "google_search",
+                "provider": "duckduckgo_lite",
                 "language": "pt-BR",
             },
         )
