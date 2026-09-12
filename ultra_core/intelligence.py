@@ -3,7 +3,7 @@
 # Ponte entre o Ultra Core e o modelo de linguagem
 # ============================================================
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .context import TaskContext
 
@@ -73,6 +73,38 @@ class UltraIntelligence:
             "- Use os resultados verificados pelo Ultra Core.\n"
             "- Não invente informações que não estejam disponíveis.\n"
         )
+
+    def generate_response(
+        self,
+        context: TaskContext,
+        gemini_bridge: Optional[Any] = None,
+    ) -> str:
+        """
+        Gera a resposta final usando o GeminiBridge.
+
+        O Ultra Core continua funcionando mesmo quando
+        o GeminiBridge não estiver disponível.
+        """
+
+        prompt = self.build_prompt(context)
+
+        # Gemini é opcional.
+        if gemini_bridge is None:
+            return ""
+
+        try:
+            resposta = gemini_bridge.gerar_resposta(prompt)
+
+            return resposta or ""
+
+        except Exception as exc:
+            context.add_error(
+                source="gemini_bridge",
+                message="Erro ao gerar resposta com Gemini",
+                details=str(exc),
+            )
+
+            return ""
 
 
 # Instância principal da inteligência
