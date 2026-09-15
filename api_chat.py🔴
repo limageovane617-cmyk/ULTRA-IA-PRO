@@ -13,7 +13,7 @@ from google import genai
 
 from gerenciador_imagem import gerar_imagem_pixazo
 
-from video import (
+from gerenciador_video import (
     gerar_video,
     gerar_video_texto,
     gerar_video_imagem,
@@ -22,7 +22,56 @@ from video import (
 
 from config_ultra import SYSTEM_PROMPT, GEMINI_MODEL
 
-app = FastAPI(title="Alex IA Ultra API")
+# ============================================================
+# ULTRA CORE
+# ============================================================
+
+from ultra_core.tool_loader import carregar_ferramentas
+from ultra_core.brain import UltraBrain
+from ultra_core.intelligence import intelligence
+from gemini_bridge import criar_gemini_bridge
+
+
+# ============================================================
+# ALEX IA ULTRA API
+# ============================================================
+
+app = FastAPI(
+    title="Alex IA Ultra API"
+)
+
+# ============================================================
+# 🧠 ULTRA CORE
+# ============================================================
+
+# Carregar ferramentas disponíveis
+status_ultra = carregar_ferramentas()
+
+
+# ============================================================
+# 🔐 GEMINI BRIDGE
+# ============================================================
+
+gemini_api_key = (
+    os.environ.get("GEMINI_API_KEY")
+    or os.environ.get("GOOGLE_API_KEY")
+)
+
+gemini_bridge = criar_gemini_bridge(
+    api_key=gemini_api_key,
+    model=GEMINI_MODEL,
+)
+
+
+# ============================================================
+# 🧠 ULTRA BRAIN
+# ============================================================
+
+ultra_brain = UltraBrain(
+    task_intelligence=intelligence,
+    gemini_bridge=gemini_bridge,
+)
+
 
 # ============================================================
 # CORS
@@ -36,6 +85,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ============================================================
 # CONFIGURACAO DA PONTE
 # ============================================================
@@ -45,22 +95,38 @@ PONTE_API_URL = os.environ.get(
     "https://ponte-alex-v2.onrender.com/api/ponte/v2/processar",
 ).rstrip("/")
 
+
 PONTE_API_SECRET = (
     os.environ.get("PONTE_API_SECRET")
     or os.environ.get("PONTE_API_SECRETO")
     or os.environ.get("ALEX_BRIDGE_SECRET")
 )
 
+
 # ============================================================
 # CONFIGURACAO DOS ARQUIVOS GERADOS
 # ============================================================
 
-PASTA_IMAGENS = Path("/tmp/alex_ia_ultra_imagens")
+PASTA_IMAGENS = Path(
+    "/tmp/alex_ia_ultra_imagens"
+)
+
+PASTA_VIDEOS = Path(
+    "/tmp/alex_ia_ultra_videos"
+)
+
 
 PASTA_IMAGENS.mkdir(
     parents=True,
     exist_ok=True,
 )
+
+
+PASTA_VIDEOS.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
 
 # ============================================================
 # MODELOS
@@ -132,6 +198,21 @@ def criar_url_imagem(caminho_imagem):
 
 
 # ============================================================
+# URL PUBLICA DO VIDEO
+# ============================================================
+
+def criar_url_video(caminho_video):
+    if not caminho_video:
+        return None
+
+    nome = Path(
+        str(caminho_video)
+    ).name
+
+    return f"/api/videos/{nome}"
+
+
+# ============================================================
 # ROTAS BASICAS
 # ============================================================
 
@@ -193,14 +274,43 @@ def servir_imagem(filename: str):
 
 
 # ============================================================
-# CHAT - GEMINI
+# SERVIR VIDEOS GERADOS
+# ============================================================
+
+@app.get("/api/videos/{filename}")
+def servir_video(filename: str):
+    nome = Path(
+        filename
+    ).name
+
+    caminho = PASTA_VIDEOS / nome
+
+    if not caminho.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Video nao encontrado.",
+        )
+
+    if not caminho.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Video invalido.",
+        )
+
+    return FileResponse(
+        caminho,
+        media_type="video/mp4",
+        filename=nome,
+    )
+
+# ============================================================
+# CHAT - ULTRA CORE
 # ============================================================
 
 @app.post("/api/chat")
 def chat(pedido: PedidoChat):
-    cliente = obter_cliente_gemini()
 
-    if cliente is None:
+    if gemini_bridge is None:
         return {
             "success": False,
             "resposta": (
@@ -209,66 +319,112 @@ def chat(pedido: PedidoChat):
             ),
         }
 
-    partes = [SYSTEM_PROMPT]
+    # ========================================================
+    # 🧠 PREPARAR SOLICITACAO
+    # ========================================================
 
-    if pedido.historico:
-        partes.append(
-            "\nHISTORICO DA CONVERSA:\n"
+    pergunta_ultra = pedido.pergunta
+
+    # ========================================================
+    # 📄 CONTEXTO DO ARQUIVO
+    # ========================================================
+
+    if pedido.contexto_arquivo:
+        pergunta_ultra += (
+            "\n\nCONTEXTO DO ARQUIVO:\n"
+            + pedido.contexto_arquivo
         )
 
+    if pedido.nome_arquivo:
+        pergunta_ultra += (
+            "\n\nNOME DO ARQUIVO:\n"
+            + pedido.nome_arquivo
+        )
+
+    # ========================================================
+    # 💬 HISTORICO DA CONVERSA
+    # ========================================================
+
+    if pedido.historico:
+
+        historico_texto = []
+
         for mensagem in pedido.historico[-20:]:
-            partes.append(
+            historico_texto.append(
                 f"{mensagem.role}: "
                 f"{mensagem.content}"
             )
 
-    if pedido.contexto_arquivo:
-        partes.append(
-            "\nCONTEXTO DO ARQUIVO:\n"
+        pergunta_ultra += (
+            "\n\nHISTORICO DA CONVERSA:\n"
+            + "\n".join(historico_texto)
         )
 
-        partes.append(
-            pedido.contexto_arquivo
-        )
-
-    partes.append(
-        "\nNOVA PERGUNTA:\n"
-    )
-
-    partes.append(
-        pedido.pergunta
-    )
-
-    instrucao = "\n".join(partes)
+    # ========================================================
+    # 🧠 EXECUTAR ULTRA CORE
+    # ========================================================
 
     try:
-        resultado = cliente.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=instrucao,
-        )
 
-        resposta = getattr(
-            resultado,
-            "text",
-            None,
+        resultado_ultra = ultra_brain.run(
+            pergunta_ultra
         )
-
-        if not resposta:
-            resposta = (
-                "Nao consegui gerar uma resposta."
-            )
 
         # ====================================================
-        # DETECTAR ACAO DE GERACAO DE IMAGEM
+        # ✨ OBTER RESPOSTA FINAL
+        # ====================================================
+
+        if isinstance(
+            resultado_ultra,
+            dict
+        ):
+            resposta = (
+                resultado_ultra.get(
+                    "final_response",
+                    ""
+                )
+                or resultado_ultra.get(
+                    "resposta",
+                    ""
+                )
+            )
+
+        elif isinstance(
+            resultado_ultra,
+            str
+        ):
+            resposta = resultado_ultra
+
+        else:
+            resposta = ""
+
+        # ====================================================
+        # ❌ NENHUMA RESPOSTA
+        # ====================================================
+
+        if not resposta:
+            return {
+                "success": False,
+                "resposta": (
+                    "Nao consegui gerar "
+                    "uma resposta."
+                ),
+            }
+
+        # ====================================================
+        # 🖼️ DETECTAR ACAO DE GERACAO DE IMAGEM
         # ====================================================
 
         texto_resposta = resposta.strip()
 
         if (
             "dalle.text2im" in texto_resposta
-            or '"action": "dalle.text2im"' in texto_resposta
-            or "'action': 'dalle.text2im'" in texto_resposta
+            or '"action": "dalle.text2im"'
+            in texto_resposta
+            or "'action': 'dalle.text2im'"
+            in texto_resposta
         ):
+
             prompt_imagem = None
 
             padroes_prompt = [
@@ -277,6 +433,7 @@ def chat(pedido: PedidoChat):
             ]
 
             for padrao in padroes_prompt:
+
                 correspondencia = re.search(
                     padrao,
                     texto_resposta,
@@ -293,61 +450,80 @@ def chat(pedido: PedidoChat):
                 prompt_imagem = pedido.pergunta
 
             try:
-                caminho_imagem = gerar_imagem_pixazo(
-                    prompt_imagem
+
+                caminho_imagem = (
+                    gerar_imagem_pixazo(
+                        prompt_imagem
+                    )
                 )
 
-                url_imagem = criar_url_imagem(
-                    caminho_imagem
+                url_imagem = (
+                    criar_url_imagem(
+                        caminho_imagem
+                    )
                 )
 
                 return {
                     "success": True,
                     "resposta": (
-                        "Pronto! A imagem foi gerada."
+                        "Pronto! A imagem "
+                        "foi gerada."
                     ),
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
                     "arquivo_imagem": (
-                        Path(caminho_imagem).name
+                        Path(
+                            caminho_imagem
+                        ).name
                     ),
                     "prompt": prompt_imagem,
                     "motor": (
-                        "Pixazo / Flux 1 Schnell"
+                        "Pixazo / "
+                        "Flux 1 Schnell"
                     ),
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
+                    "ultra_core": True,
                 }
 
             except Exception as erro_imagem:
+
                 return {
                     "success": False,
                     "resposta": (
-                        "Entendi que voce pediu "
-                        "uma imagem, mas ocorreu "
-                        "um erro ao gerar."
+                        "Entendi que voce "
+                        "pediu uma imagem, "
+                        "mas ocorreu um erro "
+                        "ao gerar."
                     ),
-                    "erro": str(erro_imagem),
+                    "erro": str(
+                        erro_imagem
+                    ),
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
+                    "ultra_core": True,
                 }
 
         # ====================================================
-        # RESPOSTA NORMAL
+        # ✨ RESPOSTA NORMAL
         # ====================================================
 
         return {
             "success": True,
             "resposta": resposta,
             "modelo": GEMINI_MODEL,
+            "ultra_core": True,
         }
 
     except Exception as erro:
+
         return {
             "success": False,
             "resposta": (
-                f"Erro ao consultar a Gemini: {erro}"
+                "Erro ao executar "
+                "o Ultra Core."
             ),
+            "erro": str(erro),
         }
 
 
@@ -397,29 +573,43 @@ def video(pedido: PedidoVideo):
     try:
         imagem_bytes = None
 
+        # ====================================================
+        # RECEBER IMAGEM BASE64
+        # ====================================================
+
         if pedido.imagem:
             dados_imagem = pedido.imagem
 
-            # Aceita tambem:
+            # Aceita:
             # data:image/png;base64,XXXXXX
 
             if "," in dados_imagem:
-                dados_imagem = dados_imagem.split(
-                    ",",
-                    1,
-                )[1]
+                dados_imagem = (
+                    dados_imagem.split(
+                        ",",
+                        1,
+                    )[1]
+                )
 
             try:
-                imagem_bytes = base64.b64decode(
-                    dados_imagem,
-                    validate=True,
+                imagem_bytes = (
+                    base64.b64decode(
+                        dados_imagem,
+                        validate=True,
+                    )
                 )
 
             except Exception:
                 raise HTTPException(
                     status_code=400,
-                    detail="Imagem em base64 invalida.",
+                    detail=(
+                        "Imagem em base64 invalida."
+                    ),
                 )
+
+        # ====================================================
+        # GERAR VIDEO A PARTIR DE IMAGEM
+        # ====================================================
 
         if imagem_bytes:
             resultado = gerar_video_imagem(
@@ -431,6 +621,10 @@ def video(pedido: PedidoVideo):
                 ),
             )
 
+        # ====================================================
+        # GERAR VIDEO A PARTIR DE TEXTO
+        # ====================================================
+
         else:
             resultado = gerar_video_texto(
                 prompt=pedido.prompt,
@@ -439,13 +633,25 @@ def video(pedido: PedidoVideo):
                 ),
             )
 
-        if not resultado.get("sucesso"):
+        # ====================================================
+        # VERIFICAR RESULTADO
+        # ====================================================
+
+        if not resultado.get(
+            "sucesso"
+        ):
             return {
                 "success": False,
                 "sucesso": False,
-                "motor": resultado.get("motor"),
-                "erro": resultado.get("erro"),
+                "motor": resultado.get(
+                    "motor"
+                ),
+                "erro": resultado.get(
+                    "erro"
+                ),
                 "video": None,
+                "video_url": None,
+                "arquivo": None,
             }
 
         caminho_video = (
@@ -457,26 +663,134 @@ def video(pedido: PedidoVideo):
             return {
                 "success": False,
                 "sucesso": False,
-                "motor": resultado.get("motor"),
+                "motor": resultado.get(
+                    "motor"
+                ),
                 "erro": (
                     "O video foi processado, "
-                    "mas nenhum arquivo foi retornado."
+                    "mas nenhum arquivo foi "
+                    "retornado."
                 ),
                 "video": None,
+                "video_url": None,
+                "arquivo": None,
             }
 
-        nome_video = Path(
-            caminho_video
-        ).name
+        # ====================================================
+        # NORMALIZAR CAMINHO
+        # ====================================================
+
+        caminho_video = Path(
+            str(caminho_video)
+        )
+
+        nome_video = (
+            caminho_video.name
+        )
+
+        # ====================================================
+        # GARANTIR QUE O VIDEO FIQUE NA
+        # PASTA PUBLICA DA API
+        # ====================================================
+
+        destino_video = (
+            PASTA_VIDEOS
+            / nome_video
+        )
+
+        if (
+            caminho_video.resolve()
+            != destino_video.resolve()
+        ):
+            try:
+                if caminho_video.exists():
+                    destino_video.write_bytes(
+                        caminho_video.read_bytes()
+                    )
+
+            except Exception as erro_copia:
+                return {
+                    "success": False,
+                    "sucesso": False,
+                    "motor": resultado.get(
+                        "motor"
+                    ),
+                    "erro": (
+                        "O video foi gerado, "
+                        "mas nao foi possivel "
+                        "prepara-lo para o APK."
+                    ),
+                    "detalhes": str(
+                        erro_copia
+                    ),
+                    "video": None,
+                    "video_url": None,
+                    "arquivo": None,
+                }
+
+        # ====================================================
+        # VERIFICAR ARQUIVO FINAL
+        # ====================================================
+
+        if not destino_video.exists():
+            return {
+                "success": False,
+                "sucesso": False,
+                "motor": resultado.get(
+                    "motor"
+                ),
+                "erro": (
+                    "O arquivo de video "
+                    "nao foi encontrado "
+                    "apos a geracao."
+                ),
+                "video": None,
+                "video_url": None,
+                "arquivo": nome_video,
+            }
+
+        if not destino_video.is_file():
+            return {
+                "success": False,
+                "sucesso": False,
+                "motor": resultado.get(
+                    "motor"
+                ),
+                "erro": (
+                    "O caminho do video "
+                    "nao corresponde a "
+                    "um arquivo valido."
+                ),
+                "video": None,
+                "video_url": None,
+                "arquivo": nome_video,
+            }
+
+        # ====================================================
+        # URL RELATIVA DA API
+        # ====================================================
+
+        url_video = criar_url_video(
+            destino_video
+        )
+
+        # ====================================================
+        # RESPOSTA COMPATIVEL COM O APK
+        # ====================================================
 
         return {
             "success": True,
             "sucesso": True,
-            "motor": resultado.get("motor"),
-            "video": (
-                f"/api/videos/{nome_video}"
+            "motor": resultado.get(
+                "motor"
             ),
+            "video": url_video,
+            "video_url": url_video,
             "arquivo": nome_video,
+            "arquivo_video": nome_video,
+            "duracao": (
+                pedido.duracao or 5
+            ),
             "erro": None,
         }
 
@@ -490,7 +804,48 @@ def video(pedido: PedidoVideo):
             "motor": None,
             "erro": str(erro),
             "video": None,
+            "video_url": None,
+            "arquivo": None,
         }
+
+
+# ============================================================
+# VIDEO - DOWNLOAD / ABRIR NO APK
+# ============================================================
+
+@app.get("/api/videos/{filename}")
+def download_video(filename: str):
+    nome = Path(
+        filename
+    ).name
+
+    caminho = PASTA_VIDEOS / nome
+
+    if not caminho.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Video nao encontrado."
+            ),
+        )
+
+    if not caminho.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Arquivo de video invalido."
+            ),
+        )
+
+    return FileResponse(
+        path=caminho,
+        media_type="video/mp4",
+        filename=nome,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600",
+        },
+    )
 
 
 # ============================================================
@@ -498,7 +853,9 @@ def video(pedido: PedidoVideo):
 # ============================================================
 
 @app.post("/api/ponte/processar")
-def processar_ponte(pedido: PedidoPonte):
+def processar_ponte(
+    pedido: PedidoPonte
+):
     if not PONTE_API_SECRET:
         return {
             "success": False,
@@ -541,8 +898,12 @@ def processar_ponte(pedido: PedidoPonte):
                     "A Ponte retornou uma "
                     "resposta invalida."
                 ),
-                "status_code": resposta.status_code,
-                "resposta": resposta.text[:2000],
+                "status_code": (
+                    resposta.status_code
+                ),
+                "resposta": (
+                    resposta.text[:2000]
+                ),
             }
 
         return dados
@@ -574,4 +935,9 @@ def processar_ponte(pedido: PedidoPonte):
                 "a Ponte Alex v2."
             ),
             "detalhes": str(erro),
-    }
+        }
+
+
+# ============================================================
+# FIM DA API
+# ============================================================
