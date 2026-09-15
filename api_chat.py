@@ -281,6 +281,29 @@ def teste_internet():
         "testes": resultados,
     }
 
+
+@app.get("/api/teste-pesquisa")
+def teste_pesquisa():
+    try:
+        resultado = pesquisar_web(
+            "qual é a capital do Brasil?",
+            limite=5,
+            timeout=15,
+        )
+
+        return {
+            "success": True,
+            "resultado": resultado,
+        }
+
+    except Exception as erro:
+        return {
+            "success": False,
+            "erro": type(erro).__name__,
+            "mensagem": str(erro),
+        }
+
+
 # ============================================================
 # SERVIR IMAGENS GERADAS
 # ============================================================
