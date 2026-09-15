@@ -243,6 +243,43 @@ def health():
     }
 
 
+@app.get("/api/teste-internet")
+def teste_internet():
+    resultados = {}
+
+    testes = [
+        ("duckduckgo", "https://lite.duckduckgo.com/lite/"),
+        ("example", "https://example.com/"),
+    ]
+
+    for nome, url in testes:
+        try:
+            inicio = time.monotonic()
+
+            resposta = requests.get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=10,
+            )
+
+            resultados[nome] = {
+                "ok": True,
+                "status": resposta.status_code,
+                "tempo": round(time.monotonic() - inicio, 2),
+            }
+
+        except Exception as erro:
+            resultados[nome] = {
+                "ok": False,
+                "erro": type(erro).__name__,
+                "mensagem": str(erro),
+            }
+
+    return {
+        "success": True,
+        "testes": resultados,
+    }
+
 # ============================================================
 # SERVIR IMAGENS GERADAS
 # ============================================================
