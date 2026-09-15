@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
+from Internet import pesquisar_web
 
 from gerenciador_imagem import gerar_imagem_pixazo
 
