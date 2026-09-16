@@ -102,6 +102,15 @@ PONTE_API_SECRET = (
     or os.environ.get("ALEX_BRIDGE_SECRET")
 )
 
+# ============================================================
+# 🔐 SEGREDO PARA CONEXÃO EXTERNA — PONTE → ULTRA
+# ============================================================
+
+ULTRA_API_SECRET = (
+    os.environ.get("ULTRA_API_SECRET")
+    or os.environ.get("ULTRA_API_SECRETO")
+    or os.environ.get("ALEX_ULTRA_SECRET")
+)
 
 # ============================================================
 # CONFIGURACAO DOS ARQUIVOS GERADOS
