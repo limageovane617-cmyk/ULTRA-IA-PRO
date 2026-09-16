@@ -113,6 +113,31 @@ ULTRA_API_SECRET = (
 )
 
 # ============================================================
+# 🔐 TESTE DE AUTENTICAÇÃO — PONTE → ULTRA
+# ============================================================
+
+@app.get("/api/ultra/ping")
+def ultra_ping(x_api_secret: Optional[str] = Header(default=None)):
+    if not ULTRA_API_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="ULTRA_API_SECRET nao configurado no servidor.",
+        )
+
+    if x_api_secret != ULTRA_API_SECRET:
+        raise HTTPException(
+            status_code=401,
+            detail="Segredo invalido.",
+        )
+
+    return {
+        "success": True,
+        "authenticated": True,
+        "service": "Alex IA Ultra API",
+        "connection": "Ponte → ULTRA",
+    }
+
+# ============================================================
 # CONFIGURACAO DOS ARQUIVOS GERADOS
 # ============================================================
 
