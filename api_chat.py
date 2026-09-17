@@ -538,27 +538,51 @@ def chat(pedido: PedidoChat):
                     "ultra_core": True,
                 }
 
-        # ====================================================
-        # ✨ RESPOSTA NORMAL
-        # ====================================================
+    # ====================================================
+    # ✨ RESPOSTA NORMAL
+    # ====================================================
 
-        return {
-            "success": True,
-            "resposta": resposta,
-            "modelo": GEMINI_MODEL,
-            "ultra_core": True,
-        }
+    return {
+        "success": True,
+        "resposta": resposta,
+        "modelo": GEMINI_MODEL,
+        "ultra_core": True,
+    }
 
-    except Exception as erro:
+except Exception as erro:
 
-        return {
-            "success": False,
-            "resposta": (
-                "Erro ao executar "
-                "o Ultra Core."
-            ),
-            "erro": str(erro),
-        }
+    return {
+        "success": False,
+        "resposta": (
+            "Erro ao executar "
+            "o Ultra Core."
+        ),
+        "erro": str(erro),
+    }
+
+
+# ============================================================
+# 🔐 CHAT PROTEGIDO — PONTE → ULTRA
+# ============================================================
+
+@app.post("/api/ultra/chat")
+def ultra_chat(
+    pedido: PedidoChat,
+    x_api_secret: Optional[str] = Header(default=None),
+):
+    if not ULTRA_API_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="ULTRA_API_SECRET nao configurado no servidor.",
+        )
+
+    if x_api_secret != ULTRA_API_SECRET:
+        raise HTTPException(
+            status_code=401,
+            detail="Segredo invalido.",
+        )
+
+    return chat(pedido)
 
 
 # ============================================================
