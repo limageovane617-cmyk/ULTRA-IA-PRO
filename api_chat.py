@@ -538,27 +538,28 @@ def chat(pedido: PedidoChat):
                     "ultra_core": True,
                 }
 
-    # ====================================================
-    # ✨ RESPOSTA NORMAL
-    # ====================================================
 
-    return {
-        "success": True,
-        "resposta": resposta,
-        "modelo": GEMINI_MODEL,
-        "ultra_core": True,
-    }
+        # ====================================================
+        # ✨ RESPOSTA NORMAL
+        # ====================================================
 
-except Exception as erro:
+        return {
+            "success": True,
+            "resposta": resposta,
+            "modelo": GEMINI_MODEL,
+            "ultra_core": True,
+        }
 
-    return {
-        "success": False,
-        "resposta": (
-            "Erro ao executar "
-            "o Ultra Core."
-        ),
-        "erro": str(erro),
-    }
+    except Exception as erro:
+
+        return {
+            "success": False,
+            "resposta": (
+                "Erro ao executar "
+                "o Ultra Core."
+            ),
+            "erro": str(erro),
+        }
 
 
 # ============================================================
