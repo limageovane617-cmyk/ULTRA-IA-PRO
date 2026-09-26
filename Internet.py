@@ -231,6 +231,29 @@ def pesquisar_web(pergunta, limite=5, timeout=15):
             if len(resultados) >= limite:
                 break
 
+        # ====================================================
+        # 🛡️ NENHUM RESULTADO
+        # ====================================================
+
+        if not resultados:
+
+            return {
+                "success": False,
+                "provider": "duckduckgo_lite",
+                "pergunta": pergunta.strip(),
+                "resultados": [],
+                "fontes": [],
+                "quantidade": 0,
+                "erro": (
+                    "Nenhum resultado encontrado "
+                    "na pesquisa web."
+                ),
+            }
+
+        # ====================================================
+        # ✅ RESULTADOS ENCONTRADOS
+        # ====================================================
+
         return {
             "success": True,
             "provider": "duckduckgo_lite",
@@ -238,6 +261,7 @@ def pesquisar_web(pergunta, limite=5, timeout=15):
             "resultados": resultados,
             "fontes": fontes,
             "quantidade": len(resultados),
+            "erro": None,
         }
 
     except Exception as erro:
