@@ -1,12 +1,14 @@
+
 # ============================================================
 # 🤖 ALEX IA ULTRA
 # APP PRINCIPAL
 # ============================================================
 # Criado por: Geovani
 # ============================================================
-# teste do codex
+# Versão compatível com a integração Ultra Core
 
 import base64
+import html
 import os
 import sys
 import importlib
@@ -29,7 +31,7 @@ from ponte_alex import (
 # ============================================================
 
 st.set_page_config(
-    page_title="Alex IA Ultra",
+    page_title="Ultra IA",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -197,7 +199,6 @@ if cliente is None:
 # ============================================================
 # 🖼️ FUNDO DA ALEX IA ULTRA
 # ============================================================
-
 FUNDO_URL = (
     "https://i.supaimg.com/"
     "c4e94ec5-263e-44e5-b119-dca8baa8acad/"
@@ -467,13 +468,13 @@ for indice, mensagem in enumerate(
         "content",
         ""
     )
-
-
     # ========================================================
     # 👤 USUÁRIO
     # ========================================================
 
     if role == "user":
+
+        texto_seguro = html.escape(str(texto))
 
         with st.chat_message(
             "user",
@@ -483,7 +484,7 @@ for indice, mensagem in enumerate(
             st.markdown(
                 f"""
                 <div class="user-message">
-                    {texto}
+                    {texto_seguro}
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -947,8 +948,6 @@ if ferramenta:
                     st.session_state.ferramenta_ativa = None
 
                     st.rerun()
-
-
                 else:
 
                     st.error(
@@ -2208,10 +2207,12 @@ if pergunta:
         avatar="👤"
     ):
 
+        texto_pergunta_seguro = html.escape(pergunta)
+
         st.markdown(
             f"""
             <div class="user-message">
-                {pergunta}
+                {texto_pergunta_seguro}
             </div>
             """,
             unsafe_allow_html=True
@@ -2394,9 +2395,6 @@ if pergunta:
             "faz vídeo",
             "fazer vídeo",
             "faça vídeo",
-
-            "video:",
-            "vídeo:",
         )
 
 
@@ -2411,486 +2409,285 @@ if pergunta:
                 break
 
 
-        if not descricao:
+        if descricao:
 
-            st.warning(
-                "🎬 Diga o que você quer no vídeo."
-            )
+            try:
 
-            st.stop()
-
-
-        try:
-
-            with st.chat_message(
-                "assistant",
-                avatar="✨"
-            ):
-
-                st.markdown(
-                    """
-                    <div class="alex-name">
-                        ✨ Alex IA
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-
-                with st.spinner(
-                    "🎬 Gerando vídeo... aguarde."
+                with st.chat_message(
+                    "assistant",
+                    avatar="✨"
                 ):
 
-                    resultado = gerar_video(
-
-                        descricao=descricao,
-
-                        camera="Sony FX6",
-
-                        proporcao="16:9",
-
-                        duracao=5,
-
-                        width=512,
-
-                        height=512,
+                    st.markdown(
+                        """
+                        <div class="alex-name">
+                            ✨ Alex IA
+                        </div>
+                        """,
+                        unsafe_allow_html=True
                     )
 
 
-                # ====================================================
-                # 🔎 VALIDAR RESPOSTA DO GERENCIADOR
-                # ====================================================
-
-                if resultado is None:
-
-                    st.error(
-                        "❌ O gerenciador de vídeo "
-                        "não retornou nenhuma resposta."
-                    )
-
-                    st.stop()
-
-
-                if not isinstance(
-                    resultado,
-                    dict
-                ):
-
-                    st.error(
-                        "❌ O gerenciador de vídeo "
-                        "retornou uma resposta inválida."
-                    )
-
-                    st.code(
-                        str(resultado)
-                    )
-
-                    st.stop()
-
-
-                # ====================================================
-                # 🎬 VÍDEO GERADO
-                # ====================================================
-
-                caminho = resultado.get(
-                    "video"
-                )
-
-                motor_video = resultado.get(
-                    "motor",
-                    "motor automático"
-                )
-
-                sucesso = resultado.get(
-                    "sucesso",
-                    False
-                )
-
-                erro = resultado.get(
-                    "erro"
-                )
-
-
-                if sucesso and caminho:
-
-                    caminho = str(
-                        caminho
-                    )
-
-
-                    # ================================================
-                    # 📁 CONFIRMAR QUE O ARQUIVO EXISTE
-                    # ================================================
-
-                    if not os.path.exists(
-                        caminho
+                    with st.spinner(
+                        "🎬 Preparando o vídeo..."
                     ):
 
-                        st.error(
-                            "❌ O motor informou que "
-                            "criou o vídeo, mas o "
-                            "arquivo não existe."
+                        resultado = gerar_video(
+                            descricao=descricao,
+                            imagem_bytes=None,
+                            nome_imagem="imagem.png",
+                            duracao=5,
+                            width=512,
+                            height=512,
                         )
 
-                        st.code(
+
+                    if (
+                        isinstance(resultado, dict)
+                        and resultado.get("sucesso")
+                        and resultado.get("video")
+                    ):
+
+                        caminho = str(
+                            resultado["video"]
+                        )
+
+
+                        st.video(
                             caminho
                         )
 
-                        st.stop()
+
+                        st.session_state.mensagens.append({
+
+                            "role":
+                                "assistant",
+
+                            "content":
+                                "🎬 Vídeo criado com sucesso.",
+
+                            "tipo":
+                                "video",
+
+                            "arquivo":
+                                caminho,
+                        })
 
 
-                    st.success(
-                        "🎉 Vídeo gerado com sucesso!\n\n"
-                        f"🎬 Motor: {motor_video}"
-                    )
+                        st.rerun()
 
 
-                    st.video(
-                        caminho
-                    )
+                    else:
 
-
-                    st.session_state.mensagens.append({
-
-                        "role":
-                            "assistant",
-
-                        "content": (
-                            "🎬 Vídeo criado com "
-                            f"sucesso usando {motor_video}."
-                        ),
-
-                        "tipo":
-                            "video",
-
-                        "arquivo":
-                            caminho,
-                    })
-
-
-                else:
-
-                    # ================================================
-                    # ❌ NENHUM MOTOR CONSEGUIU GERAR
-                    # ================================================
-
-                    st.error(
-                        "❌ Nenhum vídeo foi gerado."
-                    )
-
-
-                    if erro:
-
-                        st.warning(
-                            "Detalhes do erro:"
-                        )
-
-                        st.code(
-                            str(erro)
+                        st.error(
+                            "❌ Não foi possível gerar o vídeo."
                         )
 
 
-                    # ================================================
-                    # 🔎 DIAGNÓSTICO COMPLETO
-                    # ================================================
+                        if isinstance(
+                            resultado,
+                            dict
+                        ):
 
-                    st.markdown(
-                        "### 🔎 Resposta do gerenciador"
-                    )
-
-                    st.json(
-                        resultado
-                    )
+                            st.json(
+                                resultado
+                            )
 
 
-        except Exception as erro_video:
+            except Exception as erro:
 
-            st.error(
-                "❌ O gerador de vídeo "
-                "encontrou um erro."
+                st.error(
+                    "❌ Erro ao gerar vídeo."
+                )
+
+                st.code(
+                    str(erro)
+                )
+
+
+        else:
+
+            st.warning(
+                "🎬 Descreva como deve ser o vídeo."
             )
 
-            st.code(
-                str(erro_video)
-            )
-
-
-        st.stop()
-    # ========================================================
-    # 🧠 MEMORIZAR
-    # ========================================================
-
-    if low.startswith(
-        "memorize:"
-    ):
-
-        texto_memoria = pergunta[
-            len("memorize:"):
-        ].strip()
-
-
-        if texto_memoria:
-
-            salvar_memoria(
-                texto_memoria
-            )
-
-
-        st.success(
-            "🧠 Memória salva."
-        )
 
         st.stop()
 
 
     # ========================================================
-    # 📚 CONTEXTO
+    # 🧠 PROCESSAMENTO PRINCIPAL — ULTRA CORE
     # ========================================================
 
-    contexto = "\n".join(
-
-        f"{m['role']}: {m['content']}"
-
-        for m in st.session_state.mensagens[-20:]
-
-        if m.get("tipo")
-        not in (
-            "imagem",
-            "video"
-        )
-    )
-
-
-    instrucao = (
-
-        f"{SYSTEM_PROMPT}\n\n"
-
-        "Responda sempre em português do Brasil.\n\n"
-
-        f"Histórico:\n{contexto}\n\n"
-
-        f"Pergunta:\n{pergunta}"
-    )
-
-
-    # ========================================================
-    # 👁️ PREPARAR VISÃO DA ALEX
-    # ========================================================
-
-    conteudo_gemini = [
-        instrucao
-    ]
-
-
-    if st.session_state.get(
-        "imagem_contexto"
+    with st.chat_message(
+        "assistant",
+        avatar="✨"
     ):
 
-        try:
+        st.markdown(
+            """
+            <div class="alex-name">
+                ✨ Alex IA
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-            from google.genai import types
-
-
-            imagem_bytes = (
-                st.session_state.imagem_contexto
-            )
-
-
-            imagem_mime = (
-                st.session_state.get(
-                    "imagem_mime"
-                )
-                or "image/jpeg"
-            )
-
-
-            conteudo_gemini.append(
-                types.Part.from_bytes(
-                    data=imagem_bytes,
-                    mime_type=imagem_mime
-                )
-            )
-
-
-        except Exception as erro_imagem:
-
-            st.error(
-                "❌ Não foi possível preparar "
-                f"a imagem para o Gemini: {erro_imagem}"
-            )
-
-            st.stop()
-
-
-    # ========================================================
-    # ✨ GEMINI — RESPOSTA
-    # ========================================================
-
-    try:
 
         with st.spinner(
-            "✨ Alex IA está pensando..."
+            "🧠 A Alex está pensando..."
         ):
 
-            # ====================================================
-            # 🧠 ULTRA CORE
-            # ====================================================
+            try:
 
-            resultado_ultra = (
-                ultra_brain.run(pergunta)
-            )
+                # ============================================
+                # 🧠 HISTÓRICO DA CONVERSA
+                # ============================================
+
+                mensagens_anteriores = (
+                    st.session_state.mensagens[:-1][-20:]
+                )
+
+                historico_ultra = "\n".join(
+                    f"{m.get('role', 'assistant')}: "
+                    f"{m.get('content', '')}"
+                    for m in mensagens_anteriores
+                    if m.get("tipo") not in ("imagem", "video")
+                )
+
+                historico_ultra = (
+                    f"{SYSTEM_PROMPT}\n\n"
+                    "Responda sempre em português do Brasil.\n\n"
+                    f"Histórico da conversa:\n{historico_ultra}"
+                )
 
 
-            # ====================================================
-            # ✨ RESPOSTA FINAL
-            # ====================================================
+                # ============================================
+                # 📎 CONTEXTO DO ARQUIVO
+                # ============================================
 
-            if isinstance(
-                resultado_ultra,
-                dict
-            ):
-
-                texto = (
-                    resultado_ultra.get(
-                        "final_response",
+                contexto_arquivo = (
+                    st.session_state.get(
+                        "arquivo_contexto",
                         ""
-                    )
+                    ) or ""
                 )
 
-            else:
-
-                texto = (
-                    resultado_ultra
-                    if isinstance(
-                        resultado_ultra,
-                        str
-                    )
-                    else ""
+                nome_arquivo = (
+                    st.session_state.get(
+                        "arquivo_nome",
+                        ""
+                    ) or ""
                 )
 
 
-            if not texto:
+                # ============================================
+                # 🧠 EXECUTAR ULTRA BRAIN
+                # ============================================
 
-                texto = (
-                    "Não consegui gerar uma resposta."
+                resultado_ultra = ultra_brain.run(
+                    pergunta,
+                    history=historico_ultra,
+                    file_context=contexto_arquivo,
+                    file_name=nome_arquivo,
                 )
 
 
-        # ====================================================
-        # ✨ MOSTRAR RESPOSTA DA ALEX
-        # ====================================================
-
-        with st.chat_message(
-            "assistant",
-            avatar="✨"
-        ):
-
-            st.markdown(
-                """
-                <div class="alex-name">
-                    ✨ Alex IA
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-
-            st.markdown(
-                texto,
-                unsafe_allow_html=False
-            )
-
-
-            # ================================================
-            # 🔊 VOZ AUTOMÁTICA
-            # ================================================
-
-            if st.session_state.usar_voz:
-
-                with st.spinner(
-                    "🔊 Alex está falando..."
+                if isinstance(
+                    resultado_ultra,
+                    dict
                 ):
 
-                    audio, erro, formato = (
-                        gerar_audio(texto)
-                    )
-
-
-                if audio:
-
-                    st.audio(
-                        audio,
-                        format=formato
+                    resposta = (
+                        resultado_ultra.get("response")
+                        or resultado_ultra.get("answer")
+                        or resultado_ultra.get("output")
+                        or ""
                     )
 
                 else:
 
-                    st.warning(
-                        "🔊 Não foi possível gerar "
-                        f"a voz: {erro}"
+                    resposta = str(
+                        resultado_ultra
                     )
 
 
-            # ================================================
-            # 🔊 BOTÃO PARA OUVIR NOVAMENTE
-            # ================================================
+                if not resposta.strip():
 
-            audio_key = (
-                "audio_resposta_atual_"
-                + str(
-                    len(
-                        st.session_state.mensagens
+                    resposta = (
+                        "Não consegui gerar uma resposta "
+                        "neste momento. Tente novamente."
                     )
+
+
+                st.markdown(
+                    resposta
                 )
-            )
 
 
-            if st.button(
-                "🔊",
-                key=audio_key
-            ):
+                # ============================================
+                # 🔊 VOZ AUTOMÁTICA
+                # ============================================
 
-                with st.spinner(
-                    "🔊 Preparando a voz..."
-                ):
+                if st.session_state.usar_voz:
 
-                    audio, erro, formato = (
-                        gerar_audio(texto)
-                    )
+                    with st.spinner(
+                        "🔊 Preparando a voz da Alex..."
+                    ):
 
-
-                if audio:
-
-                    st.audio(
-                        audio,
-                        format=formato
-                    )
-
-                else:
-
-                    st.error(
-                        "❌ Não foi possível gerar "
-                        f"a voz: {erro}"
-                    )
+                        audio, erro, formato = (
+                            gerar_audio(resposta)
+                        )
 
 
-        # ====================================================
-        # 💾 SALVAR RESPOSTA
-        # ====================================================
+                    if audio:
 
-        st.session_state.mensagens.append({
+                        st.audio(
+                            audio,
+                            format=formato
+                        )
 
-            "role":
-                "assistant",
+                    elif erro:
 
-            "content":
-                texto,
-        })
+                        st.warning(
+                            f"🔊 Não foi possível gerar a voz: {erro}"
+                        )
 
 
-    except Exception as erro:
+                # ============================================
+                # 💾 SALVAR RESPOSTA
+                # ============================================
 
-        st.error(
-            "❌ Erro ao conversar com o Ultra Core: "
-            f"{erro}"
-        )
+                st.session_state.mensagens.append({
+
+                    "role":
+                        "assistant",
+
+                    "content":
+                        resposta,
+                })
+
+
+            except Exception as erro:
+
+                resposta_erro = (
+                    "❌ O Ultra Core encontrou um erro "
+                    "ao processar sua mensagem."
+                )
+
+                st.error(
+                    resposta_erro
+                )
+
+                st.code(
+                    str(erro)
+                )
+
+                st.session_state.mensagens.append({
+
+                    "role":
+                        "assistant",
+
+                    "content":
+                        resposta_erro,
+                })
