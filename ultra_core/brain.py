@@ -19,31 +19,6 @@ from gemini_bridge import GeminiBridge
 class UltraBrain:
     """
     Coordenador central da Alex IA Ultra.
-
-    Fluxo principal:
-
-        Pedido do usuário
-              ↓
-        Interpreter
-              ↓
-        Contexto
-              ↓
-        Planner
-              ↓
-        Router
-              ↓
-        Executor
-              ↓
-        Verifier
-              ↓
-        UltraIntelligence
-              ↓
-        GeminiBridge
-              ↓
-        Resposta final
-
-    O Brain coordena os componentes.
-    Ele não executa diretamente as ferramentas.
     """
 
     def __init__(
@@ -73,17 +48,6 @@ class UltraBrain:
         self,
         user_request: str,
     ) -> Dict[str, Any]:
-        """
-        Interpreta o pedido do usuário.
-
-        O Interpreter identifica:
-
-        - intenção;
-        - palavras-chave;
-        - confiança;
-        - prompt;
-        - ferramentas sugeridas.
-        """
 
         return self.interpreter.interpret(
             user_request
@@ -97,9 +61,6 @@ class UltraBrain:
         self,
         user_request: str,
     ) -> TaskContext:
-        """
-        Cria um novo contexto para uma solicitação.
-        """
 
         if not user_request or not user_request.strip():
             raise ValueError(
@@ -123,16 +84,13 @@ class UltraBrain:
         self,
         context: TaskContext,
     ) -> Dict[str, Any]:
-        """
-        Interpreta o pedido e grava as informações
-        importantes dentro do contexto.
-        """
 
         interpretation = self.interpret(
             context.user_request
         )
 
         if not interpretation.get("success"):
+
             context.add_error(
                 source="interpreter",
                 message=interpretation.get(
@@ -169,10 +127,7 @@ class UltraBrain:
 
         context.set_metadata(
             "suggested_tools",
-            interpretation.get(
-                "suggested_tools",
-                [],
-            ),
+            interpretation.get("suggested_tools", []),
         )
 
         context.set_metadata(
@@ -181,6 +136,12 @@ class UltraBrain:
                 "original_request",
                 context.user_request,
             ),
+        )
+
+        # Marca que a interpretação já foi realizada.
+        context.set_metadata(
+            "_prepared",
+            True,
         )
 
         context.update_status(
@@ -198,20 +159,11 @@ class UltraBrain:
         context: TaskContext,
         steps: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """
-        Cria o plano de execução da tarefa.
-        """
 
         plan = self.planner.create_plan(
             context,
             steps,
         )
-
-        # ----------------------------------------------------
-        # O Planner original normaliza as etapas.
-        # Aqui recuperamos as informações da interpretação
-        # para que o Router também possa utilizá-las.
-        # ----------------------------------------------------
 
         keywords = context.get_metadata(
             "keywords",
@@ -226,17 +178,13 @@ class UltraBrain:
         for step in plan:
 
             if "keywords" not in step:
-                step["keywords"] = list(
-                    keywords
-                )
+                step["keywords"] = list(keywords)
 
             arguments = step.setdefault(
                 "arguments",
                 {},
             )
 
-            # Não sobrescreve argumentos fornecidos
-            # manualmente pelo plano.
             if (
                 prompt
                 and "prompt" not in arguments
@@ -255,17 +203,35 @@ class UltraBrain:
         self,
         context: TaskContext,
     ) -> List[Dict[str, Any]]:
-        """
-        Cria uma etapa automaticamente a partir
-        da interpretação do pedido.
 
-        Esta é a primeira camada de planejamento
-        inteligente da Ultra.
-        """
+        # Evita executar o Interpreter duas vezes.
+        if context.get_metadata("_prepared", False):
 
-        interpretation = self.prepare_task(
-            context
-        )
+            interpretation = {
+                "success": True,
+                "intent": context.get_metadata(
+                    "intent",
+                    "geral",
+                ),
+                "keywords": context.get_metadata(
+                    "keywords",
+                    [],
+                ),
+                "suggested_tools": context.get_metadata(
+                    "suggested_tools",
+                    [],
+                ),
+                "prompt": context.get_metadata(
+                    "prompt",
+                    "",
+                ),
+            }
+
+        else:
+
+            interpretation = self.prepare_task(
+                context
+            )
 
         if not interpretation.get("success"):
             return []
@@ -290,11 +256,7 @@ class UltraBrain:
             "",
         )
 
-        # ----------------------------------------------------
-        # Procura primeiro uma ferramenta sugerida
-        # que realmente esteja registrada.
-        # ----------------------------------------------------
-
+        # Procura uma ferramenta sugerida e registrada.
         selected_tool = None
 
         for tool_name in suggested_tools:
@@ -332,9 +294,6 @@ class UltraBrain:
     def available_tools(
         self,
     ) -> List[Dict[str, Any]]:
-        """
-        Retorna as ferramentas disponíveis.
-        """
 
         return self.router.available_tools()
 
@@ -346,11 +305,9 @@ class UltraBrain:
         self,
         context: TaskContext,
     ) -> Dict[str, Any]:
-        """
-        Explica qual ferramenta será utilizada.
-        """
 
         if not context.plan:
+
             return {
                 "success": False,
                 "tool": None,
@@ -374,11 +331,9 @@ class UltraBrain:
         *,
         stop_on_error: bool = True,
     ) -> Dict[str, Any]:
-        """
-        Executa o plano da tarefa.
-        """
 
         if not context.plan:
+
             return {
                 "success": False,
                 "status": "no_plan",
@@ -401,9 +356,6 @@ class UltraBrain:
         self,
         context: TaskContext,
     ) -> Dict[str, Any]:
-        """
-        Verifica o resultado da tarefa.
-        """
 
         return self.verifier.verify_context(
             context
@@ -417,15 +369,6 @@ class UltraBrain:
         self,
         context: TaskContext,
     ) -> str:
-        """
-        Gera a resposta final usando a
-        UltraIntelligence e o GeminiBridge.
-
-        O Gemini é opcional.
-        Se não estiver disponível, retorna
-        uma resposta vazia sem interromper
-        o funcionamento do Ultra Core.
-        """
 
         if self.gemini_bridge is None:
             return ""
@@ -445,42 +388,73 @@ class UltraBrain:
         steps: Optional[List[Dict[str, Any]]] = None,
         *,
         stop_on_error: bool = True,
+        history: Any = None,
+        file_context: Optional[str] = None,
+        file_name: Optional[str] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Executa o ciclo completo da Ultra.
 
-        Se steps forem fornecidos:
-
-            Pedido
-              ↓
-            Interpretação
-              ↓
-            Plano fornecido
-              ↓
-            Execução
-              ↓
-            Verificação
-              ↓
-            Resposta final
-
-        Se steps não forem fornecidos:
-
-            Pedido
-              ↓
-            Interpretação
-              ↓
-            Plano automático
-              ↓
-            Execução
-              ↓
-            Verificação
-              ↓
-            Resposta final
+        Suporta:
+        - Histórico da conversa.
+        - Contexto de arquivos.
+        - Nome do arquivo.
+        - Imagens para análise visual.
         """
 
         context = self.create_task(
             user_request
         )
+
+        # ----------------------------------------------------
+        # CONTEXTO ADICIONAL
+        # ----------------------------------------------------
+
+        if history is not None:
+            context.set_metadata(
+                "history",
+                history,
+            )
+
+        if file_context is not None:
+            context.set_metadata(
+                "file_context",
+                file_context,
+            )
+
+        if file_name is not None:
+            context.set_metadata(
+                "file_name",
+                file_name,
+            )
+
+        # ----------------------------------------------------
+        # IMAGEM
+        # ----------------------------------------------------
+
+        if image_bytes is not None:
+
+            if not isinstance(image_bytes, (bytes, bytearray)):
+                raise TypeError(
+                    "image_bytes precisa ser bytes ou bytearray."
+                )
+
+            if not image_bytes:
+                raise ValueError(
+                    "A imagem enviada está vazia."
+                )
+
+            context.set_metadata(
+                "image_bytes",
+                bytes(image_bytes),
+            )
+
+            context.set_metadata(
+                "image_mime_type",
+                image_mime_type or "image/jpeg",
+            )
 
         # ----------------------------------------------------
         # INTERPRETAÇÃO
@@ -491,6 +465,7 @@ class UltraBrain:
         )
 
         if not interpretation.get("success"):
+
             return {
                 "success": False,
                 "status": context.status,
@@ -517,6 +492,7 @@ class UltraBrain:
             )
 
         if not context.plan:
+
             context.update_status(
                 "waiting_for_plan"
             )
@@ -555,17 +531,12 @@ class UltraBrain:
         # ----------------------------------------------------
 
         success = (
-            execution.get(
-                "success",
-                False,
-            )
-            and verification.get(
-                "success",
-                False,
-            )
+            execution.get("success", False)
+            and verification.get("success", False)
         )
 
         if success:
+
             context.update_status(
                 "completed"
             )
