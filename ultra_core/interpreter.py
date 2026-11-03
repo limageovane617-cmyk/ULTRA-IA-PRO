@@ -1,7 +1,10 @@
 # ============================================================
-# 🧠 ALEX IA ULTRA — INTERPRETER
+# ALEX IA ULTRA — INTERPRETER
 # Interpretador de linguagem natural do Ultra Core
 # ============================================================
+
+import re
+import unicodedata
 
 from typing import Any, Dict, List
 
@@ -11,17 +14,110 @@ class TaskInterpreter:
     Interpretador central da Alex IA Ultra.
 
     Responsabilidades:
-
-    - normalizar o pedido do usuário;
-    - identificar a intenção;
-    - extrair palavras-chave;
-    - extrair o prompt principal;
-    - sugerir ferramentas;
-    - preparar informações para o Brain e Planner.
+    - Normalizar o pedido.
+    - Identificar a intenção principal.
+    - Extrair palavras-chave relevantes.
+    - Extrair o prompt principal.
+    - Sugerir ferramentas.
+    - Preparar informações para Brain e Planner.
 
     O Interpreter não executa ferramentas.
-    Ele apenas entende o pedido.
     """
+
+    # ========================================================
+    # CONFIGURAÇÕES
+    # ========================================================
+
+    CATEGORIAS = {
+        "internet": [
+            "pesquisar", "pesquise", "pesquisa",
+            "buscar", "busque", "procure",
+            "internet", "google",
+            "noticia", "noticias",
+            "informacao atual", "informacoes atuais",
+            "dados atuais",
+        ],
+
+        "imagem": [
+            "imagem", "imagens", "foto",
+            "fotografia", "desenho",
+            "ilustracao", "picture", "image",
+            "gerar imagem", "criar imagem",
+            "fazer imagem",
+        ],
+
+        "video": [
+            "video", "videos", "filme",
+            "animacao", "clipe", "clip",
+            "gerar video", "criar video",
+            "animar",
+        ],
+
+        "texto": [
+            "texto", "escrever", "escreva",
+            "redigir", "resumo", "resumir",
+            "explicar", "explicacao",
+            "traduzir", "traducao",
+        ],
+
+        "codigo": [
+            "codigo", "programar",
+            "programacao", "python",
+            "javascript", "typescript",
+            "funcao", "arquivo", "script",
+            "classe", "bug", "erro",
+            "corrigir codigo",
+        ],
+    }
+
+    FERRAMENTAS = {
+        "internet": [
+            "pesquisa_internet",
+        ],
+
+        "imagem": [
+            "imagem.gerar",
+            "gerar_imagem",
+            "image.generate",
+            "image_generator",
+        ],
+
+        "video": [
+            "video.gerar",
+            "video.texto",
+            "video.imagem",
+            "video.fallback",
+            "gerar_video",
+        ],
+
+        "texto": [
+            "texto.gerar",
+            "text.gerar",
+            "gerar_texto",
+        ],
+
+        "codigo": [
+            "codigo.gerar",
+            "codigo.executar",
+            "python.executar",
+            "code.execute",
+        ],
+
+        "geral": [],
+    }
+
+    STOPWORDS = {
+        "para", "com", "uma", "uns", "umas",
+        "que", "qual", "quais", "como",
+        "quero", "queria", "preciso",
+        "faca", "fazer", "criar", "crie",
+        "gerar", "gere", "sobre",
+        "por", "dos", "das", "nos",
+        "nas", "aos", "pelos", "pela",
+        "pelo", "mais", "muito", "essa",
+        "esse", "isso", "aquela", "aquele",
+        "meu", "minha", "seu", "sua",
+    }
 
     # ========================================================
     # NORMALIZAÇÃO
@@ -30,15 +126,44 @@ class TaskInterpreter:
     @staticmethod
     def normalize_text(text: str) -> str:
         """
-        Normaliza o texto para facilitar a interpretação.
+        Normaliza espaços, caixa e acentos.
         """
 
-        return " ".join(
-            str(text or "")
-            .lower()
-            .strip()
-            .split()
+        texto = str(text or "").strip().lower()
+
+        texto = unicodedata.normalize(
+            "NFKD",
+            texto,
         )
+
+        texto = "".join(
+            caractere
+            for caractere in texto
+            if not unicodedata.combining(caractere)
+        )
+
+        texto = re.sub(r"\s+", " ", texto)
+
+        return texto.strip()
+
+    # ========================================================
+    # CORRESPONDÊNCIA DE TERMOS
+    # ========================================================
+
+    @staticmethod
+    def contains_term(text: str, term: str) -> bool:
+        """
+        Procura uma palavra ou expressão completa,
+        evitando correspondências dentro de outras palavras.
+        """
+
+        pattern = (
+            r"(?<!\w)"
+            + re.escape(term)
+            + r"(?!\w)"
+        )
+
+        return re.search(pattern, text) is not None
 
     # ========================================================
     # DETECÇÃO DE INTENÇÃO
@@ -48,13 +173,8 @@ class TaskInterpreter:
         self,
         user_request: str,
     ) -> Dict[str, Any]:
-        """
-        Detecta a intenção principal do usuário.
-        """
 
-        texto = self.normalize_text(
-            user_request
-        )
+        texto = self.normalize_text(user_request)
 
         if not texto:
             return {
@@ -64,185 +184,101 @@ class TaskInterpreter:
                 "suggested_tools": [],
             }
 
-        categorias = {
-            "internet": [
-                "pesquisar",
-                "pesquise",
-                "pesquisa",
-                "buscar",
-                "busque",
-                "procure",
-                "internet",
-                "google",
-                "notícia",
-                "noticias",
-                "notícia",
-                "informação atual",
-                "informacoes atuais",
-                "informações atuais",
-            ],
+        pontuacoes = {}
 
-            "imagem": [
-                "imagem",
-                "imagens",
-                "foto",
-                "fotografia",
-                "desenho",
-                "ilustração",
-                "ilustracao",
-                "picture",
-                "image",
-                "gerar imagem",
-                "criar imagem",
-                "fazer imagem",
-            ],
+        for categoria, termos in self.CATEGORIAS.items():
 
-            "video": [
-                "vídeo",
-                "video",
-                "vídeos",
-                "videos",
-                "filme",
-                "animação",
-                "animacao",
-                "clipe",
-                "clip",
-                "gerar vídeo",
-                "gerar video",
-                "criar vídeo",
-                "criar video",
-                "animar",
-            ],
+            encontrados = [
+                termo
+                for termo in termos
+                if self.contains_term(texto, termo)
+            ]
 
-            "texto": [
-                "texto",
-                "escrever",
-                "escreva",
-                "redigir",
-                "resumo",
-                "resumir",
-                "explicar",
-                "explicação",
-                "explicacao",
-                "traduzir",
-                "tradução",
-                "traducao",
-            ],
+            if encontrados:
+                # Expressões específicas têm mais peso
+                # do que palavras genéricas.
+                pontuacao = sum(
+                    2 if " " in termo else 1
+                    for termo in encontrados
+                )
 
-            "codigo": [
-                "código",
-                "codigo",
-                "programar",
-                "programação",
-                "programacao",
-                "python",
-                "javascript",
-                "typescript",
-                "função",
-                "funcao",
-                "arquivo",
-                "script",
-                "classe",
-                "bug",
-                "erro",
-                "corrigir código",
-                "corrigir codigo",
-            ],
-        }
+                pontuacoes[categoria] = pontuacao
 
-        encontrados: Dict[str, int] = {}
-
-        for categoria, palavras in categorias.items():
-
-            quantidade = sum(
-                1
-                for palavra in palavras
-                if palavra in texto
-            )
-
-            if quantidade > 0:
-                encontrados[categoria] = quantidade
-
-        if not encontrados:
+        if not pontuacoes:
             return {
                 "intent": "geral",
-                "keywords": self.extract_keywords(
-                    texto
-                ),
+                "keywords": self.extract_keywords(texto),
                 "confidence": 0.40,
                 "suggested_tools": [],
             }
 
-        # ----------------------------------------------------
-        # Escolhe a intenção com maior quantidade de sinais.
-        # ----------------------------------------------------
-
+        # Maior pontuação vence.
+        # Em caso de empate, mantém a ordem das categorias.
         intent = max(
-            encontrados,
-            key=encontrados.get,
+            pontuacoes,
+            key=pontuacoes.get,
         )
 
-        quantidade = encontrados[intent]
+        maior_pontuacao = pontuacoes[intent]
 
+        total_sinais = sum(pontuacoes.values())
+
+        # A confiança diminui quando há sinais concorrentes.
         confidence = min(
-            0.55 + (
-                quantidade * 0.10
-            ),
-            0.98,
+            0.55 + (maior_pontuacao * 0.08),
+            0.95,
         )
 
-        suggested_tools = (
-            self.suggest_tools(intent)
-        )
-
-        keywords = self.build_keywords(
-            texto,
-            intent,
-        )
+        if total_sinais > maior_pontuacao:
+            confidence *= (
+                maior_pontuacao / total_sinais
+            )
 
         return {
             "intent": intent,
-            "keywords": keywords,
-            "confidence": confidence,
-            "suggested_tools": suggested_tools,
+            "keywords": self.build_keywords(
+                texto,
+                intent,
+            ),
+            "confidence": round(confidence, 2),
+            "suggested_tools": self.suggest_tools(intent),
         }
 
     # ========================================================
-    # PALAVRAS-CHAVE
+    # EXTRAÇÃO DE PALAVRAS-CHAVE
     # ========================================================
 
-    @staticmethod
+    @classmethod
     def extract_keywords(
+        cls,
         text: str,
         limit: int = 10,
     ) -> List[str]:
-        """
-        Extrai palavras relevantes do pedido.
-        """
 
-        palavras = []
+        texto = cls.normalize_text(text)
 
-        for palavra in text.split():
+        palavras = re.findall(
+            r"\b[\w-]+\b",
+            texto,
+        )
 
-            palavra = (
-                palavra
-                .strip(
-                    ".,!?;:()[]{}\"'"
-                )
-            )
+        resultado = []
+
+        for palavra in palavras:
 
             if len(palavra) < 4:
                 continue
 
-            if palavra not in palavras:
-                palavras.append(
-                    palavra
-                )
+            if palavra in cls.STOPWORDS:
+                continue
 
-            if len(palavras) >= limit:
+            if palavra not in resultado:
+                resultado.append(palavra)
+
+            if len(resultado) >= limit:
                 break
 
-        return palavras
+        return resultado
 
     # ========================================================
     # KEYWORDS POR INTENÇÃO
@@ -254,80 +290,27 @@ class TaskInterpreter:
         intent: str,
     ) -> List[str]:
         """
-        Cria palavras-chave úteis para o Router.
+        Produz palavras-chave sem adicionar comandos
+        genéricos que possam confundir o Router.
         """
 
-        keywords = []
-
-        mapas = {
-            "internet": [
-                "internet",
-                "pesquisa",
-                "google",
-                "buscar",
-            ],
-
-            "imagem": [
-                "imagem",
-                "image",
-                "foto",
-                "gerar",
-            ],
-
-            "video": [
-                "video",
-                "vídeo",
-                "gerar",
-                "animar",
-            ],
-
-            "texto": [
-                "texto",
-                "escrever",
-                "gerar",
-            ],
-
-            "codigo": [
-                "codigo",
-                "código",
-                "python",
-                "programar",
-            ],
-        }
-
-        keywords.extend(
-            mapas.get(
-                intent,
-                [],
-            )
+        keywords = self.extract_keywords(
+            text,
+            limit=8,
         )
 
-        # Adiciona palavras do pedido.
-        keywords.extend(
-            self.extract_keywords(
-                text,
-                limit=6,
-            )
-        )
-
-        # Remove duplicadas.
+        # Evita palavras-chave artificiais como
+        # "gerar", "buscar" e "criar".
+        # A intenção e as ferramentas sugeridas
+        # já identificam a categoria.
         resultado = []
 
         for keyword in keywords:
 
-            keyword = (
-                str(keyword)
-                .strip()
-                .lower()
-            )
+            keyword = self.normalize_text(keyword)
 
-            if (
-                keyword
-                and keyword not in resultado
-            ):
-                resultado.append(
-                    keyword
-                )
+            if keyword and keyword not in resultado:
+                resultado.append(keyword)
 
         return resultado[:12]
 
@@ -340,15 +323,11 @@ class TaskInterpreter:
         user_request: str,
     ) -> str:
         """
-        Extrai o conteúdo principal do pedido.
-
-        Remove comandos comuns do começo,
-        mas preserva o restante da solicitação.
+        Remove comandos iniciais conhecidos,
+        preservando o conteúdo principal.
         """
 
-        texto = str(
-            user_request or ""
-        ).strip()
+        texto = str(user_request or "").strip()
 
         if not texto:
             return ""
@@ -357,8 +336,12 @@ class TaskInterpreter:
             # Imagem
             "gerar uma imagem de ",
             "gerar uma imagem ",
+            "gerar imagem de ",
+            "gerar imagem ",
             "criar uma imagem de ",
             "criar uma imagem ",
+            "criar imagem de ",
+            "criar imagem ",
             "fazer uma imagem de ",
             "fazer uma imagem ",
             "gere uma imagem de ",
@@ -376,9 +359,11 @@ class TaskInterpreter:
             "criar um video de ",
             "criar um video ",
             "gere um vídeo de ",
-            "gere um vídeo ",
             "gere um video de ",
+            "gere um vídeo ",
             "gere um video ",
+            "crie um vídeo de ",
+            "crie um video de ",
             "animar ",
 
             # Internet
@@ -402,20 +387,28 @@ class TaskInterpreter:
             "criar um texto ",
             "fazer um texto sobre ",
             "fazer um texto ",
+            "escreva um texto sobre ",
+            "escreva um texto ",
 
             # Código
             "criar código para ",
             "criar codigo para ",
             "escrever código para ",
             "escrever codigo para ",
+            "corrigir código ",
+            "corrigir codigo ",
         ]
 
-        texto_lower = texto.lower()
+        texto_normalizado = self.normalize_text(texto)
 
         for prefixo in prefixos:
 
-            if texto_lower.startswith(
+            prefixo_normalizado = self.normalize_text(
                 prefixo
+            )
+
+            if texto_normalizado.startswith(
+                prefixo_normalizado
             ):
 
                 return texto[
@@ -428,53 +421,17 @@ class TaskInterpreter:
     # SUGESTÃO DE FERRAMENTAS
     # ========================================================
 
-    @staticmethod
+    @classmethod
     def suggest_tools(
+        cls,
         intent: str,
     ) -> List[str]:
-        """
-        Sugere nomes de ferramentas para o Router.
-        """
 
-        ferramentas = {
-            "internet": [
-               "pesquisa_internet",
-            ],
-
-            "imagem": [
-                "imagem.gerar",
-                "gerar_imagem",
-                "image.generate",
-                "image_generator",
-            ],
-
-            "video": [
-                "video.gerar",
-                "video.texto",
-                "video.imagem",
-                "video.fallback",
-                "gerar_video",
-            ],
-
-            "texto": [
-                "texto.gerar",
-                "text.gerar",
-                "gerar_texto",
-            ],
-
-            "codigo": [
-                "codigo.gerar",
-                "codigo.executar",
-                "python.executar",
-                "code.execute",
-            ],
-
-            "geral": [],
-        }
-
-        return ferramentas.get(
-            intent,
-            [],
+        return list(
+            cls.FERRAMENTAS.get(
+                intent,
+                [],
+            )
         )
 
     # ========================================================
@@ -520,9 +477,7 @@ class TaskInterpreter:
             "keywords": detected["keywords"],
             "confidence": detected["confidence"],
             "prompt": prompt,
-            "suggested_tools": detected[
-                "suggested_tools"
-            ],
+            "suggested_tools": detected["suggested_tools"],
             "original_request": str(
                 user_request
             ).strip(),
