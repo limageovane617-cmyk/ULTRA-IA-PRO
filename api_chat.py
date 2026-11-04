@@ -579,6 +579,32 @@ def chat(pedido: PedidoChat):
             }
 
         # ----------------------------------------------------
+        # EXPOR METADADOS REAIS DA PESQUISA
+        # ----------------------------------------------------
+
+        dados_pesquisa = None
+
+        if isinstance(resultado_ultra, dict):
+            execucao = resultado_ultra.get("execution") or {}
+
+            for etapa in execucao.get("results", []):
+                if etapa.get("tool") != "pesquisa_internet":
+                    continue
+
+                bruto = etapa.get("result")
+                if isinstance(bruto, dict):
+                    dados_pesquisa = {
+                        "success": bruto.get("success", False),
+                        "provider": bruto.get("provider"),
+                        "answer": bruto.get("answer"),
+                        "verified": bruto.get("verified", False),
+                        "fontes": bruto.get("fontes", []),
+                        "resultados": bruto.get("resultados", []),
+                        "erro": bruto.get("erro"),
+                    }
+                break
+
+        # ----------------------------------------------------
         # DETECTAR ACAO DE GERACAO DE IMAGEM
         # ----------------------------------------------------
 
@@ -666,6 +692,7 @@ def chat(pedido: PedidoChat):
             "resposta": resposta,
             "modelo": GEMINI_MODEL,
             "ultra_core": True,
+            "pesquisa": dados_pesquisa,
         }
 
     except HTTPException:
