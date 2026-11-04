@@ -184,6 +184,25 @@ class TaskInterpreter:
                 "suggested_tools": [],
             }
 
+        # Perguntas factuais diretas também precisam de pesquisa,
+        # mesmo quando o usuário não escreve "pesquise".
+        padroes_pesquisa_factual = (
+            r"\\bqual\\s+(?:e|foi|sera)\\s+(?:a\\s+)?capital\\b",
+            r"\\bqual\\s+(?:e|foi)\\s+(?:a\\s+)?populacao\\b",
+            r"\\bquem\\s+(?:e|foi)\\s+(?:o|a)?\\s*(?:presidente|primeiro ministro|premier)\\b",
+            r"\\bquantos\\s+habitantes\\b",
+            r"\\bonde\\s+fica\\b",
+            r"\\bquando\\s+(?:foi|aconteceu|ocorreu)\\b",
+        )
+
+        if any(re.search(padrao, texto) for padrao in padroes_pesquisa_factual):
+            return {
+                "intent": "internet",
+                "keywords": self.extract_keywords(texto),
+                "confidence": 0.88,
+                "suggested_tools": self.suggest_tools("internet"),
+            }
+
         pontuacoes = {}
 
         for categoria, termos in self.CATEGORIAS.items():
