@@ -85,9 +85,9 @@ def pesquisar_internet(
         # ----------------------------------------------------
 
         padrao_pais = re.search(
-            r"\\bcapital\\s+(?:do|da|de|dos|das)\\s+(.+?)"
-            r"(?=\\s*[?.!,;:]|\\s+\\b(?:consulte|informe|forneca|"
-            r"cite|inclua|mostre|apresente)\\b|$)",
+            r"\bcapital\s+(?:do|da|de|dos|das)\s+(.+?)"
+            r"(?=\s*[?.!,;:]|\s+\b(?:consulte|informe|forneca|"
+            r"cite|inclua|mostre|apresente)\b|$)",
             consulta_normalizada,
             re.IGNORECASE,
         )
