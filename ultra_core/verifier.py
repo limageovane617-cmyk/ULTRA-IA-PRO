@@ -1,11 +1,10 @@
+
 # ============================================================
 # 🔍 ALEX IA ULTRA — VERIFIER
 # Sistema inteligente de verificação do Ultra Core
 # ============================================================
 
 from typing import Any, Dict, List, Optional
-
-from .context import TaskContext
 
 
 class VerificationResult:
@@ -20,11 +19,9 @@ class VerificationResult:
         details: Optional[Dict[str, Any]] = None,
     ) -> None:
 
-        self.success = bool(success)
+        self.success = success is True
 
-        self.message = str(
-            message
-        )
+        self.message = str(message)
 
         self.details = (
             details
@@ -46,14 +43,97 @@ class VerificationResult:
 
 class ResultVerifier:
     """
-    Verificador inteligente de resultados produzidos
-    pelas ferramentas da Alex IA Ultra.
+    Verificador inteligente de resultados da Ultra.
 
-    O Verifier não executa ferramentas.
+    Responsabilidades:
 
-    Ele analisa os resultados produzidos pelo Executor
-    e tenta determinar se a tarefa realmente funcionou.
+    - Identificar resultados vazios.
+    - Interpretar indicadores de sucesso e falha.
+    - Detectar erros explícitos.
+    - Verificar etapas executadas.
+    - Verificar o contexto completo da tarefa.
     """
+
+    # ========================================================
+    # NORMALIZAR VALORES BOOLEANOS
+    # ========================================================
+
+    @staticmethod
+    def _parse_boolean(
+        value: Any,
+    ) -> Optional[bool]:
+        """
+        Converte valores conhecidos para booleano.
+
+        Retorna None quando o valor é ambíguo.
+        """
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, int):
+            if value == 1:
+                return True
+
+            if value == 0:
+                return False
+
+            return None
+
+        if isinstance(value, float):
+            if value == 1.0:
+                return True
+
+            if value == 0.0:
+                return False
+
+            return None
+
+        if isinstance(value, str):
+
+            normalized = value.strip().lower()
+
+            true_values = {
+                "true",
+                "1",
+                "yes",
+                "y",
+                "sim",
+                "s",
+                "success",
+                "successful",
+                "sucesso",
+                "ok",
+                "completed",
+                "concluido",
+                "concluído",
+            }
+
+            false_values = {
+                "false",
+                "0",
+                "no",
+                "n",
+                "não",
+                "nao",
+                "failure",
+                "failed",
+                "falha",
+                "falhou",
+                "error",
+                "erro",
+                "null",
+                "none",
+                "",
+            }
+
+            if normalized in true_values:
+                return True
+
+            if normalized in false_values:
+                return False
+
+        return None
 
     # ========================================================
     # VERIFICAÇÃO BÁSICA
@@ -64,11 +144,7 @@ class ResultVerifier:
         result: Any,
     ) -> VerificationResult:
         """
-        Faz uma análise inteligente de um resultado.
-
-        Diferentemente da versão básica, esta função
-        reconhece indicadores explícitos de sucesso
-        e falha.
+        Analisa um resultado produzido por uma ferramenta.
         """
 
         # ----------------------------------------------------
@@ -78,12 +154,9 @@ class ResultVerifier:
         if result is None:
 
             return VerificationResult(
-                success=False,
-                message=(
-                    "A ferramenta não retornou "
-                    "nenhum resultado."
-                ),
-                details={
+                False,
+                "A ferramenta não retornou nenhum resultado.",
+                {
                     "result_type": "NoneType",
                     "empty": True,
                 },
@@ -93,20 +166,16 @@ class ResultVerifier:
         # BOOLEANO
         # ----------------------------------------------------
 
-        if isinstance(
-            result,
-            bool,
-        ):
+        if isinstance(result, bool):
 
             return VerificationResult(
-                success=result,
-                message=(
-                    "Resultado booleano recebido."
+                result,
+                (
+                    "Resultado booleano positivo."
                     if result
-                    else
-                    "A ferramenta retornou False."
+                    else "A ferramenta retornou False."
                 ),
-                details={
+                {
                     "result_type": "bool",
                     "value": result,
                 },
@@ -116,50 +185,33 @@ class ResultVerifier:
         # DICIONÁRIO
         # ----------------------------------------------------
 
-        if isinstance(
-            result,
-            dict,
-        ):
+        if isinstance(result, dict):
 
-            return self._verify_dict(
-                result
-            )
+            return self._verify_dict(result)
 
         # ----------------------------------------------------
-        # LISTA / TUPLA
+        # LISTA / TUPLA / CONJUNTO
         # ----------------------------------------------------
 
-        if isinstance(
-            result,
-            (list, tuple),
-        ):
+        if isinstance(result, (list, tuple, set)):
 
             if not result:
 
                 return VerificationResult(
-                    success=False,
-                    message=(
-                        "A ferramenta retornou "
-                        "uma coleção vazia."
-                    ),
-                    details={
-                        "result_type":
-                            type(result).__name__,
+                    False,
+                    "A ferramenta retornou uma coleção vazia.",
+                    {
+                        "result_type": type(result).__name__,
                         "empty": True,
                     },
                 )
 
             return VerificationResult(
-                success=True,
-                message=(
-                    "A ferramenta retornou "
-                    "uma coleção com dados."
-                ),
-                details={
-                    "result_type":
-                        type(result).__name__,
-                    "items":
-                        len(result),
+                True,
+                "A ferramenta retornou uma coleção com dados.",
+                {
+                    "result_type": type(result).__name__,
+                    "items": len(result),
                     "empty": False,
                 },
             )
@@ -168,52 +220,65 @@ class ResultVerifier:
         # STRING
         # ----------------------------------------------------
 
-        if isinstance(
-            result,
-            str,
-        ):
+        if isinstance(result, str):
 
             texto = result.strip()
 
             if not texto:
 
                 return VerificationResult(
-                    success=False,
-                    message=(
-                        "A ferramenta retornou "
-                        "um texto vazio."
-                    ),
-                    details={
+                    False,
+                    "A ferramenta retornou um texto vazio.",
+                    {
                         "result_type": "str",
                         "empty": True,
                     },
                 )
 
-            if self._text_indicates_failure(
-                texto
-            ):
+            if self._text_indicates_failure(texto):
 
                 return VerificationResult(
-                    success=False,
-                    message=(
-                        "O resultado contém "
-                        "indícios de erro."
-                    ),
-                    details={
+                    False,
+                    "O resultado contém indicadores de erro.",
+                    {
                         "result_type": "str",
                         "value": texto,
                     },
                 )
 
             return VerificationResult(
-                success=True,
-                message=(
-                    "Resultado textual recebido."
-                ),
-                details={
+                True,
+                "Resultado textual recebido.",
+                {
                     "result_type": "str",
                     "length": len(texto),
                     "empty": False,
+                },
+            )
+
+        # ----------------------------------------------------
+        # BYTES
+        # ----------------------------------------------------
+
+        if isinstance(result, (bytes, bytearray)):
+
+            if not result:
+
+                return VerificationResult(
+                    False,
+                    "A ferramenta retornou dados binários vazios.",
+                    {
+                        "result_type": type(result).__name__,
+                        "empty": True,
+                    },
+                )
+
+            return VerificationResult(
+                True,
+                "Dados binários recebidos.",
+                {
+                    "result_type": type(result).__name__,
+                    "size": len(result),
                 },
             )
 
@@ -222,14 +287,10 @@ class ResultVerifier:
         # ----------------------------------------------------
 
         return VerificationResult(
-            success=True,
-            message=(
-                "Resultado recebido "
-                "e não apresenta falha explícita."
-            ),
-            details={
-                "result_type":
-                    type(result).__name__,
+            True,
+            "Resultado recebido sem falha explícita.",
+            {
+                "result_type": type(result).__name__,
             },
         )
 
@@ -248,86 +309,108 @@ class ResultVerifier:
         if not result:
 
             return VerificationResult(
-                success=False,
-                message=(
-                    "A ferramenta retornou "
-                    "um dicionário vazio."
-                ),
-                details={
+                False,
+                "A ferramenta retornou um dicionário vazio.",
+                {
                     "result_type": "dict",
                     "empty": True,
                 },
             )
 
         # ----------------------------------------------------
-        # INDICADORES EXPLÍCITOS DE SUCESSO
+        # INDICADORES DE SUCESSO
         # ----------------------------------------------------
 
         success_values = []
 
-        for chave in (
-            "success",
-            "sucesso",
-        ):
+        for key in ("success", "sucesso"):
 
-            if chave in result:
+            if key in result:
 
-                success_values.append(
-                    bool(
-                        result[chave]
-                    )
+                parsed = self._parse_boolean(
+                    result[key]
                 )
 
+                success_values.append(parsed)
+
         # ----------------------------------------------------
-        # INDICADORES EXPLÍCITOS DE FALHA
+        # INDICADORES DE FALHA
         # ----------------------------------------------------
 
         failure_detected = False
+        failure_details = {}
 
-        for chave in (
-            "error",
-            "erro",
-            "exception",
-        ):
+        for key in ("error", "erro", "exception"):
 
-            if chave not in result:
+            if key not in result:
                 continue
 
-            valor = result.get(
-                chave
-            )
+            value = result.get(key)
 
-            if valor not in (
-                None,
-                "",
-                False,
-            ):
+            if value is None:
+                continue
+
+            if isinstance(value, bool):
+
+                if value is False:
+                    continue
 
                 failure_detected = True
+                failure_details[key] = value
+                continue
+
+            if isinstance(value, (int, float)):
+
+                if value == 0:
+                    continue
+
+                failure_detected = True
+                failure_details[key] = value
+                continue
+
+            if isinstance(value, str):
+
+                normalized = value.strip().lower()
+
+                if normalized in {
+                    "",
+                    "false",
+                    "0",
+                    "none",
+                    "null",
+                    "no",
+                    "não",
+                    "nao",
+                }:
+                    continue
+
+            failure_detected = True
+            failure_details[key] = str(value)
 
         # ----------------------------------------------------
         # STATUS
         # ----------------------------------------------------
 
         status = str(
-            result.get(
-                "status",
-                ""
-            )
+            result.get("status", "")
         ).strip().lower()
 
-        status_failure = status in {
+        failure_statuses = {
             "failed",
             "failure",
             "error",
             "erro",
+            "falha",
             "falhou",
             "failed_task",
             "cancelled",
             "canceled",
+            "cancelado",
+            "rejected",
+            "rejected_task",
         }
 
-        status_success = status in {
+        success_statuses = {
             "success",
             "successful",
             "completed",
@@ -335,55 +418,55 @@ class ResultVerifier:
             "successfully",
             "concluido",
             "concluído",
+            "verified",
+            "ok",
         }
 
+        status_failure = status in failure_statuses
+        status_success = status in success_statuses
+
         # ----------------------------------------------------
-        # FALHA EXPLÍCITA TEM PRIORIDADE
+        # FALHA TEM PRIORIDADE
         # ----------------------------------------------------
 
         if failure_detected or status_failure:
 
             return VerificationResult(
-                success=False,
-                message=(
-                    "A ferramenta retornou "
-                    "um resultado com indicação de falha."
-                ),
-                details={
+                False,
+                "A ferramenta retornou uma indicação de falha.",
+                {
                     "result_type": "dict",
-                    "status": status,
-                    "explicit_success":
-                        success_values,
-                    "failure_detected":
-                        failure_detected,
+                    "status": status or None,
+                    "explicit_success": success_values,
+                    "failure_detected": failure_detected,
+                    "failure_details": failure_details,
                 },
             )
 
         # ----------------------------------------------------
-        # SUCCESS / SUCESSO
+        # INDICADORES EXPLÍCITOS DE SUCESSO
         # ----------------------------------------------------
 
         if success_values:
 
-            sucesso = all(
-                success_values
+            # Todos os indicadores precisam ser válidos.
+            # Um indicador falso ou ambíguo reprova.
+            success = all(
+                value is True
+                for value in success_values
             )
 
             return VerificationResult(
-                success=sucesso,
-                message=(
-                    "A ferramenta confirmou "
-                    "o sucesso da operação."
-                    if sucesso
-                    else
-                    "A ferramenta indicou "
-                    "que a operação não teve sucesso."
+                success,
+                (
+                    "A ferramenta confirmou o sucesso."
+                    if success
+                    else "A ferramenta não confirmou o sucesso."
                 ),
-                details={
+                {
                     "result_type": "dict",
-                    "status": status,
-                    "explicit_success":
-                        success_values,
+                    "status": status or None,
+                    "explicit_success": success_values,
                 },
             )
 
@@ -394,38 +477,87 @@ class ResultVerifier:
         if status_success:
 
             return VerificationResult(
-                success=True,
-                message=(
-                    "O status da ferramenta "
-                    "indica conclusão."
-                ),
-                details={
+                True,
+                "O status da ferramenta indica conclusão.",
+                {
                     "result_type": "dict",
                     "status": status,
                 },
             )
 
         # ----------------------------------------------------
-        # RESULTADO COM DADOS
+        # VERIFICAR DADOS ÚTEIS
+        # ----------------------------------------------------
+
+        payload_keys = (
+            "result",
+            "results",
+            "data",
+            "answer",
+            "resposta",
+            "content",
+            "conteudo",
+            "items",
+            "sources",
+            "fontes",
+        )
+
+        payload_found = False
+        payload_empty = False
+
+        for key in payload_keys:
+
+            if key not in result:
+                continue
+
+            payload_found = True
+            value = result[key]
+
+            if value is None:
+                payload_empty = True
+                continue
+
+            if isinstance(value, str) and not value.strip():
+                payload_empty = True
+                continue
+
+            if isinstance(value, (list, tuple, dict, set)) and not value:
+                payload_empty = True
+                continue
+
+            # Existe pelo menos um conteúdo útil.
+            payload_empty = False
+            break
+
+        if payload_found and payload_empty:
+
+            return VerificationResult(
+                False,
+                "O dicionário não contém dados úteis.",
+                {
+                    "result_type": "dict",
+                    "keys": list(result.keys()),
+                    "empty_payload": True,
+                },
+            )
+
+        # ----------------------------------------------------
+        # DICIONÁRIO COM DADOS
         # ----------------------------------------------------
 
         return VerificationResult(
-            success=True,
-            message=(
-                "Resultado recebido "
-                "com dados válidos."
-            ),
-            details={
+            True,
+            "Resultado recebido com dados.",
+            {
                 "result_type": "dict",
-                "keys":
-                    list(result.keys()),
-                "status":
-                    status or None,
+                "keys": list(result.keys()),
+                "status": status or None,
+                "payload_found": payload_found,
             },
         )
 
     # ========================================================
-    # TEXTO DE ERRO
+    # DETECTAR TEXTO DE ERRO
     # ========================================================
 
     @staticmethod
@@ -433,30 +565,39 @@ class ResultVerifier:
         text: str,
     ) -> bool:
         """
-        Detecta mensagens textuais que indicam falha.
+        Detecta mensagens que indicam falha.
         """
 
-        texto = str(
-            text
-        ).lower()
+        texto = str(text).strip().lower()
 
-        palavras = (
+        error_prefixes = (
             "erro:",
             "error:",
             "exception:",
-            "failed",
-            "failure",
-            "falhou",
+            "traceback",
+            "failed:",
+            "failure:",
+            "falhou:",
+            "falha:",
+        )
+
+        failure_phrases = (
             "não foi possível",
             "nao foi possivel",
             "não foi possível gerar",
             "nao foi possivel gerar",
-            "traceback",
+            "ocorreu um erro",
+            "an error occurred",
+            "execution failed",
+            "execução falhou",
         )
 
-        return any(
-            palavra in texto
-            for palavra in palavras
+        return (
+            texto.startswith(error_prefixes)
+            or any(
+                phrase in texto
+                for phrase in failure_phrases
+            )
         )
 
     # ========================================================
@@ -465,7 +606,7 @@ class ResultVerifier:
 
     def verify_step(
         self,
-        context: TaskContext,
+        context: Any,
         step_id: int,
     ) -> VerificationResult:
         """
@@ -477,39 +618,22 @@ class ResultVerifier:
             step_id,
         )
 
-        status = step.get(
-            "status"
-        )
-
-        # ----------------------------------------------------
-        # ETAPA NÃO CONCLUÍDA
-        # ----------------------------------------------------
+        status = step.get("status")
 
         if status != "completed":
 
             return VerificationResult(
-                success=False,
-                message=(
-                    f"A etapa {step_id} não está "
-                    "marcada como concluída."
-                ),
-                details={
+                False,
+                f"A etapa {step_id} não foi concluída.",
+                {
                     "step_id": step_id,
                     "status": status,
                 },
             )
 
-        # ----------------------------------------------------
-        # VERIFICAR RESULTADO
-        # ----------------------------------------------------
+        result = step.get("result")
 
-        result = step.get(
-            "result"
-        )
-
-        verification = self.verify_result(
-            result
-        )
+        verification = self.verify_result(result)
 
         verification.details.setdefault(
             "step_id",
@@ -524,17 +648,13 @@ class ResultVerifier:
 
     def verify_context(
         self,
-        context: TaskContext,
+        context: Any,
     ) -> Dict[str, Any]:
         """
-        Verifica o estado geral da tarefa.
+        Verifica todas as etapas de uma tarefa.
         """
 
         checks: List[Dict[str, Any]] = []
-
-        # ----------------------------------------------------
-        # PLANO VAZIO
-        # ----------------------------------------------------
 
         if not context.plan:
 
@@ -544,20 +664,17 @@ class ResultVerifier:
                 "checks": [],
                 "errors": context.errors,
                 "message": (
-                    "A tarefa não possui etapas "
-                    "para verificar."
+                    "A tarefa não possui etapas para verificar."
                 ),
             }
 
         # ----------------------------------------------------
-        # VERIFICAR CADA ETAPA
+        # VERIFICAR TODAS AS ETAPAS
         # ----------------------------------------------------
 
         for step in context.plan:
 
-            step_id = step.get(
-                "id"
-            )
+            step_id = step.get("id")
 
             try:
 
@@ -566,49 +683,45 @@ class ResultVerifier:
                     step_id,
                 )
 
-                checks.append(
-                    {
-                        "step_id": step_id,
-                        **verification.to_dict(),
-                    }
-                )
+                checks.append({
+                    "step_id": step_id,
+                    **verification.to_dict(),
+                })
 
             except Exception as exc:
 
-                checks.append(
-                    {
-                        "step_id": step_id,
-                        "success": False,
-                        "message": (
-                            "Erro ao verificar etapa."
-                        ),
-                        "details": {
-                            "error":
-                                str(exc),
-                        },
-                    }
-                )
+                checks.append({
+                    "step_id": step_id,
+                    "success": False,
+                    "message": "Erro ao verificar etapa.",
+                    "details": {
+                        "error": str(exc),
+                    },
+                })
 
         # ----------------------------------------------------
-        # RESULTADO FINAL
+        # RESULTADO GERAL
         # ----------------------------------------------------
 
-        todos_sucesso = bool(
-            checks
-        ) and all(
-            check.get(
-                "success",
-                False,
+        all_success = (
+            bool(checks)
+            and all(
+                check.get("success") is True
+                for check in checks
             )
+        )
+
+        no_errors = not context.has_errors()
+
+        success = all_success and no_errors
+
+        verified_steps = sum(
+            1
             for check in checks
+            if check.get("success") is True
         )
 
-        sem_erros = not context.has_errors()
-
-        success = (
-            todos_sucesso
-            and sem_erros
-        )
+        failed_steps = len(checks) - verified_steps
 
         return {
             "success": success,
@@ -616,8 +729,7 @@ class ResultVerifier:
             "status": (
                 "verified"
                 if success
-                else
-                "verification_failed"
+                else "verification_failed"
             ),
 
             "checks": checks,
@@ -625,31 +737,10 @@ class ResultVerifier:
             "errors": context.errors,
 
             "summary": {
-                "total_steps":
-                    len(context.plan),
-
-                "verified_steps":
-                    sum(
-                        1
-                        for check in checks
-                        if check.get(
-                            "success",
-                            False,
-                        )
-                    ),
-
-                "failed_steps":
-                    sum(
-                        1
-                        for check in checks
-                        if not check.get(
-                            "success",
-                            False,
-                        )
-                    ),
-
-                "context_errors":
-                    len(context.errors),
+                "total_steps": len(context.plan),
+                "verified_steps": verified_steps,
+                "failed_steps": failed_steps,
+                "context_errors": len(context.errors),
             },
         }
 
@@ -659,7 +750,7 @@ class ResultVerifier:
 
     @staticmethod
     def _get_step(
-        context: TaskContext,
+        context: Any,
         step_id: int,
     ) -> Dict[str, Any]:
         """
@@ -668,10 +759,7 @@ class ResultVerifier:
 
         for step in context.plan:
 
-            if step.get(
-                "id"
-            ) == step_id:
-
+            if step.get("id") == step_id:
                 return step
 
         raise KeyError(
