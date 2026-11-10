@@ -1,6 +1,7 @@
+
 # ============================================================
-# 🧭 ALEX IA ULTRA — ROUTER
-# Direcionador de tarefas e ferramentas do Ultra Core
+# 🧭 ALEX IA ULTRA — ROUTER V10
+# Sistema inteligente de roteamento do Ultra Core
 # ============================================================
 
 from typing import Any, Dict, List, Optional
@@ -10,28 +11,21 @@ from .tools import Tool, ToolRegistry, tool_registry
 
 class ToolRouter:
     """
-    Decide qual ferramenta deve atender uma determinada tarefa.
+    Direcionador central de ferramentas da Alex IA Ultra.
 
-    O Router utiliza explicitamente o tool_registry global
-    do Ultra Core quando nenhuma instância personalizada
-    é fornecida.
-
-    Isso garante que Brain, Router e ToolRegistry utilizem
-    a mesma fonte de ferramentas.
+    Responsabilidades:
+    - Localizar ferramentas registradas.
+    - Identificar ferramentas por nome.
+    - Identificar ferramentas por palavras-chave.
+    - Verificar disponibilidade.
+    - Explicar decisões de roteamento.
+    - Compartilhar o registry global do Ultra Core.
     """
 
     def __init__(
         self,
         registry: Optional[ToolRegistry] = None,
     ) -> None:
-
-        # ----------------------------------------------------
-        # Usa SEMPRE o registry global quando nenhum registry
-        # personalizado for informado.
-        #
-        # Isso evita que o Router fique ligado a uma instância
-        # diferente do ToolRegistry usado pelo Tool Loader.
-        # ----------------------------------------------------
 
         self.registry = (
             registry
@@ -40,7 +34,49 @@ class ToolRouter:
         )
 
     # ========================================================
-    # 🔎 LOCALIZAR FERRAMENTA
+    # NORMALIZAÇÃO
+    # ========================================================
+
+    @staticmethod
+    def _normalize_text(value: Any) -> str:
+        """
+        Normaliza valores textuais.
+        """
+
+        if value is None:
+            return ""
+
+        return str(value).strip().lower()
+
+    @classmethod
+    def _normalize_keywords(
+        cls,
+        keywords: Any,
+    ) -> List[str]:
+        """
+        Normaliza palavras-chave sem tratar uma string
+        como uma sequência de caracteres individuais.
+        """
+
+        if isinstance(keywords, str):
+            keywords = [keywords]
+
+        if not isinstance(keywords, (list, tuple, set)):
+            return []
+
+        normalized = []
+
+        for keyword in keywords:
+
+            value = cls._normalize_text(keyword)
+
+            if value and value not in normalized:
+                normalized.append(value)
+
+        return normalized
+
+    # ========================================================
+    # LOCALIZAR FERRAMENTA
     # ========================================================
 
     def find_tool(
@@ -51,67 +87,79 @@ class ToolRouter:
         """
         Procura uma ferramenta disponível.
 
-        Ordem de busca:
-
-        1. Nome exato da ferramenta.
-        2. Palavras-chave.
+        Prioridade:
+        1. Nome exato.
+        2. Correspondência por palavras-chave.
         """
 
         # ----------------------------------------------------
-        # Busca direta pelo nome.
+        # BUSCA DIRETA
         # ----------------------------------------------------
 
-        if requested_tool:
+        requested_name = self._normalize_text(
+            requested_tool
+        )
+
+        if requested_name:
 
             tool = self.registry.get(
-                requested_tool
+                requested_name
             )
 
-            if tool and tool.enabled:
+            if tool is not None and tool.enabled:
                 return tool
 
         # ----------------------------------------------------
-        # Sem palavras-chave não há segunda tentativa.
+        # BUSCA POR PALAVRAS-CHAVE
         # ----------------------------------------------------
 
-        if not keywords:
+        normalized_keywords = self._normalize_keywords(
+            keywords
+        )
+
+        if not normalized_keywords:
             return None
 
-        normalized_keywords = [
-            str(keyword)
-            .lower()
-            .strip()
-            for keyword in keywords
-            if keyword
-        ]
-
         # ----------------------------------------------------
-        # Busca por nome + descrição.
+        # PERCORRER REGISTRO
         # ----------------------------------------------------
 
         for tool_info in self.registry.list_tools():
 
-            if not tool_info["enabled"]:
+            if not isinstance(tool_info, dict):
                 continue
 
+            if not tool_info.get("enabled", False):
+                continue
+
+            tool_name = self._normalize_text(
+                tool_info.get("name")
+            )
+
+            description = self._normalize_text(
+                tool_info.get("description")
+            )
+
             searchable_text = (
-                f"{tool_info['name']} "
-                f"{tool_info['description']}"
-            ).lower()
+                f"{tool_name} {description}"
+            )
 
             if any(
                 keyword in searchable_text
                 for keyword in normalized_keywords
             ):
 
-                return self.registry.get(
-                    tool_info["name"]
+                tool = self.registry.get(
+                    tool_info.get("name")
                 )
+
+                if tool is not None and tool.enabled:
+                    return tool
 
         return None
 
     # ========================================================
-    # 🧭 ROTEAR ETAPA
+    # ROTEAR ETAPA
     # ========================================================
 
     def route(
@@ -119,12 +167,13 @@ class ToolRouter:
         step: Dict[str, Any],
     ) -> Optional[Tool]:
         """
-        Escolhe a ferramenta para uma etapa do plano.
+        Seleciona a ferramenta adequada para uma etapa.
         """
 
-        requested_tool = step.get(
-            "tool"
-        )
+        if not isinstance(step, dict):
+            return None
+
+        requested_tool = step.get("tool")
 
         keywords = step.get(
             "keywords",
@@ -137,7 +186,7 @@ class ToolRouter:
         )
 
     # ========================================================
-    # 📝 EXPLICAR ROTA
+    # EXPLICAR ROTA
     # ========================================================
 
     def explain_route(
@@ -145,21 +194,30 @@ class ToolRouter:
         step: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Explica qual ferramenta foi escolhida.
+        Explica qual ferramenta será utilizada.
         """
 
-        tool = self.route(
-            step
-        )
-
-        if tool is None:
+        if not isinstance(step, dict):
 
             return {
                 "success": False,
                 "tool": None,
+                "reason": "A etapa informada é inválida.",
+            }
+
+        tool = self.route(step)
+
+        if tool is None:
+
+            requested_tool = step.get("tool")
+
+            return {
+                "success": False,
+                "tool": None,
+                "requested_tool": requested_tool,
                 "reason": (
                     "Nenhuma ferramenta compatível "
-                    "foi encontrada."
+                    "e habilitada foi encontrada."
                 ),
             }
 
@@ -168,34 +226,72 @@ class ToolRouter:
             "tool": tool.name,
             "description": tool.description,
             "reason": (
-                "Ferramenta encontrada no registro "
-                "da Ultra."
+                "Ferramenta encontrada e habilitada "
+                "no registro da Alex IA Ultra."
             ),
         }
 
     # ========================================================
-    # 🛠️ FERRAMENTAS DISPONÍVEIS
+    # FERRAMENTAS DISPONÍVEIS
     # ========================================================
 
     def available_tools(
         self,
     ) -> List[Dict[str, Any]]:
         """
-        Retorna as ferramentas atualmente disponíveis.
+        Retorna as ferramentas registradas.
         """
 
         return self.registry.list_tools()
 
+    # ========================================================
+    # VERIFICAR EXISTÊNCIA
+    # ========================================================
+
+    def has_tool(
+        self,
+        tool_name: str,
+    ) -> bool:
+        """
+        Verifica se uma ferramenta está registrada
+        e habilitada.
+        """
+
+        if not isinstance(tool_name, str):
+            return False
+
+        tool = self.registry.get(
+            tool_name.strip()
+        )
+
+        return (
+            tool is not None
+            and tool.enabled is True
+        )
+
+    # ========================================================
+    # CONTAGEM DE FERRAMENTAS
+    # ========================================================
+
+    def count_available_tools(self) -> int:
+        """
+        Conta as ferramentas habilitadas.
+        """
+
+        return sum(
+            1
+            for item in self.registry.list_tools()
+            if isinstance(item, dict)
+            and item.get("enabled") is True
+        )
+
 
 # ============================================================
-# 🧠 INSTÂNCIA PRINCIPAL
+# INSTÂNCIA PRINCIPAL
 # ============================================================
 
-# Importante:
-# Não criar outro ToolRegistry aqui.
-#
-# O Router deve compartilhar exatamente o mesmo
-# tool_registry utilizado pelo restante do Ultra Core.
+# Compartilha exatamente o mesmo registro utilizado
+# pelo Tool Loader e pelo restante do Ultra Core.
 
 router = ToolRouter(
     registry=tool_registry
@@ -203,7 +299,7 @@ router = ToolRouter(
 
 
 # ============================================================
-# 📦 EXPORTAÇÕES
+# EXPORTAÇÕES
 # ============================================================
 
 __all__ = [
