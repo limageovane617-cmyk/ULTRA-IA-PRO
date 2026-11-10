@@ -1,10 +1,12 @@
+
 # ============================================================
-# 🧠 ALEX IA ULTRA — BRAIN
+# 🧠 ALEX IA ULTRA — BRAIN V2
 # Cérebro central do Ultra Core
 # ============================================================
 
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
+import logging
 
 from .context import TaskContext
 from .interpreter import TaskInterpreter, interpreter
@@ -13,12 +15,26 @@ from .router import ToolRouter, router
 from .executor import TaskExecutor, executor
 from .verifier import ResultVerifier, verifier
 from .intelligence import UltraIntelligence, intelligence
+
 from gemini_bridge import GeminiBridge
+
+
+logger = logging.getLogger(__name__)
 
 
 class UltraBrain:
     """
     Coordenador central da Alex IA Ultra.
+
+    Responsabilidades:
+    - Interpretar solicitações.
+    - Criar tarefas.
+    - Planejar execuções.
+    - Encaminhar ferramentas.
+    - Executar tarefas.
+    - Verificar resultados.
+    - Gerar respostas utilizando Gemini.
+    - Preservar compatibilidade com o aplicativo principal.
     """
 
     def __init__(
@@ -63,6 +79,7 @@ class UltraBrain:
     ) -> TaskContext:
 
         if not user_request or not user_request.strip():
+
             raise ValueError(
                 "A solicitação do usuário não pode estar vazia."
             )
@@ -138,7 +155,6 @@ class UltraBrain:
             ),
         )
 
-        # Marca que a interpretação já foi realizada.
         context.set_metadata(
             "_prepared",
             True,
@@ -185,10 +201,7 @@ class UltraBrain:
                 {},
             )
 
-            if (
-                prompt
-                and "prompt" not in arguments
-            ):
+            if prompt and "prompt" not in arguments:
                 arguments["prompt"] = prompt
 
         context.touch()
@@ -266,6 +279,7 @@ class UltraBrain:
             )
 
             if tool and tool.enabled:
+
                 selected_tool = tool.name
                 break
 
@@ -288,7 +302,7 @@ class UltraBrain:
         )
 
     # ========================================================
-    # 🔧 FERRAMENTAS
+    # 🔧 FERRAMENTAS DISPONÍVEIS
     # ========================================================
 
     def available_tools(
@@ -362,7 +376,7 @@ class UltraBrain:
         )
 
     # ========================================================
-    # 🧠 RESPOSTA FINAL
+    # 🧠 RESPOSTA FINAL — GEMINI RESILIENTE
     # ========================================================
 
     def generate_response(
@@ -371,12 +385,53 @@ class UltraBrain:
     ) -> str:
 
         if self.gemini_bridge is None:
-            return ""
 
-        return self.intelligence.generate_response(
-            context=context,
-            gemini_bridge=self.gemini_bridge,
-        )
+            logger.warning(
+                "GeminiBridge não está configurado."
+            )
+
+            return (
+                "A Alex está temporariamente sem conexão "
+                "com o serviço de inteligência. "
+                "Verifique a configuração da API e tente novamente."
+            )
+
+        try:
+
+            resposta = self.intelligence.generate_response(
+                context=context,
+                gemini_bridge=self.gemini_bridge,
+            )
+
+            if resposta is None:
+                return ""
+
+            resposta = str(resposta).strip()
+
+            if not resposta:
+                logger.warning(
+                    "A camada de inteligência retornou resposta vazia."
+                )
+
+                return (
+                    "Não consegui gerar uma resposta neste momento. "
+                    "Por favor, tente novamente."
+                )
+
+            return resposta
+
+        except Exception:
+
+            logger.exception(
+                "Falha na geração da resposta final da Alex."
+            )
+
+            return (
+                "A Alex está temporariamente sem acesso "
+                "ao serviço de inteligência. "
+                "O serviço pode estar enfrentando alta demanda. "
+                "Tente novamente em alguns instantes."
+            )
 
     # ========================================================
     # 🚀 CICLO COMPLETO
@@ -394,6 +449,7 @@ class UltraBrain:
         image_bytes: Optional[bytes] = None,
         image_mime_type: Optional[str] = None,
     ) -> Dict[str, Any]:
+
         """
         Executa o ciclo completo da Ultra.
 
@@ -402,6 +458,7 @@ class UltraBrain:
         - Contexto de arquivos.
         - Nome do arquivo.
         - Imagens para análise visual.
+        - Respostas com tratamento de falhas.
         """
 
         context = self.create_task(
@@ -413,18 +470,21 @@ class UltraBrain:
         # ----------------------------------------------------
 
         if history is not None:
+
             context.set_metadata(
                 "history",
                 history,
             )
 
         if file_context is not None:
+
             context.set_metadata(
                 "file_context",
                 file_context,
             )
 
         if file_name is not None:
+
             context.set_metadata(
                 "file_name",
                 file_name,
@@ -436,12 +496,17 @@ class UltraBrain:
 
         if image_bytes is not None:
 
-            if not isinstance(image_bytes, (bytes, bytearray)):
+            if not isinstance(
+                image_bytes,
+                (bytes, bytearray),
+            ):
+
                 raise TypeError(
                     "image_bytes precisa ser bytes ou bytearray."
                 )
 
             if not image_bytes:
+
                 raise ValueError(
                     "A imagem enviada está vazia."
                 )
@@ -471,6 +536,14 @@ class UltraBrain:
                 "status": context.status,
                 "task_id": context.task_id,
                 "interpretation": interpretation,
+                "response": (
+                    interpretation.get("message")
+                    or "Não foi possível interpretar a solicitação."
+                ),
+                "final_response": (
+                    interpretation.get("message")
+                    or "Não foi possível interpretar a solicitação."
+                ),
                 "context": context.summary(),
             }
 
@@ -497,16 +570,19 @@ class UltraBrain:
                 "waiting_for_plan"
             )
 
+            mensagem = (
+                "Não foi possível criar "
+                "um plano para esta tarefa."
+            )
+
             return {
                 "success": False,
                 "status": "waiting_for_plan",
                 "task_id": context.task_id,
                 "interpretation": interpretation,
                 "context": context.summary(),
-                "message": (
-                    "Não foi possível criar "
-                    "um plano para esta tarefa."
-                ),
+                "response": mensagem,
+                "final_response": mensagem,
             }
 
         # ----------------------------------------------------
@@ -549,15 +625,35 @@ class UltraBrain:
             context
         )
 
+        # ----------------------------------------------------
+        # RETORNO PADRONIZADO
+        # ----------------------------------------------------
+
         return {
+
             "success": success,
+
             "task_id": context.task_id,
+
             "status": context.status,
+
             "interpretation": interpretation,
+
             "plan": context.plan,
+
             "execution": execution,
+
             "verification": verification,
+
+            # Compatibilidade com o aplicativo principal.
+            "response": final_response,
+
+            "answer": final_response,
+
+            "output": final_response,
+
             "final_response": final_response,
+
             "context": context.summary(),
         }
 
