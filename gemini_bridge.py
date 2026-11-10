@@ -1,58 +1,70 @@
+
 # ============================================================
-# ALEX IA ULTRA — GEMINI BRIDGE
-# Ponte entre o Ultra Core e o Google GenAI
+# ALEX IA ULTRA — GEMINI BRIDGE V2
+# Conexão resiliente com Google GenAI
 # ============================================================
 
 import logging
-
+import os
 from typing import Optional
 
 from google import genai
 from google.genai import types
 
-
 logger = logging.getLogger(__name__)
 
 
 class GeminiBridge:
-    """
-    Ponte entre o Ultra Core e o Google GenAI.
-
-    Responsabilidades:
-    - Enviar prompts de texto.
-    - Enviar imagens junto com o texto.
-    - Retornar respostas do Gemini.
-    - Tratar erros sem expor credenciais.
-
-    O Ultra Core continua responsável pelo fluxo
-    de interpretação, planejamento e execução.
-    """
 
     def __init__(
         self,
         api_key: str,
         model: str = "gemini-3.1-flash-lite",
+        fallback_models=None,
     ):
+
         if not isinstance(api_key, str) or not api_key.strip():
-            raise ValueError(
-                "A chave da API do Gemini não foi informada."
-            )
+            raise ValueError("Chave Gemini não informada.")
 
         if not isinstance(model, str) or not model.strip():
-            raise ValueError(
-                "O modelo Gemini não foi informado."
-            )
+            raise ValueError("Modelo Gemini não informado.")
 
         self.model = model.strip()
 
-        # A chave é utilizada pelo cliente,
-        # mas nunca deve aparecer em logs ou respostas.
+        # Modelos alternativos configuráveis pelo ambiente.
+        if fallback_models is None:
+            fallback_models = os.getenv(
+                "GEMINI_FALLBACK_MODELS", ""
+            ).split(",")
+
+        self.fallback_models = [
+            item.strip()
+            for item in fallback_models
+            if item.strip() and item.strip() != self.model
+        ]
+
+        # Retry configurado no SDK oficial.
+        http_options = types.HttpOptions(
+            retry_options=types.HttpRetryOptions(
+                attempts=4,
+                initial_delay=1.0,
+                max_delay=8.0,
+                exp_base=2.0,
+                jitter=1.0,
+                http_status_codes=[
+                    408, 429, 500, 502, 503, 504
+                ],
+            ),
+            timeout=90000,
+        )
+
         self.client = genai.Client(
-            api_key=api_key.strip()
+            api_key=api_key.strip(),
+            http_options=http_options,
         )
 
     # ========================================================
-    # GERAÇÃO DE RESPOSTA
+    # GERAÇÃO
     # ========================================================
 
     def gerar_resposta(
@@ -61,44 +73,25 @@ class GeminiBridge:
         image_bytes: Optional[bytes] = None,
         image_mime_type: Optional[str] = None,
     ) -> str:
-        """
-        Envia texto e, opcionalmente, uma imagem ao Gemini.
-
-        A imagem é transmitida como conteúdo multimodal,
-        sem conversão dos bytes para texto.
-        """
 
         if not isinstance(prompt, str) or not prompt.strip():
-            raise ValueError(
-                "O prompt enviado ao Gemini está vazio."
-            )
+            raise ValueError("Prompt vazio.")
 
         contents = [prompt]
 
-        # ----------------------------------------------------
-        # IMAGEM OPCIONAL
-        # ----------------------------------------------------
-
         if image_bytes is not None:
 
-            if not isinstance(
-                image_bytes,
-                (bytes, bytearray),
-            ):
-                raise TypeError(
-                    "Os dados da imagem precisam ser bytes."
-                )
+            if not isinstance(image_bytes, (bytes, bytearray)):
+                raise TypeError("Imagem precisa ser bytes.")
 
             if not image_bytes:
-                raise ValueError(
-                    "A imagem enviada está vazia."
-                )
+                raise ValueError("Imagem vazia.")
 
             mime_type = (
                 image_mime_type or "image/jpeg"
             ).strip().lower()
 
-            tipos_permitidos = {
+            permitidos = {
                 "image/jpeg",
                 "image/png",
                 "image/webp",
@@ -106,52 +99,94 @@ class GeminiBridge:
                 "image/heif",
             }
 
-            if mime_type not in tipos_permitidos:
-                raise ValueError(
-                    "Formato de imagem não suportado: "
-                    f"{mime_type}"
-                )
-
-            parte_imagem = types.Part.from_bytes(
-                data=bytes(image_bytes),
-                mime_type=mime_type,
-            )
+            if mime_type not in permitidos:
+                raise ValueError("Formato de imagem inválido.")
 
             contents.append(
-                parte_imagem
+                types.Part.from_bytes(
+                    data=bytes(image_bytes),
+                    mime_type=mime_type,
+                )
             )
 
-        # ----------------------------------------------------
-        # CHAMADA AO MODELO
-        # ----------------------------------------------------
+        modelos = [self.model] + self.fallback_models
 
-        try:
-            resposta = self.client.models.generate_content(
-                model=self.model,
-                contents=contents,
-            )
+        ultimo_erro = None
 
-            texto = getattr(
-                resposta,
-                "text",
-                None,
-            )
+        for modelo in modelos:
 
-            if not texto:
-                logger.warning(
-                    "Gemini retornou uma resposta sem texto."
+            try:
+
+                logger.info(
+                    "Solicitando resposta ao Gemini."
                 )
 
-                return ""
+                resposta = self.client.models.generate_content(
+                    model=modelo,
+                    contents=contents,
+                )
 
-            return str(texto).strip()
+                texto = getattr(resposta, "text", None)
 
-        except Exception:
-            logger.exception(
-                "Falha ao solicitar resposta ao Gemini."
-            )
+                if texto and str(texto).strip():
 
-            raise
+                    logger.info(
+                        "Resposta recebida do modelo Gemini."
+                    )
+
+                    return str(texto).strip()
+
+                logger.warning(
+                    "Modelo retornou resposta vazia."
+                )
+
+                ultimo_erro = RuntimeError(
+                    "O Gemini retornou uma resposta vazia."
+                )
+
+            except Exception as erro:
+
+                ultimo_erro = erro
+
+                mensagem = str(erro).lower()
+
+                temporario = any(
+                    termo in mensagem
+                    for termo in (
+                        "503",
+                        "429",
+                        "502",
+                        "500",
+                        "504",
+                        "408",
+                        "unavailable",
+                        "resource_exhausted",
+                        "deadline_exceeded",
+                        "timeout",
+                    )
+                )
+
+                logger.warning(
+                    "Falha no modelo Gemini durante geração."
+                )
+
+                # Erros permanentes não devem provocar
+                # tentativas em outros modelos.
+                if not temporario:
+                    raise
+
+                if modelo != modelos[-1]:
+                    logger.warning(
+                        "Tentando modelo alternativo."
+                    )
+
+        logger.error(
+            "Todos os modelos Gemini configurados falharam."
+        )
+
+        raise RuntimeError(
+            "O serviço Gemini está temporariamente indisponível."
+        ) from ultimo_erro
 
 
 # ============================================================
@@ -162,18 +197,11 @@ def criar_gemini_bridge(
     api_key: Optional[str],
     model: str = "gemini-3.1-flash-lite",
 ) -> Optional[GeminiBridge]:
-    """
-    Cria a ponte quando existe uma chave disponível.
-
-    Retorna None quando a configuração não permite
-    criar o cliente.
-    """
 
     if not api_key:
         logger.warning(
-            "GeminiBridge não criado: chave não configurada."
+            "GeminiBridge não criado: chave ausente."
         )
-
         return None
 
     try:
@@ -184,9 +212,8 @@ def criar_gemini_bridge(
 
     except Exception:
         logger.exception(
-            "Não foi possível inicializar o GeminiBridge."
+            "Falha ao inicializar GeminiBridge."
         )
-
         return None
 
 
