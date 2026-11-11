@@ -1,10 +1,11 @@
 
 # ============================================================
-# ALEX IA ULTRA — TOOL LOADER V2
-# Carregador central de ferramentas
+# 🧠 ALEX IA ULTRA — TOOL LOADER V3
+# Carregador central de ferramentas do Ultra Core
 # ============================================================
 
 import sys
+import importlib
 from pathlib import Path
 from typing import Any, Dict
 
@@ -12,7 +13,7 @@ from .tools import tool_registry
 
 
 # ============================================================
-# CAMINHO RAIZ DO PROJETO
+# 📁 CAMINHO RAIZ DO PROJETO
 # ============================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -22,7 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 # ============================================================
-# REGISTRAR UMA FERRAMENTA
+# 🔧 REGISTRADOR CENTRAL
 # ============================================================
 
 def _registrar(
@@ -34,9 +35,12 @@ def _registrar(
 ) -> bool:
 
     if not callable(funcao):
-        return False
+        raise TypeError(
+            f"A ferramenta {nome} não é executável."
+        )
 
     if not tool_registry.has(nome):
+
         tool_registry.register(
             name=nome,
             description=descricao,
@@ -47,11 +51,11 @@ def _registrar(
             },
         )
 
-    return True
+    return tool_registry.has(nome)
 
 
 # ============================================================
-# PESQUISA NA INTERNET
+# 🌐 PESQUISA NA INTERNET
 # ============================================================
 
 def _registrar_pesquisa(
@@ -59,22 +63,26 @@ def _registrar_pesquisa(
 ) -> None:
 
     try:
+
         from .tool_bindings import registrar_ferramentas
 
-        registrar_ferramentas(tool_registry)
+        registrar_ferramentas(
+            tool_registry
+        )
 
         carregadas["pesquisa_internet"] = (
             tool_registry.has("pesquisa_internet")
         )
 
     except Exception as erro:
+
         carregadas["pesquisa_internet"] = {
             "erro": str(erro)
         }
 
 
 # ============================================================
-# GERAÇÃO DE IMAGENS
+# 🎨 GERAÇÃO DE IMAGENS
 # ============================================================
 
 def _registrar_imagem(
@@ -82,24 +90,81 @@ def _registrar_imagem(
 ) -> None:
 
     try:
-        from gerenciador_imagem import gerar_imagem_pixazo
+
+        importlib.invalidate_caches()
+
+        modulo = importlib.import_module(
+            "gerenciador_imagem"
+        )
+
+        # Utiliza o gerador principal.
+        # Ele tenta Pixazo e depois Z Image Turbo.
+
+        funcao = getattr(
+            modulo,
+            "gerar_imagem",
+        )
 
         carregadas["imagem.gerar"] = _registrar(
             nome="imagem.gerar",
-            descricao="Gera imagens através do motor Pixazo.",
-            funcao=gerar_imagem_pixazo,
+            descricao=(
+                "Gera imagens usando os motores "
+                "disponíveis da Alex IA Ultra, "
+                "com fallback automático."
+            ),
+            funcao=funcao,
             categoria="imagem",
             tipo="geracao",
         )
 
+        # Registra também os motores individuais.
+
+        motores = {
+            "imagem.pixazo": (
+                "gerar_imagem_pixazo",
+                "Motor Pixazo de geração de imagens.",
+            ),
+            "imagem.zimage": (
+                "gerar_imagem_zimage",
+                "Motor Z Image Turbo de geração gratuita.",
+            ),
+        }
+
+        for nome, (
+            atributo,
+            descricao,
+        ) in motores.items():
+
+            try:
+
+                motor = getattr(
+                    modulo,
+                    atributo,
+                )
+
+                carregadas[nome] = _registrar(
+                    nome=nome,
+                    descricao=descricao,
+                    funcao=motor,
+                    categoria="imagem",
+                    tipo="motor",
+                )
+
+            except Exception as erro:
+
+                carregadas[nome] = {
+                    "erro": str(erro)
+                }
+
     except Exception as erro:
+
         carregadas["imagem.gerar"] = {
             "erro": str(erro)
         }
 
 
 # ============================================================
-# GERAÇÃO DE VÍDEOS
+# 🎬 GERAÇÃO DE VÍDEOS
 # ============================================================
 
 def _registrar_video(
@@ -107,38 +172,70 @@ def _registrar_video(
 ) -> None:
 
     try:
-        import gerenciador_video
+
+        importlib.invalidate_caches()
+
+        modulo = importlib.import_module(
+            "gerenciador_video"
+        )
 
     except Exception as erro:
+
         carregadas["video"] = {
             "erro": str(erro)
         }
+
         return
 
     ferramentas_video = {
+
         "video.gerar": (
             "gerar_video",
-            "Geração principal de vídeos.",
+            "Gerador principal de vídeos.",
         ),
+
         "video.texto": (
             "gerar_video_texto",
             "Geração de vídeos a partir de texto.",
         ),
+
         "video.imagem": (
             "gerar_video_imagem",
             "Geração de vídeos a partir de imagens.",
         ),
-        "video.fallback": (
-            "gerar_video_fallback",
-            "Motor alternativo de geração de vídeos.",
+
+        "video.magichour": (
+            "gerar_magichour",
+            "Geração de vídeos utilizando MagicHour.",
+        ),
+
+        "video.ltx": (
+            "gerar_ltx_huggingface",
+            "Geração de vídeos utilizando LTX.",
+        ),
+
+        "video.r3gm": (
+            "gerar_r3gm",
+            "Geração de vídeos utilizando R3GM.",
+        ),
+
+        "video.wan": (
+            "gerar_wan_comfyui",
+            "Geração de vídeos utilizando WAN ComfyUI.",
         ),
     }
 
-    for nome, (atributo, descricao) in ferramentas_video.items():
+    registrados = 0
+
+    for nome, (
+        atributo,
+        descricao,
+    ) in ferramentas_video.items():
 
         try:
+
             funcao = getattr(
-                gerenciador_video,
+                modulo,
                 atributo,
             )
 
@@ -150,17 +247,32 @@ def _registrar_video(
                 tipo=nome.split(".", 1)[1],
             )
 
+            registrados += 1
+
         except Exception as erro:
+
             carregadas[nome] = {
                 "erro": str(erro)
             }
 
+    carregadas["video"] = {
+        "success": registrados > 0,
+        "registrados": registrados,
+        "total": len(ferramentas_video),
+    }
+
 
 # ============================================================
-# CARREGAMENTO GERAL
+# 🚀 CARREGAMENTO GERAL
 # ============================================================
 
 def carregar_ferramentas() -> Dict[str, Any]:
+    """
+    Carrega as ferramentas da Alex IA Ultra.
+
+    Cada grupo possui isolamento de erros.
+    Uma falha não interrompe os demais.
+    """
 
     carregadas: Dict[str, Any] = {}
 
@@ -174,7 +286,7 @@ def carregar_ferramentas() -> Dict[str, Any]:
 
 
 # ============================================================
-# FERRAMENTAS DISPONÍVEIS
+# 🛠️ FERRAMENTAS DISPONÍVEIS
 # ============================================================
 
 def ferramentas_disponiveis() -> list:
@@ -183,7 +295,7 @@ def ferramentas_disponiveis() -> list:
 
 
 # ============================================================
-# STATUS
+# 📊 STATUS DAS FERRAMENTAS
 # ============================================================
 
 def status_ferramentas() -> Dict[str, Any]:
@@ -192,16 +304,19 @@ def status_ferramentas() -> Dict[str, Any]:
 
     return {
         "total": len(ferramentas),
+
         "habilitadas": sum(
-            1 for ferramenta in ferramentas
+            1
+            for ferramenta in ferramentas
             if ferramenta["enabled"]
         ),
+
         "ferramentas": ferramentas,
     }
 
 
 # ============================================================
-# EXPORTAÇÕES
+# 📦 EXPORTAÇÕES
 # ============================================================
 
 __all__ = [
