@@ -1,11 +1,13 @@
 
 # ============================================================
-# 🧠 ALEX IA ULTRA — TOOL LOADER V3
+# 🧠 ALEX IA ULTRA V14 — TOOL LOADER
 # Carregador central de ferramentas do Ultra Core
+# NVIDIA FLUX.1-dev — IMAGENS
 # ============================================================
 
 import sys
 import importlib
+
 from pathlib import Path
 from typing import Any, Dict
 
@@ -66,9 +68,7 @@ def _registrar_pesquisa(
 
         from .tool_bindings import registrar_ferramentas
 
-        registrar_ferramentas(
-            tool_registry
-        )
+        registrar_ferramentas(tool_registry)
 
         carregadas["pesquisa_internet"] = (
             tool_registry.has("pesquisa_internet")
@@ -82,7 +82,7 @@ def _registrar_pesquisa(
 
 
 # ============================================================
-# 🎨 GERAÇÃO DE IMAGENS
+# 🎨 GERAÇÃO DE IMAGENS — NVIDIA FLUX.1-dev
 # ============================================================
 
 def _registrar_imagem(
@@ -97,8 +97,9 @@ def _registrar_imagem(
             "gerenciador_imagem"
         )
 
-        # Utiliza o gerador principal.
-        # Ele tenta Pixazo e depois Z Image Turbo.
+        # ----------------------------------------------------
+        # GERADOR PRINCIPAL NVIDIA
+        # ----------------------------------------------------
 
         funcao = getattr(
             modulo,
@@ -108,53 +109,24 @@ def _registrar_imagem(
         carregadas["imagem.gerar"] = _registrar(
             nome="imagem.gerar",
             descricao=(
-                "Gera imagens usando os motores "
-                "disponíveis da Alex IA Ultra, "
-                "com fallback automático."
+                "Gera imagens exclusivamente através "
+                "da NVIDIA NIM utilizando o modelo "
+                "Black Forest Labs FLUX.1-dev."
             ),
             funcao=funcao,
             categoria="imagem",
-            tipo="geracao",
+            tipo="nvidia_flux",
         )
 
-        # Registra também os motores individuais.
+        # ----------------------------------------------------
+        # INFORMAÇÕES DO MOTOR
+        # ----------------------------------------------------
 
-        motores = {
-            "imagem.pixazo": (
-                "gerar_imagem_pixazo",
-                "Motor Pixazo de geração de imagens.",
-            ),
-            "imagem.zimage": (
-                "gerar_imagem_zimage",
-                "Motor Z Image Turbo de geração gratuita.",
-            ),
+        carregadas["imagem.motor"] = {
+            "nome": "NVIDIA NIM",
+            "modelo": "black-forest-labs/flux.1-dev",
+            "status": "registrado",
         }
-
-        for nome, (
-            atributo,
-            descricao,
-        ) in motores.items():
-
-            try:
-
-                motor = getattr(
-                    modulo,
-                    atributo,
-                )
-
-                carregadas[nome] = _registrar(
-                    nome=nome,
-                    descricao=descricao,
-                    funcao=motor,
-                    categoria="imagem",
-                    tipo="motor",
-                )
-
-            except Exception as erro:
-
-                carregadas[nome] = {
-                    "erro": str(erro)
-                }
 
     except Exception as erro:
 
@@ -256,7 +228,7 @@ def _registrar_video(
             }
 
     carregadas["video"] = {
-        "success": registrados > 0,
+        "success": registrados == len(ferramentas_video),
         "registrados": registrados,
         "total": len(ferramentas_video),
     }
@@ -267,19 +239,16 @@ def _registrar_video(
 # ============================================================
 
 def carregar_ferramentas() -> Dict[str, Any]:
-    """
-    Carrega as ferramentas da Alex IA Ultra.
-
-    Cada grupo possui isolamento de erros.
-    Uma falha não interrompe os demais.
-    """
 
     carregadas: Dict[str, Any] = {}
 
+    # Pesquisa
     _registrar_pesquisa(carregadas)
 
+    # NVIDIA FLUX
     _registrar_imagem(carregadas)
 
+    # Vídeos
     _registrar_video(carregadas)
 
     return carregadas
