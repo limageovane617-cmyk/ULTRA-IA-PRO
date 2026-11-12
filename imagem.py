@@ -1,76 +1,42 @@
+
 # ============================================================
-# 🖼️ ALEX IA ULTRA — GERENCIADOR DE IMAGENS
-# NVIDIA NIM / FLUX.1-dev
-# Criado por Geovani
+# ALEX IA ULTRA V13 — GERENCIADOR DE IMAGENS
+# MOTOR PRINCIPAL: Z-IMAGE TURBO / HUGGING FACE
+# SEM PIXAZO OU NVIDIA PAGOS
 # ============================================================
 
 import os
-import base64
+import shutil
 from pathlib import Path
 
 import requests
 import streamlit as st
 
-
 # ============================================================
-# ⚙️ CONFIGURAÇÃO NVIDIA
+# CONFIGURAÇÃO
 # ============================================================
 
-NVIDIA_API_URL = (
-    "https://ai.api.nvidia.com/v1/genai/"
-    "black-forest-labs/flux.1-dev"
-)
+ZIMAGE_SPACE = "mrfakename/Z-Image-Turbo"
 
-MODELO_IMAGEM = "black-forest-labs/flux.1-dev"
+MOTOR_IMAGEM = "Z-Image Turbo / Hugging Face"
+
+TIMEOUT_IMAGEM = 600
 
 
 # ============================================================
-# 🔐 OBTER CHAVE NVIDIA
-# ============================================================
-
-def obter_chave_nvidia():
-
-    try:
-
-        chave = st.secrets.get(
-            "NVIDIA_API_KEY",
-            ""
-        )
-
-        if chave:
-            return str(chave).strip()
-
-    except Exception:
-        pass
-
-    chave = os.environ.get(
-        "NVIDIA_API_KEY",
-        ""
-    )
-
-    return str(chave).strip()
-
-
-# ============================================================
-# 📁 PASTA DAS IMAGENS
+# PASTA DE IMAGENS
 # ============================================================
 
 def obter_pasta_imagens():
 
-    pasta = Path(
-        "/tmp/alex_ia_ultra_imagens"
-    )
-
-    pasta.mkdir(
-        parents=True,
-        exist_ok=True
-    )
+    pasta = Path("/tmp/alex_ia_ultra_imagens")
+    pasta.mkdir(parents=True, exist_ok=True)
 
     return pasta
 
 
 # ============================================================
-# 💾 GUARDAR ÚLTIMA IMAGEM
+# SALVAR ESTADO
 # ============================================================
 
 def guardar_ultima_imagem(
@@ -81,278 +47,219 @@ def guardar_ultima_imagem(
 ):
 
     try:
-
         st.session_state.ultima_imagem = imagem
-
-        st.session_state.ultima_imagem_caminho = (
-            caminho
-        )
-
-        st.session_state.ultimo_prompt_imagem = (
-            prompt
-        )
-
-        st.session_state.ultimo_motor_imagem = (
-            motor
-        )
+        st.session_state.ultima_imagem_caminho = caminho
+        st.session_state.ultimo_prompt_imagem = prompt
+        st.session_state.ultimo_motor_imagem = motor
 
         return True
 
     except Exception:
-
         return False
 
 
 # ============================================================
-# 🎨 GERAR IMAGEM COM NVIDIA
+# NORMALIZAR RESULTADO DO HUGGING FACE
 # ============================================================
 
-def gerar_imagem_nvidia(prompt):
+def normalizar_resultado(resultado):
 
-    chave = obter_chave_nvidia()
+    if isinstance(resultado, (tuple, list)):
 
-    if not chave:
+        if not resultado:
+            raise RuntimeError("O motor retornou uma lista vazia.")
+
+        return normalizar_resultado(resultado[0])
+
+    if isinstance(resultado, dict):
+
+        for chave in ("path", "image", "url", "name"):
+
+            if resultado.get(chave):
+                return normalizar_resultado(resultado[chave])
 
         raise RuntimeError(
-            "NVIDIA_API_KEY não encontrada "
-            "nos Secrets do Streamlit."
+            f"Formato de imagem não reconhecido: {resultado}"
         )
 
-    headers = {
-        "Authorization": f"Bearer {chave}",
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
+    if isinstance(resultado, os.PathLike):
+        return str(resultado)
 
-    # ========================================================
-    # PAYLOAD OFICIAL DO FLUX.1-dev
-    # ========================================================
+    if isinstance(resultado, str):
+        return resultado
 
-    dados = {
-        "prompt": prompt.strip(),
-        "width": 1024,
-        "height": 1024,
-        "cfg_scale": 5,
-        "mode": "base",
-        "samples": 1,
-        "seed": 0,
-        "steps": 50,
-    }
-
-    resposta = requests.post(
-        NVIDIA_API_URL,
-        headers=headers,
-        json=dados,
-        timeout=300,
+    raise RuntimeError(
+        f"Tipo de resultado não reconhecido: {type(resultado)}"
     )
 
-    # ========================================================
-    # ERRO HTTP
-    # ========================================================
 
-    if resposta.status_code != 200:
+# ============================================================
+# GERAR IMAGEM — Z IMAGE TURBO
+# ============================================================
 
-        try:
-            detalhe = resposta.json()
+def gerar_imagem_zimage(prompt):
 
-        except Exception:
-            detalhe = resposta.text
+    if not prompt or not prompt.strip():
+        raise ValueError("O prompt está vazio.")
 
+    try:
+        from gradio_client import Client
+
+    except ImportError:
         raise RuntimeError(
-            f"NVIDIA HTTP {resposta.status_code}: "
-            f"{detalhe}"
+            "gradio_client não instalado. "
+            "Execute: pip install -U gradio_client"
         )
-
-    # ========================================================
-    # JSON
-    # ========================================================
 
     try:
 
-        resultado = resposta.json()
-
-    except Exception:
-
-        raise RuntimeError(
-            "A NVIDIA respondeu, mas a resposta "
-            "não é um JSON válido."
+        cliente = Client(
+            ZIMAGE_SPACE,
+            verbose=False
         )
 
-    # ========================================================
-    # RESPOSTA OFICIAL DO NIM
-    #
-    # artifacts[0]["base64"]
-    # ========================================================
-
-    artifacts = resultado.get(
-        "artifacts",
-        []
-    )
-
-    if not artifacts:
-
-        raise RuntimeError(
-            "A NVIDIA respondeu, mas não retornou "
-            "nenhum artifact de imagem."
-        )
-
-    primeiro = artifacts[0]
-
-    imagem_base64 = primeiro.get(
-        "base64"
-    )
-
-    if not imagem_base64:
-
-        raise RuntimeError(
-            "A NVIDIA retornou o resultado, "
-            "mas não encontrou a imagem em base64."
-        )
-
-    # ========================================================
-    # DECODIFICAR BASE64
-    # ========================================================
-
-    try:
-
-        imagem_bytes = base64.b64decode(
-            imagem_base64
+        resultado = cliente.predict(
+            prompt.strip(),
+            1024,
+            1024,
+            9,
+            42,
+            True,
+            api_name="/generate_image"
         )
 
     except Exception as erro:
 
         raise RuntimeError(
-            f"Erro ao decodificar a imagem NVIDIA: "
-            f"{erro}"
+            f"Falha ao conectar ao Z-Image Turbo: {erro}"
         )
 
-    # ========================================================
-    # SALVAR
-    # ========================================================
+    origem = normalizar_resultado(resultado)
 
-    pasta = obter_pasta_imagens()
+    destino = obter_pasta_imagens() / "ultima_imagem.png"
 
-    caminho = (
-        pasta / "ultima_imagem.png"
-    )
+    # Resultado em URL
+    if origem.startswith(("http://", "https://")):
 
-    with open(
-        caminho,
-        "wb"
-    ) as arquivo:
+        try:
 
-        arquivo.write(
-            imagem_bytes
+            resposta = requests.get(
+                origem,
+                timeout=120
+            )
+
+            resposta.raise_for_status()
+
+            destino.write_bytes(resposta.content)
+
+        except Exception as erro:
+
+            raise RuntimeError(
+                f"Erro ao baixar imagem: {erro}"
+            )
+
+    # Resultado em arquivo local
+    else:
+
+        arquivo = Path(origem)
+
+        if not arquivo.is_file():
+
+            raise RuntimeError(
+                f"Arquivo de imagem não encontrado: {origem}"
+            )
+
+        shutil.copy2(
+            arquivo,
+            destino
         )
 
-    return str(caminho)
+    if not destino.exists() or destino.stat().st_size == 0:
+
+        raise RuntimeError("A imagem gerada está vazia.")
+
+    return str(destino)
 
 
 # ============================================================
-# 🖼️ GERADOR PRINCIPAL
+# FUNÇÃO PRINCIPAL
 # ============================================================
 
 def gerar_imagem(prompt):
 
     if not prompt or not prompt.strip():
 
-        return (
-            None,
-            "❌ O prompt da imagem está vazio."
-        )
+        return None, "❌ Descrição da imagem vazia."
 
     try:
 
-        caminho = gerar_imagem_nvidia(
-            prompt
-        )
+        caminho = gerar_imagem_zimage(prompt)
 
         guardar_ultima_imagem(
             imagem=caminho,
             prompt=prompt,
             caminho=caminho,
-            motor=(
-                "NVIDIA NIM / "
-                f"{MODELO_IMAGEM}"
-            ),
+            motor=MOTOR_IMAGEM
         )
 
         return (
             caminho,
-            "🖼️ Imagem gerada pela NVIDIA."
+            "✅ Imagem gerada com sucesso pelo Z-Image Turbo."
         )
 
     except Exception as erro:
 
-        return (
-            None,
-            (
-                "❌ Erro ao gerar imagem pela NVIDIA:\n\n"
-                f"{erro}"
-            )
+        mensagem = (
+            f"❌ Falha na geração de imagem: {erro}"
         )
+
+        print(mensagem)
+
+        return None, mensagem
 
 
 # ============================================================
-# 🖼️ MOSTRAR IMAGEM
+# MOSTRAR IMAGEM
 # ============================================================
 
 def mostrar_imagem(prompt):
 
-    with st.spinner(
-        "🎨 Alex IA está criando sua imagem..."
-    ):
+    with st.spinner("🎨 Alex IA está criando sua imagem..."):
 
-        imagem, mensagem = gerar_imagem(
-            prompt
-        )
+        imagem, mensagem = gerar_imagem(prompt)
 
     if imagem is None:
 
-        st.error(
-            mensagem
-        )
-
+        st.error(mensagem)
         return False
 
     st.image(
         imagem,
-        caption=(
-            "🖼️ Imagem gerada pela "
-            "Alex IA Ultra"
-        ),
-        use_container_width=True,
+        caption="🖼️ Imagem gerada pela Alex IA Ultra",
+        use_container_width=True
     )
 
-    motor = st.session_state.get(
-        "ultimo_motor_imagem"
+    st.success(mensagem)
+
+    st.caption(
+        f"Motor utilizado: {MOTOR_IMAGEM}"
     )
-
-    if motor:
-
-        st.caption(
-            f"🎨 Motor utilizado: {motor}"
-        )
 
     return True
 
 
 # ============================================================
-# 🔎 ACESSO À ÚLTIMA IMAGEM
+# RECUPERAR ÚLTIMA IMAGEM
 # ============================================================
 
 def obter_ultima_imagem():
 
-    return st.session_state.get(
-        "ultima_imagem"
-    )
+    return st.session_state.get("ultima_imagem")
 
 
 def obter_caminho_ultima_imagem():
 
-    return st.session_state.get(
-        "ultima_imagem_caminho"
-    )
+    return st.session_state.get("ultima_imagem_caminho")
 
 
 def obter_prompt_ultima_imagem():
@@ -372,7 +279,7 @@ def obter_motor_ultima_imagem():
 
 
 # ============================================================
-# 🧹 LIMPAR ÚLTIMA IMAGEM
+# LIMPAR IMAGEM
 # ============================================================
 
 def limpar_ultima_imagem():
@@ -381,7 +288,7 @@ def limpar_ultima_imagem():
         "ultima_imagem",
         "ultima_imagem_caminho",
         "ultimo_prompt_imagem",
-        "ultimo_motor_imagem",
+        "ultimo_motor_imagem"
     ]
 
     for chave in chaves:
@@ -389,5 +296,18 @@ def limpar_ultima_imagem():
         st.session_state.pop(
             chave,
             None
-    )
-    
+        )
+
+
+# ============================================================
+# COMPATIBILIDADE COM TOOL LOADER
+# ============================================================
+
+def gerar_imagem_pixazo(prompt):
+
+    return gerar_imagem_zimage(prompt)
+
+
+def gerar_imagem_nvidia(prompt):
+
+    return gerar_imagem_zimage(prompt)
