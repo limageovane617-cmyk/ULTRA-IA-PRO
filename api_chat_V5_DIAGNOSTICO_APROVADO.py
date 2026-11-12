@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from google import genai
 from Internet import pesquisar_web
 
-from gerenciador_imagem import gerar_imagem_pixazo
+from gerenciador_imagem import gerar_imagem_zimage
 
 from gerenciador_video import (
     gerar_video,
@@ -514,7 +514,7 @@ def chat(pedido: PedidoChat):
             try:
 
                 caminho_imagem = (
-                    gerar_imagem_pixazo(
+                    gerar_imagem_zimage(
                         prompt_imagem
                     )
                 )
@@ -596,7 +596,7 @@ def chat(pedido: PedidoChat):
 @app.post("/api/imagem")
 def imagem(pedido: PedidoImagem):
     try:
-        caminho = gerar_imagem_pixazo(
+        caminho = gerar_imagem_zimage(
             pedido.prompt
         )
 
@@ -613,7 +613,7 @@ def imagem(pedido: PedidoImagem):
             ),
             "prompt": pedido.prompt,
             "motor": (
-                "Pixazo / Flux 1 Schnell"
+                "Z-Image Turbo / Hugging Face"
             ),
         }
 
