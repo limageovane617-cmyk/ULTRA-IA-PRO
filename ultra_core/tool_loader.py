@@ -2,7 +2,7 @@
 # ============================================================
 # 🧠 ALEX IA ULTRA V14 — TOOL LOADER
 # Carregador central de ferramentas do Ultra Core
-# NVIDIA FLUX.1-dev — IMAGENS
+# Z-IMAGE TURBO — IMAGENS
 # ============================================================
 
 import sys
@@ -82,7 +82,7 @@ def _registrar_pesquisa(
 
 
 # ============================================================
-# 🎨 GERAÇÃO DE IMAGENS — NVIDIA FLUX.1-dev
+# 🎨 GERAÇÃO DE IMAGENS — Z-IMAGE TURBO
 # ============================================================
 
 def _registrar_imagem(
@@ -109,13 +109,11 @@ def _registrar_imagem(
         carregadas["imagem.gerar"] = _registrar(
             nome="imagem.gerar",
             descricao=(
-                "Gera imagens exclusivamente através "
-                "da NVIDIA NIM utilizando o modelo "
-                "Black Forest Labs FLUX.1-dev."
+                "Gera imagens exclusivamente através do espaço público Z-Image Turbo no Hugging Face."
             ),
             funcao=funcao,
             categoria="imagem",
-            tipo="nvidia_flux",
+            tipo="huggingface_zimage",
         )
 
         # ----------------------------------------------------
@@ -123,8 +121,8 @@ def _registrar_imagem(
         # ----------------------------------------------------
 
         carregadas["imagem.motor"] = {
-            "nome": "NVIDIA NIM",
-            "modelo": "black-forest-labs/flux.1-dev",
+            "nome": "Hugging Face",
+            "modelo": "mrfakename/Z-Image-Turbo",
             "status": "registrado",
         }
 
@@ -245,7 +243,7 @@ def carregar_ferramentas() -> Dict[str, Any]:
     # Pesquisa
     _registrar_pesquisa(carregadas)
 
-    # NVIDIA FLUX
+    # Z-IMAGE TURBO
     _registrar_imagem(carregadas)
 
     # Vídeos
