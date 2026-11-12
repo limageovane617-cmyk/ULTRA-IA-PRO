@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 
-from gerenciador_imagem import gerar_imagem_pixazo
+from gerenciador_imagem import gerar_imagem_zimage
 
 from gerenciador_video import (
     gerar_video,
@@ -642,28 +642,22 @@ def chat(pedido: PedidoChat):
 
             try:
 
-                caminho_imagem = gerar_imagem_pixazo(
-                    prompt_imagem
-                )
+                caminho_imagem = gerar_imagem_zimage(prompt_imagem)
 
-                url_imagem = criar_url_imagem(
-                    caminho_imagem
-                )
+                caminho_validado = Path(caminho_imagem)
+                if not caminho_validado.is_file() or caminho_validado.stat().st_size == 0:
+                    raise RuntimeError("O gerador não retornou um arquivo de imagem válido.")
+
+                url_imagem = criar_url_imagem(caminho_imagem)
 
                 return {
                     "success": True,
-                    "resposta": (
-                        "Pronto! A imagem foi gerada."
-                    ),
+                    "resposta": "Pronto! A imagem foi gerada e validada pelo Z-Image Turbo.",
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
-                    "arquivo_imagem": (
-                        Path(caminho_imagem).name
-                    ),
+                    "arquivo_imagem": caminho_validado.name,
                     "prompt": prompt_imagem,
-                    "motor": (
-                        "Pixazo / Flux 1 Schnell"
-                    ),
+                    "motor": "Z-Image Turbo / Hugging Face",
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
                     "ultra_core": True,
@@ -673,10 +667,9 @@ def chat(pedido: PedidoChat):
 
                 return {
                     "success": False,
-                    "resposta": (
-                        "Entendi que voce pediu uma imagem, "
-                        "mas ocorreu um erro ao gerar."
-                    ),
+                    "resposta": "Entendi que você pediu uma imagem, mas o Z-Image Turbo não conseguiu gerá-la.",
+                    "imagem": None,
+                    "imagem_url": None,
                     "erro": str(erro_imagem),
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
@@ -734,31 +727,28 @@ def ultra_chat(
 
 
 # ============================================================
-# IMAGEM — PIXAZO
+# ============================================================
+# IMAGEM — Z-IMAGE TURBO
 # ============================================================
 
 @app.post("/api/imagem")
 def imagem(pedido: PedidoImagem):
     try:
-        caminho = gerar_imagem_pixazo(
-            pedido.prompt
-        )
+        caminho = gerar_imagem_zimage(pedido.prompt)
+        arquivo = Path(caminho)
 
-        url_imagem = criar_url_imagem(
-            caminho
-        )
+        if not arquivo.is_file() or arquivo.stat().st_size == 0:
+            raise RuntimeError("O gerador não retornou um arquivo de imagem válido.")
+
+        url_imagem = criar_url_imagem(caminho)
 
         return {
             "success": True,
             "imagem": url_imagem,
             "imagem_url": url_imagem,
-            "arquivo_imagem": (
-                Path(caminho).name
-            ),
+            "arquivo_imagem": arquivo.name,
             "prompt": pedido.prompt,
-            "motor": (
-                "Pixazo / Flux 1 Schnell"
-            ),
+            "motor": "Z-Image Turbo / Hugging Face",
         }
 
     except Exception as erro:
@@ -767,6 +757,7 @@ def imagem(pedido: PedidoImagem):
             "imagem": None,
             "imagem_url": None,
             "error": str(erro),
+            "motor": "Z-Image Turbo / Hugging Face",
         }
 
 
