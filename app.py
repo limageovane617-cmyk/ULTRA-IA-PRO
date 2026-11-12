@@ -2585,11 +2585,22 @@ if pergunta:
                 # 🧠 EXECUTAR ULTRA BRAIN
                 # ============================================
 
+                imagem_bytes = st.session_state.get(
+                    "imagem_contexto"
+                )
+
+                imagem_mime = st.session_state.get(
+                    "imagem_mime",
+                    "image/jpeg"
+                )
+
                 resultado_ultra = ultra_brain.run(
                     pergunta,
                     history=historico_ultra,
                     file_context=contexto_arquivo,
                     file_name=nome_arquivo,
+                    image_bytes=imagem_bytes,
+                    image_mime_type=imagem_mime if imagem_bytes else None,
                 )
 
 
