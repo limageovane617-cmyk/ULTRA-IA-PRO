@@ -19,6 +19,31 @@ MOTOR_IMAGEM = "Z-Image Turbo / Hugging Face"
 TIMEOUT_IMAGEM = 600
 
 
+def obter_token_huggingface():
+    """
+    Obtém o token do Hugging Face sem expô-lo nos logs ou na interface.
+
+    Prioridade:
+    1. Variáveis de ambiente HF_TOKEN / HUGGINGFACE_TOKEN.
+    2. Secrets do Streamlit com os mesmos nomes.
+    """
+    for nome in ("HF_TOKEN", "HUGGINGFACE_TOKEN"):
+        token = os.environ.get(nome, "")
+        if token and token.strip():
+            return token.strip()
+
+    try:
+        for nome in ("HF_TOKEN", "HUGGINGFACE_TOKEN"):
+            token = st.secrets.get(nome, "")
+            if token and str(token).strip():
+                return str(token).strip()
+    except Exception:
+        # Streamlit pode não ter secrets configurados (ex.: execução local/Kaggle).
+        pass
+
+    return None
+
+
 def obter_pasta_imagens():
     pasta = Path("/tmp/alex_ia_ultra_imagens")
     pasta.mkdir(parents=True, exist_ok=True)
@@ -92,6 +117,14 @@ def gerar_imagem_zimage(prompt):
     if not prompt or not prompt.strip():
         raise ValueError("O prompt da imagem está vazio.")
 
+    token = obter_token_huggingface()
+    if not token:
+        raise RuntimeError(
+            "HF_TOKEN não configurado. Adicione um token do Hugging Face "
+            "nas variáveis de ambiente (HF_TOKEN) ou nos Secrets do Streamlit "
+            "(HF_TOKEN). Não cole o token no código nem no repositório."
+        )
+
     try:
         from gradio_client import Client
     except ImportError as erro:
@@ -101,7 +134,13 @@ def gerar_imagem_zimage(prompt):
         ) from erro
 
     try:
-        cliente = Client(ZIMAGE_SPACE, verbose=False)
+        # O parâmetro correto do gradio_client é token.
+        # Isso autentica a chamada ao Space com a conta Hugging Face do usuário.
+        cliente = Client(
+            ZIMAGE_SPACE,
+            token=token,
+            verbose=False,
+        )
         resultado = cliente.predict(
             prompt.strip(),
             1024,
