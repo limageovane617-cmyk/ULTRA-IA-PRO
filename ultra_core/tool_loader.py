@@ -85,6 +85,26 @@ def _registrar_pesquisa(
 # 🎨 GERAÇÃO DE IMAGENS — Z-IMAGE TURBO
 # ============================================================
 
+def _executar_geracao_imagem(prompt: str = "", **kwargs: Any) -> Dict[str, Any]:
+    """
+    Adaptador do retorno legado (caminho, mensagem) para o contrato
+    explícito do Ultra Core. Uma tupla com caminho None nunca é sucesso.
+    """
+    modulo = importlib.import_module("gerenciador_imagem")
+    funcao = getattr(modulo, "gerar_imagem")
+    caminho, mensagem = funcao(prompt)
+
+    sucesso = bool(caminho) and Path(str(caminho)).is_file()
+
+    return {
+        "success": sucesso,
+        "tool": "imagem.gerar",
+        "path": str(caminho) if sucesso else None,
+        "message": str(mensagem or ""),
+        "error": None if sucesso else str(mensagem or "A geração de imagem não retornou um arquivo válido."),
+    }
+
+
 def _registrar_imagem(
     carregadas: Dict[str, Any],
 ) -> None:
@@ -101,10 +121,7 @@ def _registrar_imagem(
         # GERADOR PRINCIPAL NVIDIA
         # ----------------------------------------------------
 
-        funcao = getattr(
-            modulo,
-            "gerar_imagem",
-        )
+        funcao = _executar_geracao_imagem
 
         carregadas["imagem.gerar"] = _registrar(
             nome="imagem.gerar",
