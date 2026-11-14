@@ -1,51 +1,133 @@
 # ============================================================
-# 🖼️ ALEX IA ULTRA — GERENCIADOR DE IMAGENS
-# MOTOR ÚNICO: Z-IMAGE TURBO (HUGGING FACE)
-# Sem Pixazo, sem motor pago e sem fallback pago.
+# ALEX IA ULTRA — GERENCIADOR DE IMAGENS
+# BACKEND LOCAL: DIFFUSERS + GPU CUDA (SEM API DE INFERÊNCIA)
+#
+# Configuração:
+#   ALEX_IMAGE_MODEL_PATH=/caminho/para/modelo/diffusers
+# Opcional:
+#   ALEX_IMAGE_DEVICE=auto | cuda:0 | cuda:1 | cpu
+#   ALEX_IMAGE_WIDTH=768
+#   ALEX_IMAGE_HEIGHT=768
+#   ALEX_IMAGE_STEPS=25
+#   ALEX_IMAGE_GUIDANCE=7.5
+#
+# O diretório do modelo deve conter um pipeline Diffusers completo.
+# Este módulo não baixa nem chama serviços de geração remotos.
 # ============================================================
 
 import os
-import shutil
-from io import BytesIO
+import threading
+import uuid
 from pathlib import Path
 
-import requests
 import streamlit as st
+import torch
 from PIL import Image
 
-
-ZIMAGE_SPACE = "mrfakename/Z-Image-Turbo"
-MOTOR_IMAGEM = "Z-Image Turbo / Hugging Face"
+MOTOR_IMAGEM = "ALEX IMAGE ENGINE — Diffusers local"
 TIMEOUT_IMAGEM = 600
+
+_PIPELINES = {}
+_PIPELINE_LOCK = threading.Lock()
+_GPU_LOCKS = {}
+_GPU_LOCKS_LOCK = threading.Lock()
+
+
+def _modelo_path():
+    valor = os.environ.get("ALEX_IMAGE_MODEL_PATH", "").strip()
+    if not valor:
+        raise RuntimeError(
+            "ALEX_IMAGE_MODEL_PATH não foi configurado. "
+            "Informe a pasta local de um modelo Diffusers completo. "
+            "Nenhum serviço remoto será usado como fallback."
+        )
+    caminho = Path(valor).expanduser()
+    if not caminho.exists() or not caminho.is_dir():
+        raise RuntimeError(f"Pasta do modelo não encontrada: {caminho}")
+    return str(caminho)
+
+
+def _dispositivos():
+    preferencia = os.environ.get("ALEX_IMAGE_DEVICE", "auto").strip().lower()
+    if preferencia == "cpu":
+        return ["cpu"]
+    if preferencia.startswith("cuda:"):
+        if not torch.cuda.is_available():
+            raise RuntimeError("Foi solicitado CUDA, mas CUDA não está disponível.")
+        indice = int(preferencia.split(":", 1)[1])
+        if indice >= torch.cuda.device_count():
+            raise RuntimeError(f"GPU {indice} não está disponível.")
+        return [f"cuda:{indice}"]
+    if torch.cuda.is_available():
+        return [f"cuda:{i}" for i in range(torch.cuda.device_count())]
+    raise RuntimeError(
+        "Nenhuma GPU CUDA disponível. O backend local foi configurado "
+        "para não recorrer a serviços externos."
+    )
+
+
+def _lock_gpu(device):
+    with _GPU_LOCKS_LOCK:
+        return _GPU_LOCKS.setdefault(device, threading.Lock())
+
+
+def _carregar_pipeline(device):
+    chave = (device, _modelo_path())
+    with _PIPELINE_LOCK:
+        if chave in _PIPELINES:
+            return _PIPELINES[chave]
+
+        try:
+            from diffusers import StableDiffusionPipeline, DEISMultistepScheduler
+        except ImportError as erro:
+            raise RuntimeError(
+                "Diffusers não está instalado. Instale diffusers, transformers, "
+                "accelerate e safetensors no ambiente local."
+            ) from erro
+
+        dtype = torch.float16 if device.startswith("cuda") else torch.float32
+        try:
+            pipe = StableDiffusionPipeline.from_pretrained(
+                chave[1],
+                torch_dtype=dtype,
+                local_files_only=True,
+                use_safetensors=True,
+            )
+            pipe.scheduler = DEISMultistepScheduler.from_config(
+                pipe.scheduler.config
+            )
+            pipe = pipe.to(device)
+            pipe.set_progress_bar_config(disable=True)
+
+            # Reduz uso de VRAM em GPUs como a Tesla T4.
+            try:
+                pipe.enable_attention_slicing()
+            except Exception:
+                pass
+            try:
+                pipe.enable_vae_slicing()
+            except Exception:
+                pass
+
+            _PIPELINES[chave] = pipe
+            return pipe
+        except Exception as erro:
+            raise RuntimeError(
+                f"Não foi possível carregar o modelo local em {device}: {erro}"
+            ) from erro
 
 
 def obter_token_huggingface():
-    """
-    Obtém o token do Hugging Face sem expô-lo nos logs ou na interface.
-
-    Prioridade:
-    1. Variáveis de ambiente HF_TOKEN / HUGGINGFACE_TOKEN.
-    2. Secrets do Streamlit com os mesmos nomes.
-    """
-    for nome in ("HF_TOKEN", "HUGGINGFACE_TOKEN"):
-        token = os.environ.get(nome, "")
-        if token and token.strip():
-            return token.strip()
-
-    try:
-        for nome in ("HF_TOKEN", "HUGGINGFACE_TOKEN"):
-            token = st.secrets.get(nome, "")
-            if token and str(token).strip():
-                return str(token).strip()
-    except Exception:
-        # Streamlit pode não ter secrets configurados (ex.: execução local/Kaggle).
-        pass
-
+    # Mantido apenas por compatibilidade com integrações antigas.
+    # O backend local não usa token para inferência.
     return None
 
 
 def obter_pasta_imagens():
-    pasta = Path("/tmp/alex_ia_ultra_imagens")
+    pasta = Path(os.environ.get(
+        "ALEX_IMAGE_OUTPUT_DIR",
+        str(Path.cwd() / "alex_imagens")
+    )).expanduser()
     pasta.mkdir(parents=True, exist_ok=True)
     return pasta
 
@@ -61,134 +143,83 @@ def guardar_ultima_imagem(imagem, prompt, caminho=None, motor=None):
         return False
 
 
-def normalizar_resultado(resultado):
-    if isinstance(resultado, (tuple, list)):
-        if not resultado:
-            raise RuntimeError("O Z-Image Turbo retornou uma lista vazia.")
-        return normalizar_resultado(resultado[0])
-
-    if isinstance(resultado, dict):
-        for chave in ("path", "image", "url", "image_url", "name"):
-            if resultado.get(chave):
-                return normalizar_resultado(resultado[chave])
-        raise RuntimeError("Formato de imagem não reconhecido no retorno do Z-Image Turbo.")
-
-    if isinstance(resultado, os.PathLike):
-        return str(resultado)
-
-    if isinstance(resultado, str) and resultado.strip():
-        return resultado.strip()
-
-    raise RuntimeError(f"Tipo de resultado não reconhecido: {type(resultado).__name__}")
-
-
-def _salvar_como_png(origem):
-    destino = obter_pasta_imagens() / "ultima_imagem.png"
-
-    if isinstance(origem, bytes):
-        entrada = BytesIO(origem)
-        with Image.open(entrada) as imagem:
-            imagem.load()
-            imagem.convert("RGB" if imagem.mode not in ("RGBA", "LA") else "RGBA").save(
-                destino, format="PNG"
-            )
-    else:
-        caminho = Path(str(origem))
-        if not caminho.is_file():
-            raise RuntimeError(f"Arquivo de imagem não encontrado: {caminho}")
-
-        with Image.open(caminho) as imagem:
-            imagem.load()
-            imagem.convert("RGB" if imagem.mode not in ("RGBA", "LA") else "RGBA").save(
-                destino, format="PNG"
-            )
-
-    if not destino.is_file() or destino.stat().st_size == 0:
-        raise RuntimeError("O arquivo de imagem gerado está vazio.")
-
-    # Confirma que o arquivo pode realmente ser aberto como imagem.
-    with Image.open(destino) as validacao:
-        validacao.verify()
-
-    return str(destino)
-
-
-def gerar_imagem_zimage(prompt):
+def gerar_imagem_local(prompt):
     if not prompt or not prompt.strip():
         raise ValueError("O prompt da imagem está vazio.")
 
-    token = obter_token_huggingface()
-    if not token:
-        raise RuntimeError(
-            "HF_TOKEN não configurado. Adicione um token do Hugging Face "
-            "nas variáveis de ambiente (HF_TOKEN) ou nos Secrets do Streamlit "
-            "(HF_TOKEN). Não cole o token no código nem no repositório."
-        )
+    dispositivos = _dispositivos()
+    largura = int(os.environ.get("ALEX_IMAGE_WIDTH", "768"))
+    altura = int(os.environ.get("ALEX_IMAGE_HEIGHT", "768"))
+    passos = int(os.environ.get("ALEX_IMAGE_STEPS", "25"))
+    guidance = float(os.environ.get("ALEX_IMAGE_GUIDANCE", "7.5"))
 
-    try:
-        from gradio_client import Client
-    except ImportError as erro:
-        raise RuntimeError(
-            "A biblioteca gradio_client não está instalada. "
-            "Adicione gradio_client às dependências."
-        ) from erro
+    if largura < 256 or altura < 256 or largura % 8 or altura % 8:
+        raise ValueError("Largura e altura devem ser >=256 e múltiplas de 8.")
+    if not 1 <= passos <= 100:
+        raise ValueError("ALEX_IMAGE_STEPS deve estar entre 1 e 100.")
 
-    try:
-        # O parâmetro correto do gradio_client é token.
-        # Isso autentica a chamada ao Space com a conta Hugging Face do usuário.
-        cliente = Client(
-            ZIMAGE_SPACE,
-            token=token,
-            verbose=False,
-        )
-        resultado = cliente.predict(
-            prompt.strip(),
-            1024,
-            1024,
-            9,
-            42,
-            True,
-            api_name="/generate_image",
-        )
-    except Exception as erro:
-        raise RuntimeError(f"Falha ao chamar o Z-Image Turbo: {erro}") from erro
-
-    origem = normalizar_resultado(resultado)
-
-    if origem.startswith(("http://", "https://")):
+    erros = []
+    # Distribui chamadas entre as GPUs; cada pipeline é protegido por lock.
+    for tentativa in range(len(dispositivos)):
+        device = dispositivos[tentativa]
+        lock = _lock_gpu(device)
         try:
-            resposta = requests.get(origem, timeout=120)
-            resposta.raise_for_status()
-            caminho = _salvar_como_png(resposta.content)
+            with lock:
+                pipe = _carregar_pipeline(device)
+                gerador = torch.Generator(device=device).manual_seed(
+                    int.from_bytes(os.urandom(4), "big")
+                )
+                with torch.inference_mode():
+                    resultado = pipe(
+                        prompt=prompt.strip(),
+                        width=largura,
+                        height=altura,
+                        num_inference_steps=passos,
+                        guidance_scale=guidance,
+                        generator=gerador,
+                    )
+                imagem = resultado.images[0]
+                destino = obter_pasta_imagens() / f"alex_{uuid.uuid4().hex}.png"
+                imagem.save(destino, format="PNG")
+                with Image.open(destino) as validacao:
+                    validacao.verify()
+                return str(destino)
         except Exception as erro:
-            raise RuntimeError(f"Não foi possível baixar/validar a imagem: {erro}") from erro
-    else:
-        caminho = _salvar_como_png(origem)
+            erros.append(f"{device}: {erro}")
+            if device.startswith("cuda"):
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
 
-    return caminho
+    raise RuntimeError("Falha em todos os dispositivos locais: " + " | ".join(erros))
+
+
+# Nome antigo mantido para não quebrar imports existentes.
+def gerar_imagem_zimage(prompt):
+    return gerar_imagem_local(prompt)
 
 
 def gerar_imagem(prompt):
     if not prompt or not prompt.strip():
         return None, "❌ A descrição da imagem está vazia."
-
     try:
-        caminho = gerar_imagem_zimage(prompt)
+        caminho = gerar_imagem_local(prompt)
         guardar_ultima_imagem(
             imagem=caminho,
             prompt=prompt.strip(),
             caminho=caminho,
             motor=MOTOR_IMAGEM,
         )
-        return caminho, "✅ Imagem gerada e validada pelo Z-Image Turbo."
+        return caminho, "✅ Imagem gerada e validada pelo motor local da Alex."
     except Exception as erro:
-        mensagem = f"❌ Não foi possível gerar a imagem com o Z-Image Turbo: {erro}"
+        mensagem = f"❌ Falha no motor local de imagens: {erro}"
         print(mensagem)
         return None, mensagem
 
 
 def mostrar_imagem(prompt):
-    with st.spinner("🎨 Alex IA está criando sua imagem com o Z-Image Turbo..."):
+    with st.spinner("🎨 Alex está gerando a imagem no motor local..."):
         caminho, mensagem = gerar_imagem(prompt)
 
     if not caminho or not Path(caminho).is_file():
@@ -200,11 +231,11 @@ def mostrar_imagem(prompt):
             imagem.verify()
         st.image(
             caminho,
-            caption="🖼️ Imagem gerada pela Alex IA Ultra",
+            caption="🖼️ Imagem gerada pelo ALEX IMAGE ENGINE local",
             use_container_width=True,
         )
     except Exception as erro:
-        st.error(f"❌ A imagem foi retornada, mas não pôde ser exibida: {erro}")
+        st.error(f"❌ A imagem não pôde ser exibida: {erro}")
         return False
 
     st.success(mensagem)
@@ -239,8 +270,12 @@ def limpar_ultima_imagem():
 
 
 def executar_teste():
-    st.title("🖼️ Teste de Geração de Imagem")
-    st.write("Motor único: Z-Image Turbo / Hugging Face.")
+    st.title("🖼️ ALEX IMAGE ENGINE — TESTE LOCAL")
+    st.caption("Inferência local com Diffusers; sem API externa de geração.")
+    st.info(
+        "Configure ALEX_IMAGE_MODEL_PATH apontando para a pasta local "
+        "do modelo Diffusers antes de gerar."
+    )
     prompt = st.text_input(
         "Descreva a imagem:",
         value="Um beija-flor voando com as asas abertas",
