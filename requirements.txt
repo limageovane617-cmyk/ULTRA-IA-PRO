@@ -26,3 +26,9 @@ imageio
 imageio-ffmpeg
 fastapi
 uvicorn
+
+# Motor local de imagens (Diffusers)
+diffusers>=0.30.0
+transformers>=4.44.0
+accelerate>=0.34.0
+safetensors>=0.4.5
