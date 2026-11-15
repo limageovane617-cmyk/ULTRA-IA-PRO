@@ -282,13 +282,14 @@ def gerar_imagem(prompt):
         return None, "❌ A descrição da imagem está vazia."
     try:
         caminho = gerar_imagem_api(prompt)
+        motor = "Fluxpool / Flux 1.1 Pro" if obter_api_key_fluxpool() else MOTOR_IMAGEM
         guardar_ultima_imagem(
             imagem=caminho,
             prompt=prompt.strip(),
             caminho=caminho,
-            motor=MOTOR_IMAGEM,
+            motor=motor,
         )
-        return caminho, "✅ Imagem gerada e validada pelo motor local da Alex."
+        return caminho, f"✅ Imagem gerada e validada pelo motor {motor} da Alex."
     except Exception as erro:
         mensagem = f"❌ Falha no motor local de imagens: {erro}"
         print(mensagem)
