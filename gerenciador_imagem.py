@@ -20,9 +20,21 @@ import threading
 import uuid
 from pathlib import Path
 
-import streamlit as st
-import torch
+try:
+    import streamlit as st
+except ImportError:
+    st = None
+
 from PIL import Image
+import requests
+
+
+def _torch_module():
+    try:
+        import torch
+        return torch
+    except ImportError as erro:
+        raise RuntimeError("PyTorch não está instalado. Configure FLUXPOOL_API_KEY para geração remota ou use um ambiente com GPU.") from erro
 
 MOTOR_IMAGEM = "ALEX IMAGE ENGINE — Diffusers local"
 TIMEOUT_IMAGEM = 600
@@ -48,6 +60,7 @@ def _modelo_path():
 
 
 def _dispositivos():
+    torch = _torch_module()
     preferencia = os.environ.get("ALEX_IMAGE_DEVICE", "auto").strip().lower()
     if preferencia == "cpu":
         return ["cpu"]
@@ -72,6 +85,7 @@ def _lock_gpu(device):
 
 
 def _carregar_pipeline(device):
+    torch = _torch_module()
     chave = (device, _modelo_path())
     with _PIPELINE_LOCK:
         if chave in _PIPELINES:
@@ -134,6 +148,8 @@ def obter_pasta_imagens():
 
 def guardar_ultima_imagem(imagem, prompt, caminho=None, motor=None):
     try:
+        if st is None:
+            return False
         st.session_state.ultima_imagem = imagem
         st.session_state.ultima_imagem_caminho = caminho
         st.session_state.ultimo_prompt_imagem = prompt
@@ -147,6 +163,7 @@ def gerar_imagem_local(prompt):
     if not prompt or not prompt.strip():
         raise ValueError("O prompt da imagem está vazio.")
 
+    torch = _torch_module()
     dispositivos = _dispositivos()
     largura = int(os.environ.get("ALEX_IMAGE_WIDTH", "768"))
     altura = int(os.environ.get("ALEX_IMAGE_HEIGHT", "768"))
@@ -195,6 +212,66 @@ def gerar_imagem_local(prompt):
     raise RuntimeError("Falha em todos os dispositivos locais: " + " | ".join(erros))
 
 
+def obter_api_key_fluxpool():
+    return os.environ.get("FLUXPOOL_API_KEY", "").strip()
+
+
+def gerar_imagem_fluxpool(prompt):
+    """Gera via Fluxpool e salva a imagem no armazenamento configurado."""
+    api_key = obter_api_key_fluxpool()
+    if not api_key:
+        raise RuntimeError("FLUXPOOL_API_KEY não configurada no servidor.")
+    resposta = requests.post(
+        "https://api.fluxpool.ai/v1/images/generations",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={
+            "model": os.environ.get("FLUXPOOL_IMAGE_MODEL", "flux-1.1-pro"),
+            "prompt": prompt.strip(),
+            "size": os.environ.get("ALEX_IMAGE_SIZE", "1024x1024"),
+        },
+        timeout=(20, int(os.environ.get("ALEX_IMAGE_TIMEOUT", "240"))),
+    )
+    if resposta.status_code < 200 or resposta.status_code >= 300:
+        try:
+            detalhe = resposta.json()
+        except Exception:
+            detalhe = resposta.text[:1000]
+        raise RuntimeError(f"Fluxpool HTTP {resposta.status_code}: {detalhe}")
+    try:
+        imagem_url = resposta.json()["data"][0]["url"]
+    except (ValueError, KeyError, IndexError, TypeError) as erro:
+        raise RuntimeError(f"Fluxpool não retornou URL válida: {resposta.text[:500]}") from erro
+    download = requests.get(imagem_url, timeout=(20, 180))
+    download.raise_for_status()
+    destino = obter_pasta_imagens() / f"alex_{uuid.uuid4().hex}.png"
+    destino.write_bytes(download.content)
+    try:
+        with Image.open(destino) as validacao:
+            validacao.verify()
+    except Exception:
+        destino.unlink(missing_ok=True)
+        raise RuntimeError("O provedor retornou um arquivo que não é uma imagem válida.")
+    return str(destino)
+
+
+def gerar_imagem_api(prompt):
+    """Backend hospedado: provedor remoto ou DreamShaper local com CUDA."""
+    if not prompt or not prompt.strip():
+        raise ValueError("O prompt da imagem está vazio.")
+    if obter_api_key_fluxpool():
+        return gerar_imagem_fluxpool(prompt)
+    try:
+        torch = _torch_module()
+        if torch.cuda.is_available():
+            return gerar_imagem_local(prompt)
+    except Exception as erro:
+        if "PyTorch não está instalado" not in str(erro):
+            raise
+    raise RuntimeError(
+        "Geração de imagens indisponível: configure FLUXPOOL_API_KEY no Render. "
+        "O DreamShaper 8 local exige GPU CUDA e não pode rodar no serviço web sem GPU."
+    )
+
 # Nome antigo mantido para não quebrar imports existentes.
 def gerar_imagem_zimage(prompt):
     return gerar_imagem_local(prompt)
@@ -204,7 +281,7 @@ def gerar_imagem(prompt):
     if not prompt or not prompt.strip():
         return None, "❌ A descrição da imagem está vazia."
     try:
-        caminho = gerar_imagem_local(prompt)
+        caminho = gerar_imagem_api(prompt)
         guardar_ultima_imagem(
             imagem=caminho,
             prompt=prompt.strip(),
