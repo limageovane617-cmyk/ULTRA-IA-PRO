@@ -82,7 +82,7 @@ def _registrar_pesquisa(
 
 
 # ============================================================
-# 🎨 GERAÇÃO DE IMAGENS — Z-IMAGE TURBO
+# 🎨 GERAÇÃO DE IMAGENS — BACKEND HÍBRIDO
 # ============================================================
 
 def _registrar_imagem(
@@ -109,7 +109,7 @@ def _registrar_imagem(
         carregadas["imagem.gerar"] = _registrar(
             nome="imagem.gerar",
             descricao=(
-                "Gera imagens exclusivamente através do espaço público Z-Image Turbo no Hugging Face."
+                "Gera imagens via Fluxpool quando FLUXPOOL_API_KEY está configurada; caso contrário usa Diffusers local com CUDA disponível."
             ),
             funcao=funcao,
             categoria="imagem",
@@ -121,8 +121,8 @@ def _registrar_imagem(
         # ----------------------------------------------------
 
         carregadas["imagem.motor"] = {
-            "nome": "Hugging Face",
-            "modelo": "mrfakename/Z-Image-Turbo",
+            "nome": "Fluxpool / DreamShaper local",
+            "modelo": "flux-1.1-pro ou DreamShaper 8 local",
             "status": "registrado",
         }
 
