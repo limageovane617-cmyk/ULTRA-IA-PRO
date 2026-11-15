@@ -1,0 +1,29 @@
+name: Backend syntax check
+
+on:
+  push:
+    branches:
+      - main
+      - fix/ultra-production-end-to-end
+    paths:
+      - "*.py"
+      - "ultra_core/**"
+      - ".github/workflows/backend-check.yml"
+  pull_request:
+    paths:
+      - "*.py"
+      - "ultra_core/**"
+      - ".github/workflows/backend-check.yml"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile backend modules
+        run: |
+          python -m py_compile api_chat.py gerenciador_imagem.py gerenciador_video.py config_ultra.py gemini_bridge.py
+          python -m compileall -q ultra_core
