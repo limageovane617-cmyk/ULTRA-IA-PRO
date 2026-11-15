@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: ultra-ia-pro
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api_chat:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: ALEX_IMAGE_OUTPUT_DIR
+        value: /tmp/alex_ia_ultra_imagens
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FLUXPOOL_API_KEY
+        sync: false
+      - key: ULTRA_API_SECRET
+        sync: false
+      - key: PONTE_API_SECRET
+        sync: false

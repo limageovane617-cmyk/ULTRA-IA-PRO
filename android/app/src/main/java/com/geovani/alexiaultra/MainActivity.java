@@ -2094,7 +2094,7 @@ public class MainActivity extends Activity {
                         );
 
                         connection.setReadTimeout(
-                                90000
+                                180000
                         );
 
                         byte[] dados =
@@ -2372,7 +2372,7 @@ public class MainActivity extends Activity {
                         );
 
                         conexao.setReadTimeout(
-                                180000
+                                300000
                         );
 
                         byte[] dados =
@@ -2433,8 +2433,11 @@ public class MainActivity extends Activity {
 
                             String erro =
                                     resposta.optString(
-                                            "error",
-                                            "Não foi possível gerar a imagem."
+                                            "erro",
+                                            resposta.optString(
+                                                    "error",
+                                                    "Não foi possível gerar a imagem."
+                                            )
                                     );
 
                             runOnUiThread(
@@ -3420,7 +3423,30 @@ public class MainActivity extends Activity {
 
         leitor.close();
 
-        return resultado.toString();
+        String textoResposta = resultado.toString().trim();
+
+        // Render/proxy pode devolver HTML (502/503 ou falha de deploy).
+        // Evita tentar converter uma página HTML em JSONObject.
+        if (
+                textoResposta.startsWith("<!DOCTYPE")
+                        || textoResposta.startsWith("<html")
+                        || textoResposta.startsWith("<HTML")
+        ) {
+            String trecho = textoResposta
+                    .replaceAll("\\s+", " ")
+                    .substring(0, Math.min(180, textoResposta.length()));
+            throw new Exception(
+                    "O servidor retornou HTML em vez de JSON. "
+                            + "O serviço pode estar iniciando ou com falha de deploy. "
+                            + "Resposta: " + trecho
+            );
+        }
+
+        if (textoResposta.isEmpty()) {
+            throw new Exception("O servidor retornou uma resposta vazia.");
+        }
+
+        return textoResposta;
     }
 
     // ============================================================

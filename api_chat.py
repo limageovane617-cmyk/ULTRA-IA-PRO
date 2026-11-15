@@ -12,12 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 
-# Configuração do motor local de imagens — pode ser sobrescrita pelo ambiente.
-os.environ.setdefault("ALEX_IMAGE_MODEL_PATH", "/kaggle/working/models/dreamshaper-8")
-os.environ.setdefault("ALEX_IMAGE_DEVICE", "cuda:0")
-os.environ.setdefault("ALEX_IMAGE_OUTPUT_DIR", "/kaggle/working/alex_imagens")
+# O caminho de saída é configurável. Em Render, use RENDER_DISK_PATH=/var/data
+# para gravar em um disco persistente; sem disco, usa /tmp.
+_pasta_persistente = os.environ.get("RENDER_DISK_PATH", "").strip()
+_pasta_padrao = str(Path(_pasta_persistente) / "alex_imagens") if _pasta_persistente else "/tmp/alex_ia_ultra_imagens"
+os.environ.setdefault("ALEX_IMAGE_OUTPUT_DIR", _pasta_padrao)
 
-from gerenciador_imagem import gerar_imagem_local
+from gerenciador_imagem import gerar_imagem_api
 
 from gerenciador_video import (
     gerar_video,
@@ -167,7 +168,7 @@ def ultra_ping(
 # CONFIGURACAO DOS ARQUIVOS GERADOS
 # ============================================================
 
-PASTA_IMAGENS = Path(os.environ.get("ALEX_IMAGE_OUTPUT_DIR", "/kaggle/working/alex_imagens")).expanduser()
+PASTA_IMAGENS = Path(os.environ.get("ALEX_IMAGE_OUTPUT_DIR", "/tmp/alex_ia_ultra_imagens")).expanduser()
 
 PASTA_VIDEOS = Path(
     "/tmp/alex_ia_ultra_videos"
@@ -409,6 +410,8 @@ def health():
         "gemini": cliente is not None,
         "ponte": bool(PONTE_API_SECRET),
         "hf_token": bool(hf_token),
+        "image_provider": "fluxpool" if os.environ.get("FLUXPOOL_API_KEY") else ("dreamshaper-local" if os.environ.get("ALEX_IMAGE_MODEL_PATH") else "not_configured"),
+        "image_storage": str(PASTA_IMAGENS),
     }
 
 
@@ -480,6 +483,43 @@ def servir_video(filename: str):
 
 @app.post("/api/chat")
 def chat(pedido: PedidoChat):
+
+    # Pedidos explícitos de imagem são atendidos pelo motor de imagens,
+    # sem depender da disponibilidade do Gemini.
+    pergunta_direta = (pedido.pergunta or "").strip()
+    pedido_imagem_direto = bool(re.search(
+        r"\b(gere|gerar|crie|criar|desenhe|desenhar|faça|faca|produza)\b.{0,100}\b(imagem|ilustração|ilustracao|arte)\b",
+        pergunta_direta,
+        re.IGNORECASE,
+    ))
+    if pedido_imagem_direto:
+        try:
+            caminho = gerar_imagem_api(pergunta_direta)
+            arquivo = Path(caminho)
+            if not arquivo.is_file() or arquivo.stat().st_size == 0:
+                raise RuntimeError("O gerador não retornou uma imagem válida.")
+            url_imagem = criar_url_imagem(caminho)
+            return {
+                "success": True,
+                "resposta": "Pronto! Sua imagem foi gerada.",
+                "imagem": url_imagem,
+                "imagem_url": url_imagem,
+                "arquivo_imagem": arquivo.name,
+                "prompt": pergunta_direta,
+                "motor": "Fluxpool" if os.environ.get("FLUXPOOL_API_KEY") else "DreamShaper 8 local",
+                "acao": "imagem",
+                "ultra_core": True,
+            }
+        except Exception as erro_imagem:
+            return {
+                "success": False,
+                "resposta": "Entendi que você pediu uma imagem, mas o motor de geração não está disponível.",
+                "imagem": None,
+                "imagem_url": None,
+                "erro": str(erro_imagem),
+                "acao": "imagem",
+                "ultra_core": True,
+            }
 
     if gemini_bridge is None:
         return {
@@ -653,7 +693,7 @@ def chat(pedido: PedidoChat):
 
             try:
 
-                caminho_imagem = gerar_imagem_local(prompt_imagem)
+                caminho_imagem = gerar_imagem_api(prompt_imagem)
 
                 caminho_validado = Path(caminho_imagem)
                 if not caminho_validado.is_file() or caminho_validado.stat().st_size == 0:
@@ -663,12 +703,12 @@ def chat(pedido: PedidoChat):
 
                 return {
                     "success": True,
-                    "resposta": "Pronto! A imagem foi gerada e validada pelo DreamShaper 8 local.",
+                    "resposta": "Pronto! A imagem foi gerada e validada.",
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
                     "arquivo_imagem": caminho_validado.name,
                     "prompt": prompt_imagem,
-                    "motor": "DreamShaper 8 / Diffusers local",
+                    "motor": "Fluxpool" if os.environ.get("FLUXPOOL_API_KEY") else "DreamShaper 8 / Diffusers local",
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
                     "ultra_core": True,
