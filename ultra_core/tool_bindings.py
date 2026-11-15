@@ -21,6 +21,7 @@ from Internet import (
     pesquisar_web,
     pesquisar_capital,
 )
+from .web_search_fallback import pesquisar_bing_rss
 
 
 # ============================================================
@@ -242,7 +243,29 @@ def pesquisar_internet(
     erro_ddg = resultado_web.get("erro")
 
     # ========================================================
-    # 🟣 FALLBACK — GOOGLE SEARCH GROUNDING (GEMINI)
+    # 🟠 SEGUNDA TENTATIVA — BING RSS (SEM CHAVE DE API)
+    # ========================================================
+
+    resultado_bing = pesquisar_bing_rss(consulta_usuario)
+
+    if resultado_bing.get("success") and resultado_bing.get("resultados"):
+        return {
+            "success": True,
+            "tool": "pesquisa_internet",
+            "pergunta": consulta_usuario,
+            "consulta": pesquisa,
+            "provider": resultado_bing.get("provider", "bing_rss"),
+            "resultados": resultado_bing.get("resultados", []),
+            "fontes": resultado_bing.get("fontes", []),
+            "quantidade": resultado_bing.get("quantidade", 0),
+            "verified": False,
+            "erro": None,
+        }
+
+    erro_bing = resultado_bing.get("erro")
+
+    # ========================================================
+    # 🟣 ÚLTIMA TENTATIVA — GOOGLE SEARCH GROUNDING (GEMINI)
     # ========================================================
 
     if os.environ.get("ALEX_GOOGLE_SEARCH_ENABLED", "true").strip().lower() not in ("0", "false", "no", "off"):
@@ -272,12 +295,12 @@ def pesquisar_internet(
         "tool": "pesquisa_internet",
         "pergunta": consulta_usuario,
         "consulta": pesquisa,
-        "provider": "duckduckgo_lite+google_search_grounding",
+        "provider": "duckduckgo_lite+bing_rss+google_search_grounding",
         "resultados": [],
         "fontes": [],
         "quantidade": 0,
         "verified": False,
-        "erro": f"DuckDuckGo: {erro_ddg or 'sem resultados'}. Google Search: {erro_google or 'sem resultados'}.",
+        "erro": f"DuckDuckGo: {erro_ddg or 'sem resultados'}. Bing RSS: {erro_bing or 'sem resultados'}. Google Search: {erro_google or 'sem resultados'}.",
     }
 
 
@@ -299,8 +322,7 @@ def registrar_ferramentas(
             name="pesquisa_internet",
             description=(
                 "Pesquisa informações atuais na internet "
-                "usando Internet Engine, Wikidata e "
-                "DuckDuckGo Lite."
+                "usando Wikidata, DuckDuckGo Lite, Bing RSS e Google Search Grounding como último fallback."
             ),
             function=pesquisar_internet,
             metadata={
@@ -309,6 +331,7 @@ def registrar_ferramentas(
                 "providers": [
                     "wikidata",
                     "duckduckgo_lite",
+                    "bing_rss",
                 ],
                 "language": "pt-BR",
             },
