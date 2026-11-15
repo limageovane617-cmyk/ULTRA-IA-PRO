@@ -2433,8 +2433,11 @@ public class MainActivity extends Activity {
 
                             String erro =
                                     resposta.optString(
-                                            "error",
-                                            "Não foi possível gerar a imagem."
+                                            "erro",
+                                            resposta.optString(
+                                                    "error",
+                                                    "Não foi possível gerar a imagem."
+                                            )
                                     );
 
                             runOnUiThread(
