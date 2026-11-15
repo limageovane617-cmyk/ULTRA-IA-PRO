@@ -12,7 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 
-from gerenciador_imagem import gerar_imagem_zimage
+# Configuração do motor local de imagens — pode ser sobrescrita pelo ambiente.
+os.environ.setdefault("ALEX_IMAGE_MODEL_PATH", "/kaggle/working/models/dreamshaper-8")
+os.environ.setdefault("ALEX_IMAGE_DEVICE", "cuda:0")
+os.environ.setdefault("ALEX_IMAGE_OUTPUT_DIR", "/tmp/alex_ia_ultra_imagens")
+
+from gerenciador_imagem import gerar_imagem_local
 
 from gerenciador_video import (
     gerar_video,
@@ -162,9 +167,7 @@ def ultra_ping(
 # CONFIGURACAO DOS ARQUIVOS GERADOS
 # ============================================================
 
-PASTA_IMAGENS = Path(
-    "/tmp/alex_ia_ultra_imagens"
-)
+PASTA_IMAGENS = Path(os.environ.get("ALEX_IMAGE_OUTPUT_DIR", "/tmp/alex_ia_ultra_imagens"))
 
 PASTA_VIDEOS = Path(
     "/tmp/alex_ia_ultra_videos"
@@ -650,7 +653,7 @@ def chat(pedido: PedidoChat):
 
             try:
 
-                caminho_imagem = gerar_imagem_zimage(prompt_imagem)
+                caminho_imagem = gerar_imagem_local(prompt_imagem)
 
                 caminho_validado = Path(caminho_imagem)
                 if not caminho_validado.is_file() or caminho_validado.stat().st_size == 0:
@@ -660,12 +663,12 @@ def chat(pedido: PedidoChat):
 
                 return {
                     "success": True,
-                    "resposta": "Pronto! A imagem foi gerada e validada pelo Z-Image Turbo.",
+                    "resposta": "Pronto! A imagem foi gerada e validada pelo DreamShaper 8 local.",
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
                     "arquivo_imagem": caminho_validado.name,
                     "prompt": prompt_imagem,
-                    "motor": "Z-Image Turbo / Hugging Face",
+                    "motor": "DreamShaper 8 / Diffusers local",
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
                     "ultra_core": True,
@@ -675,7 +678,7 @@ def chat(pedido: PedidoChat):
 
                 return {
                     "success": False,
-                    "resposta": "Entendi que você pediu uma imagem, mas o Z-Image Turbo não conseguiu gerá-la.",
+                    "resposta": "Entendi que você pediu uma imagem, mas o DreamShaper 8 local não conseguiu gerá-la.",
                     "imagem": None,
                     "imagem_url": None,
                     "erro": str(erro_imagem),
@@ -742,7 +745,7 @@ def ultra_chat(
 @app.post("/api/imagem")
 def imagem(pedido: PedidoImagem):
     try:
-        caminho = gerar_imagem_zimage(pedido.prompt)
+        caminho = gerar_imagem_local(pedido.prompt)
         arquivo = Path(caminho)
 
         if not arquivo.is_file() or arquivo.stat().st_size == 0:
