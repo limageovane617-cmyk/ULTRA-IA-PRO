@@ -703,12 +703,12 @@ def chat(pedido: PedidoChat):
 
                 return {
                     "success": True,
-                    "resposta": "Pronto! A imagem foi gerada e validada pelo DreamShaper 8 local.",
+                    "resposta": "Pronto! A imagem foi gerada e validada.",
                     "imagem": url_imagem,
                     "imagem_url": url_imagem,
                     "arquivo_imagem": caminho_validado.name,
                     "prompt": prompt_imagem,
-                    "motor": "DreamShaper 8 / Diffusers local",
+                    "motor": "Fluxpool" if os.environ.get("FLUXPOOL_API_KEY") else "DreamShaper 8 / Diffusers local",
                     "acao": "imagem",
                     "modelo": GEMINI_MODEL,
                     "ultra_core": True,
