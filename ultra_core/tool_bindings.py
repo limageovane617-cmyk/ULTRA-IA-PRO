@@ -24,6 +24,48 @@ from Internet import (
 from .web_search_fallback import pesquisar_bing_rss
 
 
+_STOPWORDS_PESQUISA = {
+    "a", "o", "as", "os", "um", "uma", "de", "da", "do", "das", "dos",
+    "em", "no", "na", "nos", "nas", "para", "por", "com", "sobre", "e",
+    "ou", "que", "qual", "quais", "como", "quando", "onde", "mais", "menos",
+    "me", "diga", "mostre", "pesquise", "pesquisa", "internet", "atual",
+    "atuais", "recente", "recentes", "noticia", "noticias"
+}
+
+
+def _normalizar_termos_pesquisa(texto: str) -> set[str]:
+    import unicodedata
+    texto = unicodedata.normalize("NFKD", str(texto or "").lower())
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    return {
+        termo for termo in re.findall(r"[a-z0-9]{3,}", texto)
+        if termo not in _STOPWORDS_PESQUISA
+    }
+
+
+def filtrar_resultados_relevantes(pergunta: str, resultados: list) -> list:
+    """Remove resultados sem correspondência lexical mínima com a consulta."""
+    termos = _normalizar_termos_pesquisa(pergunta)
+    if not termos:
+        return resultados
+
+    relevantes = []
+    for item in resultados:
+        if not isinstance(item, dict):
+            continue
+        texto = " ".join(str(item.get(campo) or "") for campo in (
+            "titulo", "title", "snippet", "description", "resumo"
+        ))
+        termos_resultado = _normalizar_termos_pesquisa(texto)
+        correspondencias = termos.intersection(termos_resultado)
+        # Uma correspondência basta para consultas específicas; para consultas
+        # muito amplas, exigir duas reduz falsos positivos de palavras comuns.
+        minimo = 1 if len(termos) <= 3 else 2
+        if len(correspondencias) >= minimo:
+            relevantes.append(item)
+    return relevantes
+
+
 # ============================================================
 # 🌐 FERRAMENTA DE PESQUISA
 # ============================================================
@@ -226,21 +268,33 @@ def pesquisar_internet(
 
     resultado_web = pesquisar_web(consulta_usuario)
 
-    if resultado_web.get("success") and resultado_web.get("resultados"):
+    resultados_ddg = resultado_web.get("resultados") or []
+    resultados_ddg_relevantes = filtrar_resultados_relevantes(
+        consulta_usuario, resultados_ddg
+    )
+
+    if resultado_web.get("success") and resultados_ddg_relevantes:
+        fontes_ddg = [
+            item.get("url") for item in resultados_ddg_relevantes
+            if isinstance(item, dict) and item.get("url")
+        ]
         return {
             "success": True,
             "tool": "pesquisa_internet",
             "pergunta": consulta_usuario,
             "consulta": pesquisa,
             "provider": resultado_web.get("provider", "duckduckgo_lite"),
-            "resultados": resultado_web.get("resultados", []),
-            "fontes": resultado_web.get("fontes", []),
-            "quantidade": resultado_web.get("quantidade", 0),
+            "resultados": resultados_ddg_relevantes,
+            "fontes": fontes_ddg or resultado_web.get("fontes", []),
+            "quantidade": len(resultados_ddg_relevantes),
             "verified": False,
             "erro": None,
         }
 
-    erro_ddg = resultado_web.get("erro")
+    erro_ddg = resultado_web.get("erro") or (
+        "DuckDuckGo retornou resultados, mas nenhum passou na validação de relevância."
+        if resultados_ddg else "DuckDuckGo não retornou resultados."
+    )
 
     # ========================================================
     # 🟠 SEGUNDA TENTATIVA — BING RSS (SEM CHAVE DE API)
