@@ -23,7 +23,7 @@ def _texto(element: ElementTree.Element, tag: str) -> str:
     node = element.find(tag)
     if node is None:
         return ""
-    return re.sub(r"\\s+", " ", html.unescape("".join(node.itertext()))).strip()
+    return " ".join(html.unescape("".join(node.itertext())).split())
 
 
 def _url_destino(url: str) -> str:
