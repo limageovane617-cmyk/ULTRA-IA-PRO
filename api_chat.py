@@ -656,6 +656,34 @@ def chat(pedido: PedidoChat):
                 break
 
         # ----------------------------------------------------
+        # EXIBIR FONTES DA PESQUISA NA RESPOSTA DO APLICATIVO
+        # ----------------------------------------------------
+
+        if isinstance(dados_pesquisa, dict) and dados_pesquisa.get("success"):
+            fontes = dados_pesquisa.get("fontes") or []
+            resultados = dados_pesquisa.get("resultados") or []
+            titulos_por_url = {
+                item.get("url"): item.get("titulo")
+                for item in resultados
+                if isinstance(item, dict) and item.get("url")
+            }
+            linhas_fontes = []
+            for url in fontes[:5]:
+                if not isinstance(url, str) or not url.startswith(("https://", "http://")):
+                    continue
+                if url in resposta:
+                    continue
+                titulo = titulos_por_url.get(url) or url
+                linhas_fontes.append(f"- [{titulo}]({url})")
+
+            if linhas_fontes:
+                resposta = (
+                    resposta.rstrip()
+                    + "\\n\\nFontes consultadas:\\n"
+                    + "\\n".join(linhas_fontes)
+                )
+
+        # ----------------------------------------------------
         # DETECTAR ACAO DE GERACAO DE IMAGEM
         # ----------------------------------------------------
 
