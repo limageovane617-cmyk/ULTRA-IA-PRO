@@ -15,7 +15,7 @@ from google import genai
 # Configuração do motor local de imagens — pode ser sobrescrita pelo ambiente.
 os.environ.setdefault("ALEX_IMAGE_MODEL_PATH", "/kaggle/working/models/dreamshaper-8")
 os.environ.setdefault("ALEX_IMAGE_DEVICE", "cuda:0")
-os.environ.setdefault("ALEX_IMAGE_OUTPUT_DIR", "/tmp/alex_ia_ultra_imagens")
+os.environ.setdefault("ALEX_IMAGE_OUTPUT_DIR", "/kaggle/working/alex_imagens")
 
 from gerenciador_imagem import gerar_imagem_local
 
@@ -167,7 +167,7 @@ def ultra_ping(
 # CONFIGURACAO DOS ARQUIVOS GERADOS
 # ============================================================
 
-PASTA_IMAGENS = Path(os.environ.get("ALEX_IMAGE_OUTPUT_DIR", "/tmp/alex_ia_ultra_imagens"))
+PASTA_IMAGENS = Path(os.environ.get("ALEX_IMAGE_OUTPUT_DIR", "/kaggle/working/alex_imagens")).expanduser()
 
 PASTA_VIDEOS = Path(
     "/tmp/alex_ia_ultra_videos"
@@ -739,7 +739,7 @@ def ultra_chat(
 
 # ============================================================
 # ============================================================
-# IMAGEM — Z-IMAGE TURBO
+# IMAGEM — DREAMSHAPER 8 LOCAL
 # ============================================================
 
 @app.post("/api/imagem")
@@ -759,7 +759,7 @@ def imagem(pedido: PedidoImagem):
             "imagem_url": url_imagem,
             "arquivo_imagem": arquivo.name,
             "prompt": pedido.prompt,
-            "motor": "Z-Image Turbo / Hugging Face",
+            "motor": "DreamShaper 8 / Diffusers local",
         }
 
     except Exception as erro:
@@ -767,8 +767,8 @@ def imagem(pedido: PedidoImagem):
             "success": False,
             "imagem": None,
             "imagem_url": None,
-            "error": str(erro),
-            "motor": "Z-Image Turbo / Hugging Face",
+            "erro": str(erro),
+            "motor": "DreamShaper 8 / Diffusers local",
         }
 
 
