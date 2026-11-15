@@ -679,8 +679,8 @@ def chat(pedido: PedidoChat):
             if linhas_fontes:
                 resposta = (
                     resposta.rstrip()
-                    + "\\n\\nFontes consultadas:\\n"
-                    + "\\n".join(linhas_fontes)
+                    + "\n\nFontes consultadas:\n"
+                    + "\n".join(linhas_fontes)
                 )
 
         # ----------------------------------------------------
