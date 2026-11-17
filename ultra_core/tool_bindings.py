@@ -302,21 +302,33 @@ def pesquisar_internet(
 
     resultado_bing = pesquisar_bing_rss(consulta_usuario)
 
-    if resultado_bing.get("success") and resultado_bing.get("resultados"):
+    resultados_bing = resultado_bing.get("resultados") or []
+    resultados_bing_relevantes = filtrar_resultados_relevantes(
+        consulta_usuario, resultados_bing
+    )
+
+    if resultado_bing.get("success") and resultados_bing_relevantes:
+        fontes_bing = [
+            item.get("url") for item in resultados_bing_relevantes
+            if isinstance(item, dict) and item.get("url")
+        ]
         return {
             "success": True,
             "tool": "pesquisa_internet",
             "pergunta": consulta_usuario,
             "consulta": pesquisa,
             "provider": resultado_bing.get("provider", "bing_rss"),
-            "resultados": resultado_bing.get("resultados", []),
-            "fontes": resultado_bing.get("fontes", []),
-            "quantidade": resultado_bing.get("quantidade", 0),
+            "resultados": resultados_bing_relevantes,
+            "fontes": fontes_bing,
+            "quantidade": len(resultados_bing_relevantes),
             "verified": False,
             "erro": None,
         }
 
-    erro_bing = resultado_bing.get("erro")
+    erro_bing = resultado_bing.get("erro") or (
+        "Bing RSS retornou resultados, mas nenhum passou na validação de relevância."
+        if resultados_bing else "Bing RSS não retornou resultados."
+    )
 
     # ========================================================
     # 🟣 ÚLTIMA TENTATIVA — GOOGLE SEARCH GROUNDING (GEMINI)
