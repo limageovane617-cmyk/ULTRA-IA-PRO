@@ -401,7 +401,7 @@ def pesquisar_internet(
         "fontes": [],
         "quantidade": 0,
         "verified": False,
-        "erro": f"DuckDuckGo: {erro_ddg or 'sem resultados'}. Bing RSS: {erro_bing or 'sem resultados'}. Google Search: {erro_google or 'sem resultados'}.",
+        "erro": f"Bing RSS: {erro_bing or 'sem resultados'}. DuckDuckGo: {erro_ddg or 'sem resultados'}. Google Search: {erro_google or 'sem resultados'}.",
     }
 
 
@@ -423,7 +423,7 @@ def registrar_ferramentas(
             name="pesquisa_internet",
             description=(
                 "Pesquisa informações atuais na internet "
-                "usando Wikidata, DuckDuckGo Lite, Bing RSS e Google Search Grounding como último fallback."
+                "usando Wikidata, Bing RSS, DuckDuckGo Lite e Google Search Grounding opcional."
             ),
             function=pesquisar_internet,
             metadata={
