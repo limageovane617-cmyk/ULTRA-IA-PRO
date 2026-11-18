@@ -37,18 +37,53 @@ def _normalizar_termos_pesquisa(texto: str) -> set[str]:
     import unicodedata
     texto = unicodedata.normalize("NFKD", str(texto or "").lower())
     texto = "".join(c for c in texto if not unicodedata.combining(c))
-    return {
+    termos = {
         termo for termo in re.findall(r"[a-z0-9]{3,}", texto)
         if termo not in _STOPWORDS_PESQUISA
     }
+    # "IA" é uma sigla válida de dois caracteres e precisa ser preservada.
+    if re.search(r"(?<![a-z0-9])ia(?![a-z0-9])", texto):
+        termos.add("ia")
+    return termos
+
+
+def _conceitos_da_consulta(termos: set[str]) -> list:
+    """Agrupa IA/inteligência artificial como um único conceito semântico."""
+    conceitos = []
+    tem_conceito_ia = (
+        "ia" in termos
+        or {"inteligencia", "artificial"}.issubset(termos)
+    )
+    if tem_conceito_ia:
+        conceitos.append("ia")
+    conceitos.extend(sorted(
+        termos - {"ia", "inteligencia", "artificial"}
+    ))
+    return conceitos
+
+
+def _resultado_corresponde_conceito(
+    conceito: str, termos_resultado: set[str]
+) -> bool:
+    if conceito == "ia":
+        return (
+            "ia" in termos_resultado
+            or {"inteligencia", "artificial"}.issubset(termos_resultado)
+        )
+    return conceito in termos_resultado
 
 
 def filtrar_resultados_relevantes(pergunta: str, resultados: list) -> list:
-    """Remove resultados sem correspondência lexical mínima com a consulta."""
+    """Remove resultados que não cobrem os conceitos centrais da consulta."""
     termos = _normalizar_termos_pesquisa(pergunta)
-    if not termos:
+    conceitos = _conceitos_da_consulta(termos)
+    if not conceitos:
         return resultados
 
+    # Exige até três conceitos distintos. Isso evita aceitar resultados
+    # tangenciais em consultas com três conceitos, sem exigir cada palavra
+    # auxiliar de uma pergunta longa.
+    minimo = min(3, len(conceitos))
     relevantes = []
     for item in resultados:
         if not isinstance(item, dict):
@@ -57,11 +92,11 @@ def filtrar_resultados_relevantes(pergunta: str, resultados: list) -> list:
             "titulo", "title", "snippet", "description", "resumo"
         ))
         termos_resultado = _normalizar_termos_pesquisa(texto)
-        correspondencias = termos.intersection(termos_resultado)
-        # Uma correspondência basta para consultas específicas; para consultas
-        # muito amplas, exigir duas reduz falsos positivos de palavras comuns.
-        minimo = 1 if len(termos) <= 3 else 2
-        if len(correspondencias) >= minimo:
+        correspondencias = sum(
+            1 for conceito in conceitos
+            if _resultado_corresponde_conceito(conceito, termos_resultado)
+        )
+        if correspondencias >= minimo:
             relevantes.append(item)
     return relevantes
 
