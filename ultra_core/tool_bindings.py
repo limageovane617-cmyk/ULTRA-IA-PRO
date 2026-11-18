@@ -58,9 +58,12 @@ def filtrar_resultados_relevantes(pergunta: str, resultados: list) -> list:
         ))
         termos_resultado = _normalizar_termos_pesquisa(texto)
         correspondencias = termos.intersection(termos_resultado)
-        # Uma correspondência basta para consultas específicas; para consultas
-        # muito amplas, exigir duas reduz falsos positivos de palavras comuns.
-        minimo = 1 if len(termos) <= 3 else 2
+        # Consultas com dois conceitos (ex.: "inteligência artificial")
+        # precisam corresponder aos dois. Aceitar apenas um termo permite
+        # falsos positivos de páginas que mencionam só uma palavra incidentalmente.
+        # Para consultas longas, exigir ao menos dois conceitos evita eliminar
+        # resultados legítimos por causa de palavras/instruções adicionais.
+        minimo = min(2, len(termos))
         if len(correspondencias) >= minimo:
             relevantes.append(item)
     return relevantes
