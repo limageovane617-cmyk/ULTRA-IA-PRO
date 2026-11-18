@@ -78,6 +78,50 @@ class BingRssSearchTests(unittest.TestCase):
 
         self.assertEqual(filtrar_resultados_relevantes(pergunta, resultados), [])
 
+    def test_three_concepts_must_be_represented(self):
+        pergunta = "inteligência artificial carros elétricos"
+        resultados = [
+            {
+                "titulo": "Inteligência artificial transforma carros",
+                "snippet": "Novas tecnologias para veículos.",
+                "url": "https://example.com/parcial",
+            },
+            {
+                "titulo": "IA em carros elétricos",
+                "snippet": "Inteligência artificial otimiza baterias e autonomia.",
+                "url": "https://example.com/completo",
+            },
+        ]
+
+        filtrados = filtrar_resultados_relevantes(pergunta, resultados)
+
+        self.assertEqual(len(filtrados), 1)
+        self.assertEqual(filtrados[0]["url"], "https://example.com/completo")
+
+    def test_ia_acronym_matches_full_expression_and_acronym(self):
+        pergunta = "notícias recentes sobre IA"
+        resultados = [
+            {
+                "titulo": "IA: novos modelos chegam ao mercado",
+                "url": "https://example.com/sigla",
+            },
+            {
+                "titulo": "Inteligência artificial ganha novos modelos",
+                "url": "https://example.com/expressao",
+            },
+            {
+                "titulo": "LATAM anuncia novas rotas",
+                "url": "https://example.com/irrelevante",
+            },
+        ]
+
+        filtrados = filtrar_resultados_relevantes(pergunta, resultados)
+
+        self.assertEqual(
+            {item["url"] for item in filtrados},
+            {"https://example.com/sigla", "https://example.com/expressao"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
