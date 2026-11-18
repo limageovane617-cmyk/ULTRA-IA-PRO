@@ -1,9 +1,10 @@
+import os
 import unittest
 from unittest.mock import Mock, patch
 from urllib.parse import quote
 
 from ultra_core.web_search_fallback import pesquisar_bing_rss, _url_destino
-from ultra_core.tool_bindings import filtrar_resultados_relevantes
+from ultra_core.tool_bindings import filtrar_resultados_relevantes, pesquisar_internet
 
 
 class BingRssSearchTests(unittest.TestCase):
@@ -121,6 +122,79 @@ class BingRssSearchTests(unittest.TestCase):
             {item["url"] for item in filtrados},
             {"https://example.com/sigla", "https://example.com/expressao"},
         )
+
+
+class PesquisaGratuitaFallbackTests(unittest.TestCase):
+    @patch("ultra_core.tool_bindings.pesquisar_google_grounded")
+    @patch("ultra_core.tool_bindings.pesquisar_web")
+    @patch("ultra_core.tool_bindings.pesquisar_bing_rss")
+    @patch("ultra_core.tool_bindings.preparar_pesquisa", return_value="consulta")
+    def test_bing_is_primary_and_does_not_call_google_by_default(
+        self, preparar, bing, ddg, google
+    ):
+        bing.return_value = {
+            "success": True,
+            "provider": "bing_rss",
+            "resultados": [{
+                "titulo": "Inteligência artificial: novidades recentes",
+                "snippet": "Avanços em inteligência artificial",
+                "url": "https://example.com/ia",
+            }],
+        }
+        with patch.dict(os.environ, {"ALEX_GOOGLE_SEARCH_ENABLED": "false"}):
+            resultado = pesquisar_internet("notícias recentes sobre inteligência artificial")
+
+        self.assertTrue(resultado["success"])
+        self.assertEqual(resultado["provider"], "bing_rss")
+        bing.assert_called_once()
+        ddg.assert_not_called()
+        google.assert_not_called()
+
+    @patch("ultra_core.tool_bindings.pesquisar_google_grounded")
+    @patch("ultra_core.tool_bindings.pesquisar_web")
+    @patch("ultra_core.tool_bindings.pesquisar_bing_rss")
+    @patch("ultra_core.tool_bindings.preparar_pesquisa", return_value="consulta")
+    def test_duckduckgo_is_used_when_bing_has_no_relevant_results(
+        self, preparar, bing, ddg, google
+    ):
+        bing.return_value = {
+            "success": False, "provider": "bing_rss",
+            "resultados": [], "erro": "Bing indisponível",
+        }
+        ddg.return_value = {
+            "success": True,
+            "provider": "duckduckgo_lite",
+            "resultados": [{
+                "titulo": "IA: novidades recentes",
+                "snippet": "Inteligência artificial em destaque",
+                "url": "https://example.com/ddg",
+            }],
+        }
+        with patch.dict(os.environ, {"ALEX_GOOGLE_SEARCH_ENABLED": "false"}):
+            resultado = pesquisar_internet("notícias recentes sobre IA")
+
+        self.assertTrue(resultado["success"])
+        self.assertEqual(resultado["provider"], "duckduckgo_lite")
+        bing.assert_called_once()
+        ddg.assert_called_once()
+        google.assert_not_called()
+
+    @patch("ultra_core.tool_bindings.pesquisar_google_grounded")
+    @patch("ultra_core.tool_bindings.pesquisar_web")
+    @patch("ultra_core.tool_bindings.pesquisar_bing_rss")
+    @patch("ultra_core.tool_bindings.preparar_pesquisa", return_value="consulta")
+    def test_google_grounding_is_opt_in_not_default(
+        self, preparar, bing, ddg, google
+    ):
+        bing.return_value = {"success": False, "resultados": [], "erro": "indisponível"}
+        ddg.return_value = {"success": False, "resultados": [], "erro": "indisponível"}
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ALEX_GOOGLE_SEARCH_ENABLED", None)
+            resultado = pesquisar_internet("notícias sobre inteligência artificial")
+
+        self.assertFalse(resultado["success"])
+        google.assert_not_called()
+        self.assertIn("desativado", resultado["erro"])
 
 
 if __name__ == "__main__":
