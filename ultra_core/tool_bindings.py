@@ -298,41 +298,7 @@ def pesquisar_internet(
             # Continua para a pesquisa web geral como alternativa.
 
     # ========================================================
-    # 🔵 PRIMEIRA TENTATIVA — DUCKDUCKGO LITE
-    # ========================================================
-
-    resultado_web = pesquisar_web(consulta_usuario)
-
-    resultados_ddg = resultado_web.get("resultados") or []
-    resultados_ddg_relevantes = filtrar_resultados_relevantes(
-        consulta_usuario, resultados_ddg
-    )
-
-    if resultado_web.get("success") and resultados_ddg_relevantes:
-        fontes_ddg = [
-            item.get("url") for item in resultados_ddg_relevantes
-            if isinstance(item, dict) and item.get("url")
-        ]
-        return {
-            "success": True,
-            "tool": "pesquisa_internet",
-            "pergunta": consulta_usuario,
-            "consulta": pesquisa,
-            "provider": resultado_web.get("provider", "duckduckgo_lite"),
-            "resultados": resultados_ddg_relevantes,
-            "fontes": fontes_ddg or resultado_web.get("fontes", []),
-            "quantidade": len(resultados_ddg_relevantes),
-            "verified": False,
-            "erro": None,
-        }
-
-    erro_ddg = resultado_web.get("erro") or (
-        "DuckDuckGo retornou resultados, mas nenhum passou na validação de relevância."
-        if resultados_ddg else "DuckDuckGo não retornou resultados."
-    )
-
-    # ========================================================
-    # 🟠 SEGUNDA TENTATIVA — BING RSS (SEM CHAVE DE API)
+    # 🟠 PRIMEIRA TENTATIVA — BING RSS (SEM CHAVE DE API)
     # ========================================================
 
     resultado_bing = pesquisar_bing_rss(consulta_usuario)
@@ -366,10 +332,44 @@ def pesquisar_internet(
     )
 
     # ========================================================
+    # 🔵 SEGUNDA TENTATIVA — DUCKDUCKGO LITE
+    # ========================================================
+
+    resultado_web = pesquisar_web(consulta_usuario)
+
+    resultados_ddg = resultado_web.get("resultados") or []
+    resultados_ddg_relevantes = filtrar_resultados_relevantes(
+        consulta_usuario, resultados_ddg
+    )
+
+    if resultado_web.get("success") and resultados_ddg_relevantes:
+        fontes_ddg = [
+            item.get("url") for item in resultados_ddg_relevantes
+            if isinstance(item, dict) and item.get("url")
+        ]
+        return {
+            "success": True,
+            "tool": "pesquisa_internet",
+            "pergunta": consulta_usuario,
+            "consulta": pesquisa,
+            "provider": resultado_web.get("provider", "duckduckgo_lite"),
+            "resultados": resultados_ddg_relevantes,
+            "fontes": fontes_ddg or resultado_web.get("fontes", []),
+            "quantidade": len(resultados_ddg_relevantes),
+            "verified": False,
+            "erro": None,
+        }
+
+    erro_ddg = resultado_web.get("erro") or (
+        "DuckDuckGo retornou resultados, mas nenhum passou na validação de relevância."
+        if resultados_ddg else "DuckDuckGo não retornou resultados."
+    )
+
+    # ========================================================
     # 🟣 ÚLTIMA TENTATIVA — GOOGLE SEARCH GROUNDING (GEMINI)
     # ========================================================
 
-    if os.environ.get("ALEX_GOOGLE_SEARCH_ENABLED", "true").strip().lower() not in ("0", "false", "no", "off"):
+    if os.environ.get("ALEX_GOOGLE_SEARCH_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on"):
         resultado_google = pesquisar_google_grounded(consulta_usuario)
 
         if resultado_google.get("success"):
@@ -396,7 +396,7 @@ def pesquisar_internet(
         "tool": "pesquisa_internet",
         "pergunta": consulta_usuario,
         "consulta": pesquisa,
-        "provider": "duckduckgo_lite+bing_rss+google_search_grounding",
+        "provider": "bing_rss+duckduckgo_lite+google_search_grounding",
         "resultados": [],
         "fontes": [],
         "quantidade": 0,
