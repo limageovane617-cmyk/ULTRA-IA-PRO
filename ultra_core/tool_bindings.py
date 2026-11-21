@@ -266,12 +266,25 @@ def pesquisar_internet(
     # 📰 CONSULTAS DE NOTÍCIAS — BING NEWS RSS
     # ========================================================
 
-    consulta_sem_acento = _normalizar_termos_pesquisa(consulta_usuario)
+    # A detecção de notícias precisa preservar palavras como "notícias"
+    # e "recentes". _normalizar_termos_pesquisa remove essas palavras
+    # como stopwords, portanto não deve ser usada nesta decisão.
+    import unicodedata
+    texto_para_detectar = unicodedata.normalize(
+        "NFKD", consulta_usuario.lower()
+    )
+    texto_para_detectar = "".join(
+        caractere for caractere in texto_para_detectar
+        if not unicodedata.combining(caractere)
+    )
     termos_noticias = {
-        "noticia", "noticias", "manchetes", "jornalismo",
-        "ultimas", "recentes", "acontecimentos",
+        "noticia", "noticias", "manchete", "manchetes", "jornalismo",
+        "ultima", "ultimas", "recente", "recentes", "acontecimento",
+        "acontecimentos", "novidade", "novidades", "atualidade",
+        "atualidades",
     }
-    eh_consulta_noticias = bool(consulta_sem_acento & termos_noticias)
+    palavras_consulta = set(re.findall(r"[a-z0-9]+", texto_para_detectar))
+    eh_consulta_noticias = bool(palavras_consulta & termos_noticias)
 
     if eh_consulta_noticias:
         resultado_news = pesquisar_bing_news_rss(consulta_usuario)
