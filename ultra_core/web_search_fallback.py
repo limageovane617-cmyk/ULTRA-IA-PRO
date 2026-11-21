@@ -113,3 +113,78 @@ def pesquisar_bing_rss(pergunta: str, limite: int = 5, timeout: int = 12) -> dic
             "resultados": [], "fontes": [], "quantidade": 0,
             "verified": False,
         }
+
+
+
+def pesquisar_bing_news_rss(pergunta: str, limite: int = 8, timeout: int = 12) -> dict[str, Any]:
+    """Pesquisa notícias no feed oficial Bing News RSS."""
+    consulta = str(pergunta or "").strip()
+    if not consulta:
+        return {
+            "success": False, "provider": "bing_news_rss",
+            "erro": "Pergunta vazia.", "resultados": [], "fontes": [],
+            "quantidade": 0, "verified": False,
+        }
+
+    try:
+        response = requests.get(
+            "https://www.bing.com/news/search",
+            params={
+                "q": consulta, "format": "rss",
+                "mkt": "pt-BR", "setlang": "pt-BR",
+            },
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; AlexIAUltra/1.0)",
+                "Accept": "application/rss+xml, application/xml, text/xml, */*",
+            },
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        root = ElementTree.fromstring(response.content)
+        channel = root.find("channel")
+        if channel is None:
+            raise ValueError("Feed Bing News RSS sem canal válido.")
+
+        resultados = []
+        vistos = set()
+        for item in channel.findall("item"):
+            titulo = _texto(item, "title")
+            url = _url_destino(_texto(item, "link"))
+            snippet = _texto(item, "description")
+            if not titulo or not url:
+                continue
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https") or not parsed.netloc or url in vistos:
+                continue
+            vistos.add(url)
+            registro = {"titulo": titulo, "url": url}
+            if snippet:
+                registro["snippet"] = snippet[:700]
+            data = _texto(item, "pubDate")
+            if data:
+                registro["data"] = data
+            resultados.append(registro)
+            if len(resultados) >= max(1, min(int(limite), 20)):
+                break
+
+        if not resultados:
+            return {
+                "success": False, "provider": "bing_news_rss",
+                "erro": "O Bing News RSS não retornou notícias utilizáveis.",
+                "resultados": [], "fontes": [], "quantidade": 0,
+                "verified": False,
+            }
+        return {
+            "success": True, "provider": "bing_news_rss",
+            "pergunta": consulta, "resultados": resultados,
+            "fontes": [item["url"] for item in resultados],
+            "quantidade": len(resultados), "verified": False, "erro": None,
+        }
+    except Exception as exc:
+        logger.warning("Bing News RSS indisponível: %s", exc)
+        return {
+            "success": False, "provider": "bing_news_rss",
+            "erro": f"{type(exc).__name__}: {exc}",
+            "resultados": [], "fontes": [], "quantidade": 0,
+            "verified": False,
+        }
