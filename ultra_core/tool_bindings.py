@@ -21,7 +21,7 @@ from Internet import (
     pesquisar_web,
     pesquisar_capital,
 )
-from .web_search_fallback import pesquisar_bing_rss
+from .web_search_fallback import pesquisar_bing_rss, pesquisar_bing_news_rss
 
 
 _STOPWORDS_PESQUISA = {
@@ -261,6 +261,36 @@ def pesquisar_internet(
 
             # Uma falha no Wikidata não é sucesso.
             # Continua para a pesquisa web geral como alternativa.
+
+    # ========================================================
+    # 📰 CONSULTAS DE NOTÍCIAS — BING NEWS RSS
+    # ========================================================
+
+    consulta_sem_acento = _normalizar_termos_pesquisa(consulta_usuario)
+    termos_noticias = {
+        "noticia", "noticias", "manchetes", "jornalismo",
+        "ultimas", "recentes", "acontecimentos",
+    }
+    eh_consulta_noticias = bool(consulta_sem_acento & termos_noticias)
+
+    if eh_consulta_noticias:
+        resultado_news = pesquisar_bing_news_rss(consulta_usuario)
+        noticias = resultado_news.get("resultados") or []
+        # Notícias já vêm do endpoint específico do Bing News. Não aplicar
+        # o filtro lexical rígido que pode eliminar manchetes válidas.
+        if resultado_news.get("success") and noticias:
+            return {
+                "success": True,
+                "tool": "pesquisa_internet",
+                "pergunta": consulta_usuario,
+                "consulta": pesquisa,
+                "provider": "bing_news_rss",
+                "resultados": noticias,
+                "fontes": resultado_news.get("fontes", []),
+                "quantidade": len(noticias),
+                "verified": False,
+                "erro": None,
+            }
 
     # ========================================================
     # 🔵 PRIMEIRA TENTATIVA — DUCKDUCKGO LITE
