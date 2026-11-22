@@ -63,13 +63,43 @@ def pesquisar_bing_rss(pergunta: str, limite: int = 5, timeout: int = 12) -> dic
         )
         response.raise_for_status()
         root = ElementTree.fromstring(response.content)
-        channel = root.find("channel")
-        if channel is None:
-            raise ValueError("Feed RSS do Bing sem canal válido.")
+
+        # Aceita RSS 2.0 padrão e feeds que tragam namespace XML.
+        def _filhos_por_nome(elemento, nome):
+            return [
+                filho for filho in list(elemento)
+                if filho.tag.rsplit("}", 1)[-1].lower() == nome.lower()
+            ]
+
+        canais = _filhos_por_nome(root, "channel")
+        canal = canais[0] if canais else root
+        itens = _filhos_por_nome(canal, "item")
+
+        # Alguns endpoints variam o feed conforme os parâmetros regionais.
+        # Se a resposta HTTP for válida, mas vier sem itens, tenta a URL RSS
+        # simples que também é usada no teste de conectividade do projeto.
+        if not itens and (
+            response.url.find("setlang=") >= 0
+            or response.url.find("mkt=") >= 0
+        ):
+            retry = requests.get(
+                BING_RSS_URL,
+                params={"q": consulta, "format": "rss"},
+                headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+                },
+                timeout=timeout,
+            )
+            retry.raise_for_status()
+            root = ElementTree.fromstring(retry.content)
+            canais = _filhos_por_nome(root, "channel")
+            canal = canais[0] if canais else root
+            itens = _filhos_por_nome(canal, "item")
 
         resultados = []
         vistos = set()
-        for item in channel.findall("item"):
+        for item in itens:
             titulo = _texto(item, "title")
             url = _url_destino(_texto(item, "link"))
             snippet = _texto(item, "description")
