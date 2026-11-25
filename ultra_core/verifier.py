@@ -334,6 +334,32 @@ class ResultVerifier:
                 success_values.append(parsed)
 
         # ----------------------------------------------------
+        # VERIFICAÇÃO INTERNA DA FERRAMENTA
+        # ----------------------------------------------------
+
+        verification_values = []
+
+        for key in ("verified", "verificado"):
+
+            if key in result:
+                parsed = self._parse_boolean(result[key])
+                verification_values.append(parsed)
+
+        if verification_values and not all(
+            value is True for value in verification_values
+        ):
+
+            return VerificationResult(
+                False,
+                "A ferramenta não confirmou a verificação interna.",
+                {
+                    "result_type": "dict",
+                    "verification_values": verification_values,
+                    "internal_verification_failed": True,
+                },
+            )
+
+        # ----------------------------------------------------
         # INDICADORES DE FALHA
         # ----------------------------------------------------
 
